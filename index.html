@@ -1115,7 +1115,7 @@ function parseIBCSV(text) {
   for (const line of lines) {
     if (line.startsWith("Dividends,Data,USD")) {
       const r = parseRow(line);
-      const date = r[2].substring(0,10); const desc = r[3]; const amount = parseFloat(r[4]);
+      const date = r[3].substring(0,10); const desc = r[4]; const amount = parseFloat(r[5]);
       if (isNaN(amount)||amount<=0) continue;
       const ticker = desc.includes("VTI")?"VTI":desc.includes("BND")?"BND":null;
       if (!ticker) continue;
