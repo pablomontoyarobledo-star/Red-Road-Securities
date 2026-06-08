@@ -397,8 +397,8 @@ const USERS = {
 };
 
 const DEFAULT_POSITIONS = [
-  { ticker:"VTI", name:"Vanguard Total Stock Market ETF", shares:1009, costBasis:343.77 },
-  { ticker:"BND", name:"Vanguard Total Bond Market ETF",  shares:2106, costBasis:73.39  }
+  { ticker:"VTI", name:"Vanguard Total Stock Market ETF", shares:1009, costBasis:343.77, ibClose:363.38 },
+  { ticker:"BND", name:"Vanguard Total Bond Market ETF",  shares:2106, costBasis:73.39,  ibClose:72.83  }
 ];
 
 const DEFAULT_TRANSACTIONS = [
@@ -495,22 +495,67 @@ function logout() {
   if (perfChart) { perfChart.destroy(); perfChart = null; }
 }
 
+async function fetchSinglePrice(ticker) {
+  // Try multiple endpoints — Yahoo frequently blocks direct browser requests
+  const endpoints = [
+    // Endpoint 1: allorigins proxy → query2
+    async () => {
+      const inner = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+      const url = `https://api.allorigins.win/get?url=${encodeURIComponent(inner)}`;
+      const r = await fetch(url);
+      const d = await r.json();
+      const parsed = JSON.parse(d.contents);
+      return parsed.chart.result[0].meta.regularMarketPrice;
+    },
+    // Endpoint 2: allorigins proxy → query1
+    async () => {
+      const inner = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+      const url = `https://api.allorigins.win/get?url=${encodeURIComponent(inner)}`;
+      const r = await fetch(url);
+      const d = await r.json();
+      const parsed = JSON.parse(d.contents);
+      return parsed.chart.result[0].meta.regularMarketPrice;
+    },
+    // Endpoint 3: direct query2 (works in some browsers/networks)
+    async () => {
+      const r = await fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+      const d = await r.json();
+      return d.chart.result[0].meta.regularMarketPrice;
+    },
+    // Endpoint 4: direct query1
+    async () => {
+      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+      const d = await r.json();
+      return d.chart.result[0].meta.regularMarketPrice;
+    }
+  ];
+  for (const fn of endpoints) {
+    try {
+      const price = await fn();
+      if (price && price > 0) return price;
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
 async function fetchPrices() {
-  const tickers = positions.map(p=>p.ticker);
   const status = document.getElementById("price-status");
   status.innerHTML = '<i class="ti ti-refresh spin"></i> Fetching live prices…';
-  try {
-    for (const ticker of tickers) {
-      const resp = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
-      const data = await resp.json();
-      const meta = data.chart.result[0].meta;
-      livePrice[ticker] = meta.regularMarketPrice || meta.previousClose;
+  let anyFailed = false;
+  for (const p of positions) {
+    const price = await fetchSinglePrice(p.ticker);
+    if (price) {
+      livePrice[p.ticker] = price;
+    } else {
+      livePrice[p.ticker] = p.ibClose || p.costBasis;
+      anyFailed = true;
     }
-    const now = new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+  }
+  const now = new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+  if (anyFailed) {
+    status.innerHTML = '<i class="ti ti-alert-circle" style="color:var(--amber-text);"></i> Live prices unavailable — showing IB close prices (Jun 5, 2026)';
+  } else {
     status.innerHTML = `<i class="ti ti-circle-check" style="color:var(--green);"></i> Live prices as of ${now}`;
-  } catch(e) {
-    status.innerHTML = '<i class="ti ti-alert-circle" style="color:var(--red);"></i> Could not fetch live prices — using IB close prices';
-    positions.forEach(p => { livePrice[p.ticker] = p.costBasis; });
   }
   renderPositions();
   renderMetrics();
@@ -518,12 +563,12 @@ async function fetchPrices() {
 }
 
 function getTotalValue() {
-  return positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.costBasis), 0);
+  return positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||p.costBasis), 0);
 }
 
 function renderMetrics() {
   const totalValue = getTotalValue();
-  const totalCost  = positions.reduce((s,p) => s + p.shares*p.costBasis, 0);
+  const totalCost  = positions.reduce((s,p) => s + p.shares*(p.ibClose||p.costBasis), 0);
   const gl = totalValue - totalCost;
   const glPct = (gl/totalCost)*100;
   document.getElementById("metrics-grid").innerHTML = `
@@ -545,7 +590,7 @@ function renderOwnership() {
 function renderPositions() {
   const totalValue = getTotalValue();
   document.getElementById("pos-body").innerHTML = positions.map(p => {
-    const price = livePrice[p.ticker] || p.costBasis;
+    const price = livePrice[p.ticker] || p.ibClose || p.costBasis;
     const val   = p.shares * price;
     const gl    = (price - p.costBasis) * p.shares;
     const glPct = ((price - p.costBasis)/p.costBasis)*100;
