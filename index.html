@@ -33,6 +33,13 @@
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
 
+  /* LANG TOGGLE */
+  .lang-toggle { display: flex; gap: 2px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: 20px; padding: 2px; }
+  .lang-btn { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 16px; border: none; background: none; color: var(--text3); cursor: pointer; transition: all 0.15s; letter-spacing: 0.04em; }
+  .lang-btn.active { background: var(--blue); color: #fff; }
+  .lang-btn:not(.active):hover { color: var(--text); }
+  .login-lang-wrap { position: fixed; top: 1rem; right: 1rem; z-index: 10; }
+
   /* LOGIN */
   #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
   .login-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2.5rem; width: 360px; display: flex; flex-direction: column; gap: 1.25rem; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
@@ -102,7 +109,7 @@
 
   /* TX TABLE */
   .tx-table { table-layout: fixed; min-width: 560px; }
-  .tx-table th:nth-child(1) { width: 95px; }
+  .tx-table th:nth-child(1) { width: 115px; }
   .tx-table th:nth-child(2) { width: 65px; }
   .tx-table th:nth-child(3) { width: 85px; }
   .tx-table th:nth-child(4) { width: 70px; }
@@ -163,18 +170,26 @@
 </head>
 <body>
 
+<!-- Language toggle on login screen -->
+<div class="login-lang-wrap">
+  <div class="lang-toggle">
+    <button class="lang-btn active" id="login-lang-en" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" id="login-lang-es" onclick="setLang('es')">ES</button>
+  </div>
+</div>
+
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo">
       <div class="logo-mark"><i class="ti ti-chart-line" style="font-size:24px;color:#fff;"></i></div>
       <h1>Montoya Family Fund</h1>
-      <p>Investor portal</p>
+      <p id="login-subtitle">Investor portal</p>
     </div>
     <div class="field">
-      <label for="pw">Access password</label>
+      <label id="login-pw-label" for="pw">Access password</label>
       <input type="password" id="pw" placeholder="Enter your password" />
     </div>
-    <button class="login-btn" onclick="tryLogin()">Sign in</button>
+    <button class="login-btn" onclick="tryLogin()" id="login-btn-text">Sign in</button>
     <p class="login-error" id="login-error">Incorrect password. Please try again.</p>
   </div>
 </div>
@@ -186,8 +201,12 @@
       <h2>Montoya Family Fund</h2>
     </div>
     <div class="top-bar-right">
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="app-lang-en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" id="app-lang-es" onclick="setLang('es')">ES</button>
+      </div>
       <span class="investor-badge" id="investor-badge">—</span>
-      <button class="logout-btn" onclick="logout()"><i class="ti ti-logout" style="font-size:13px;vertical-align:-2px;margin-right:4px;"></i>Sign out</button>
+      <button class="logout-btn" onclick="logout()"><i class="ti ti-logout" style="font-size:13px;vertical-align:-2px;margin-right:4px;"></i><span id="logout-label">Sign out</span></button>
     </div>
   </div>
 
@@ -195,62 +214,62 @@
   <div id="admin-panel">
     <div class="admin-header">
       <i class="ti ti-settings" style="font-size:15px;color:var(--amber-text);"></i>
-      <span>Admin — data editor</span>
+      <span id="admin-header-label">Admin — data editor</span>
     </div>
     <div class="admin-body">
       <div class="tabs" id="admin-tabs" style="margin-bottom:1.25rem;">
-        <button class="tab-btn active" onclick="switchAdminTab('import', this)">Import IB file</button>
-        <button class="tab-btn" onclick="switchAdminTab('position', this)">Update position</button>
-        <button class="tab-btn" onclick="switchAdminTab('transaction', this)">Log transaction</button>
-        <button class="tab-btn" onclick="switchAdminTab('performance', this)">Performance data</button>
+        <button class="tab-btn active" onclick="switchAdminTab('import', this)" id="atab-import">Import IB file</button>
+        <button class="tab-btn" onclick="switchAdminTab('position', this)" id="atab-position">Update position</button>
+        <button class="tab-btn" onclick="switchAdminTab('transaction', this)" id="atab-transaction">Log transaction</button>
+        <button class="tab-btn" onclick="switchAdminTab('performance', this)" id="atab-performance">Performance data</button>
       </div>
 
       <!-- IB Import -->
       <div id="admin-import" class="admin-form">
-        <p style="font-size:13px;color:var(--text2);">Upload your Interactive Brokers Activity Statement CSV to automatically update positions, transactions, and fallback prices.</p>
+        <p id="ib-intro-text" style="font-size:13px;color:var(--text2);">Upload your Interactive Brokers Activity Statement CSV to automatically update positions, transactions, and fallback prices.</p>
         <div id="ib-drop-zone" style="border:1.5px dashed var(--border2);border-radius:var(--radius);padding:2rem;text-align:center;cursor:pointer;transition:background 0.15s;" onclick="document.getElementById('ib-file-input').click()" ondragover="event.preventDefault();this.style.background='var(--blue-bg)'" ondragleave="this.style.background=''" ondrop="handleIBDrop(event)">
           <i class="ti ti-file-upload" style="font-size:28px;color:var(--text3);display:block;margin-bottom:0.5rem;"></i>
-          <p style="font-size:13px;color:var(--text2);margin-bottom:4px;">Drop your IB CSV here or click to browse</p>
-          <p style="font-size:11px;color:var(--text3);">Activity Statement export from Interactive Brokers</p>
+          <p id="ib-drop-main" style="font-size:13px;color:var(--text2);margin-bottom:4px;">Drop your IB CSV here or click to browse</p>
+          <p id="ib-drop-sub" style="font-size:11px;color:var(--text3);">Activity Statement export from Interactive Brokers</p>
         </div>
         <input type="file" id="ib-file-input" accept=".csv" style="display:none;" onchange="handleIBFile(this.files[0])" />
         <div id="ib-import-status" style="display:none;font-size:13px;border-radius:var(--radius);padding:0.75rem 1rem;margin-top:0.25rem;"></div>
         <div id="ib-import-preview" style="display:none;">
-          <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Preview — data to be imported</p>
+          <p id="ib-preview-label" style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Preview — data to be imported</p>
           <div id="ib-preview-content" style="font-size:12px;color:var(--text2);background:var(--bg2);border-radius:var(--radius);padding:0.75rem 1rem;line-height:1.8;"></div>
-          <button class="save-btn" style="margin-top:0.75rem;" onclick="commitIBImport()">Apply import</button>
+          <button class="save-btn" style="margin-top:0.75rem;" onclick="commitIBImport()" id="ib-apply-btn">Apply import</button>
           <span class="admin-success" id="ib-success" style="margin-left:0.75rem;">&#10003; Data updated</span>
         </div>
       </div>
-      <div id="admin-position" class="admin-form">
+      <div id="admin-position" class="admin-form" style="display:none;">
         <div class="form-row">
-          <div class="form-group"><label>Ticker</label><select id="a-pos-ticker"><option value="VTI">VTI</option><option value="BND">BND</option></select></div>
-          <div class="form-group"><label>Shares held</label><input type="number" id="a-pos-shares" placeholder="e.g. 1009" /></div>
+          <div class="form-group"><label id="lbl-pos-ticker">Ticker</label><select id="a-pos-ticker"><option value="VTI">VTI</option><option value="BND">BND</option></select></div>
+          <div class="form-group"><label id="lbl-pos-shares">Shares held</label><input type="number" id="a-pos-shares" placeholder="e.g. 1009" /></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Avg cost basis ($/sh)</label><input type="number" step="0.01" id="a-pos-cost" placeholder="e.g. 343.77" /></div>
+          <div class="form-group"><label id="lbl-pos-cost">Avg cost basis ($/sh)</label><input type="number" step="0.01" id="a-pos-cost" placeholder="e.g. 343.77" /></div>
         </div>
-        <button class="save-btn" onclick="savePosition()">Save position</button>
+        <button class="save-btn" onclick="savePosition()" id="save-pos-btn">Save position</button>
         <span class="admin-success" id="pos-success">✓ Position updated</span>
       </div>
       <div id="admin-transaction" class="admin-form" style="display:none;">
         <div class="form-row-3">
-          <div class="form-group"><label>Date</label><input type="date" id="a-tx-date" /></div>
-          <div class="form-group"><label>Ticker</label><select id="a-tx-ticker"><option>VTI</option><option>BND</option></select></div>
-          <div class="form-group"><label>Type</label><select id="a-tx-type"><option value="buy">Buy</option><option value="sell">Sell</option><option value="dividend">Dividend</option></select></div>
+          <div class="form-group"><label id="lbl-tx-date">Date</label><input type="date" id="a-tx-date" /></div>
+          <div class="form-group"><label id="lbl-tx-ticker">Ticker</label><select id="a-tx-ticker"><option>VTI</option><option>BND</option></select></div>
+          <div class="form-group"><label id="lbl-tx-type">Type</label><select id="a-tx-type"><option value="buy">Buy</option><option value="sell">Sell</option><option value="dividend">Dividend</option></select></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Shares (blank for dividends)</label><input type="number" id="a-tx-shares" /></div>
-          <div class="form-group"><label>Price per share ($)</label><input type="number" step="0.0001" id="a-tx-price" /></div>
+          <div class="form-group"><label id="lbl-tx-shares">Shares (blank for dividends)</label><input type="number" id="a-tx-shares" /></div>
+          <div class="form-group"><label id="lbl-tx-price">Price per share ($)</label><input type="number" step="0.0001" id="a-tx-price" /></div>
         </div>
-        <div class="form-group"><label>Notes</label><input type="text" id="a-tx-notes" /></div>
-        <button class="save-btn" onclick="saveTx()">Log transaction</button>
+        <div class="form-group"><label id="lbl-tx-notes">Notes</label><input type="text" id="a-tx-notes" /></div>
+        <button class="save-btn" onclick="saveTx()" id="save-tx-btn">Log transaction</button>
         <span class="admin-success" id="tx-success">✓ Transaction logged</span>
       </div>
       <div id="admin-performance" class="admin-form" style="display:none;">
-        <p style="font-size:13px;color:var(--text2);margin-bottom:0.5rem;">Edit portfolio value history as JSON: <code style="font-size:11px;background:var(--bg2);padding:2px 5px;border-radius:4px;">{"labels":[...],"values":[...]}</code></p>
-        <div class="form-group"><label>Performance JSON</label><textarea id="a-perf-json" rows="5" style="padding:8px 10px;font-size:12px;font-family:monospace;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);color:var(--text);outline:none;width:100%;resize:vertical;"></textarea></div>
-        <button class="save-btn" onclick="savePerf()">Save & refresh chart</button>
+        <p id="perf-intro-text" style="font-size:13px;color:var(--text2);margin-bottom:0.5rem;">Edit portfolio value history as JSON: <code style="font-size:11px;background:var(--bg2);padding:2px 5px;border-radius:4px;">{"labels":[...],"values":[...]}</code></p>
+        <div class="form-group"><label id="lbl-perf-json">Performance JSON</label><textarea id="a-perf-json" rows="5" style="padding:8px 10px;font-size:12px;font-family:monospace;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);color:var(--text);outline:none;width:100%;resize:vertical;"></textarea></div>
+        <button class="save-btn" onclick="savePerf()" id="save-perf-btn">Save & refresh chart</button>
         <span class="admin-success" id="perf-success">✓ Chart updated</span>
       </div>
     </div>
@@ -259,16 +278,16 @@
   <!-- Overview metrics -->
   <div class="section">
     <div class="section-header">
-      <p class="section-label" style="margin-bottom:0;">Portfolio overview</p>
-      <div class="price-refresh" id="price-status"><i class="ti ti-refresh spin"></i> Fetching live prices…</div>
+      <p class="section-label" style="margin-bottom:0;" id="lbl-overview">Portfolio overview</p>
+      <div class="price-refresh" id="price-status"><i class="ti ti-refresh spin"></i> <span id="price-status-text">Fetching live prices…</span></div>
     </div>
     <div class="metrics-grid" id="metrics-grid">
-      <div class="metric-card"><div class="metric-label">Portfolio value</div><div class="metric-value" style="font-size:16px;color:var(--text3);">Loading…</div></div>
+      <div class="metric-card"><div class="metric-label" id="lbl-loading">Portfolio value</div><div class="metric-value" style="font-size:16px;color:var(--text3);">Loading…</div></div>
     </div>
     <div class="metric-card" id="nav-unit-card" style="margin-top:12px;background:var(--blue-bg);border:0.5px solid var(--border);">
-      <div class="metric-label" style="color:var(--blue-text);">Unit NAV — price per unit</div>
+      <div class="metric-label" style="color:var(--blue-text);" id="nav-unit-label">Unit NAV — price per unit</div>
       <div class="metric-value" id="nav-unit-value" style="color:var(--blue);">—</div>
-      <div class="metric-sub" style="color:var(--blue-text);opacity:0.8;">494,078 units outstanding · inception $1,000.00</div>
+      <div class="metric-sub" style="color:var(--blue-text);opacity:0.8;" id="nav-unit-sub">494,078 units outstanding · inception $1,000.00</div>
     </div>
   </div>
 
@@ -276,7 +295,7 @@
   <div class="section">
     <div class="chart-card">
       <div class="chart-header">
-        <h3>Portfolio value — historical (IB data)</h3>
+        <h3 id="chart-title">Portfolio value — historical (IB data)</h3>
         <span style="font-size:11px;color:var(--text3);" id="chart-updated"></span>
       </div>
       <div style="position:relative;width:100%;height:220px;">
@@ -287,10 +306,18 @@
 
   <!-- Positions -->
   <div class="section">
-    <p class="section-label">Current positions</p>
+    <p class="section-label" id="lbl-positions">Current positions</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Ticker</th><th>Name</th><th>Shares</th><th>Live price</th><th>Value</th><th>Allocation</th><th>Gain / Loss</th></tr></thead>
+        <thead><tr>
+          <th id="col-ticker">Ticker</th>
+          <th id="col-name">Name</th>
+          <th id="col-shares">Shares</th>
+          <th id="col-price">Live price</th>
+          <th id="col-value">Value</th>
+          <th id="col-alloc">Allocation</th>
+          <th id="col-gl">Gain / Loss</th>
+        </tr></thead>
         <tbody id="pos-body"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:2rem;">Loading…</td></tr></tbody>
       </table>
     </div>
@@ -298,122 +325,433 @@
 
   <!-- Ownership -->
   <div class="section">
-    <p class="section-label">Investor ownership</p>
+    <p class="section-label" id="lbl-ownership">Investor ownership</p>
     <div class="ownership-cards" id="ownership-cards">
       <div class="ownership-card">
         <div class="ownership-card-header">
           <div class="avatar avatar-f">FM</div>
-          <div><div class="ownership-name">Fernando Montoya</div><div class="ownership-pct">67.84% ownership · 335,166 units</div></div>
+          <div><div class="ownership-name">Fernando Montoya</div><div class="ownership-pct" id="fernando-pct">67.84% ownership · 335,166 units</div></div>
         </div>
         <div class="ownership-value pos" id="fernando-value">—</div>
-        <div class="ownership-deposited">Deposited: $339,000</div>
+        <div class="ownership-deposited" id="fernando-deposited">Deposited: $339,000</div>
         <div class="ownership-bar-wrap"><div class="ownership-bar-bg"><div class="ownership-bar-fill-f" style="width:67.84%"></div></div></div>
       </div>
       <div class="ownership-card">
         <div class="ownership-card-header">
           <div class="avatar avatar-d">DM</div>
-          <div><div class="ownership-name">Dario Montoya</div><div class="ownership-pct">32.16% ownership · 158,912 units</div></div>
+          <div><div class="ownership-name">Dario Montoya</div><div class="ownership-pct" id="dario-pct">32.16% ownership · 158,912 units</div></div>
         </div>
         <div class="ownership-value pos" id="dario-value">—</div>
-        <div class="ownership-deposited">Deposited: $161,000</div>
+        <div class="ownership-deposited" id="dario-deposited">Deposited: $161,000</div>
         <div class="ownership-bar-wrap"><div class="ownership-bar-bg"><div class="ownership-bar-fill-d" style="width:32.16%"></div></div></div>
       </div>
     </div>
 
     <!-- Deposits table -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.85rem;">
+      <select id="dep-filter-month" onchange="filterDeposits()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
+        <option value="" id="dep-all-months">All months</option>
+        <option>01 — Jan</option><option>02 — Feb</option><option>03 — Mar</option>
+        <option>04 — Apr</option><option>05 — May</option><option>06 — Jun</option>
+        <option>07 — Jul</option><option>08 — Aug</option><option>09 — Sep</option>
+        <option>10 — Oct</option><option>11 — Nov</option><option>12 — Dec</option>
+      </select>
+      <select id="dep-filter-year" onchange="filterDeposits()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
+        <option value="" id="dep-all-years">All years</option>
+        <option>2025</option><option>2026</option>
+      </select>
+      <button onclick="clearDepFilters()" id="dep-clear-btn" style="padding:5px 12px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:none;color:var(--text3);cursor:pointer;">Clear</button>
+    </div>
     <div class="table-wrap">
       <div class="table-scroll">
         <table class="deposits-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Source</th>
-              <th>NAV at deposit</th>
-              <th>Fernando</th>
-              <th>Dario</th>
+              <th id="dep-col-date">Date</th>
+              <th id="dep-col-amount">Amount</th>
+              <th id="dep-col-source">Source</th>
+              <th id="dep-col-nav">NAV at deposit</th>
+              <th id="dep-col-fernando">Fernando</th>
+              <th id="dep-col-dario">Dario</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Dec 18, 2025</td><td>$1,000</td>
-              <td><span class="source-moneche">Moneche</span></td>
-              <td>$1,000.00</td><td>$650</td><td>$350</td>
-            </tr>
-            <tr>
-              <td>Dec 29, 2025</td><td>$25,000</td>
-              <td><span class="source-moneche">Moneche</span></td>
-              <td>$998.00</td><td>$16,250</td><td>$8,750</td>
-            </tr>
-            <tr>
-              <td>Dec 29, 2025</td><td>$3,000</td>
-              <td><span class="source-moneche">Moneche</span></td>
-              <td>$998.00</td><td>$1,950</td><td>$1,050</td>
-            </tr>
-            <tr>
-              <td>Dec 30, 2025</td><td>$31,000</td>
-              <td><span class="source-moneche">Moneche</span></td>
-              <td>$997.00</td><td>$20,150</td><td>$10,850</td>
-            </tr>
-            <tr>
-              <td>Jan 2, 2026</td><td>$40,000</td>
-              <td><span class="source-fernando">Fernando</span></td>
-              <td>$993.00</td><td>$40,000</td><td>—</td>
-            </tr>
-            <tr>
-              <td>Jan 28, 2026</td><td>$100,000</td>
-              <td><span class="source-moneche">Moneche</span></td>
-              <td>$100,803.00</td><td>$65,000</td><td>$35,000</td>
-            </tr>
-            <tr>
-              <td>Mar 12, 2026</td><td>$100,000</td>
-              <td><span class="source-moneche">Moneche</span></td>
-              <td>$194,121.00</td><td>$65,000</td><td>$35,000</td>
-            </tr>
-            <tr>
-              <td>Apr 27, 2026</td><td>$100,000</td>
-              <td><span class="source-moneche">Moneche</span></td>
-              <td>$311,672.00</td><td>$65,000</td><td>$35,000</td>
-            </tr>
-            <tr>
-              <td>May 11, 2026</td><td>$100,000</td>
-              <td><span class="source-moneche">Moneche</span></td>
-              <td>$420,590.00</td><td>$65,000</td><td>$35,000</td>
-            </tr>
-            <tr class="total-row">
-              <td>Total deposited</td><td>$500,000</td><td></td><td></td><td>$339,000</td><td>$161,000</td>
-            </tr>
+            <tr><td data-date="2025-12-18">Dec 18, 2025</td><td>$1,000</td><td><span class="source-moneche">Moneche</span></td><td>$1,000.00</td><td>$650</td><td>$350</td></tr>
+            <tr><td data-date="2025-12-29">Dec 29, 2025</td><td>$25,000</td><td><span class="source-moneche">Moneche</span></td><td>$998.00</td><td>$16,250</td><td>$8,750</td></tr>
+            <tr><td data-date="2025-12-29">Dec 29, 2025</td><td>$3,000</td><td><span class="source-moneche">Moneche</span></td><td>$998.00</td><td>$1,950</td><td>$1,050</td></tr>
+            <tr><td data-date="2025-12-30">Dec 30, 2025</td><td>$31,000</td><td><span class="source-moneche">Moneche</span></td><td>$997.00</td><td>$20,150</td><td>$10,850</td></tr>
+            <tr><td data-date="2026-01-02">Jan 2, 2026</td><td>$40,000</td><td><span class="source-fernando">Fernando</span></td><td>$993.00</td><td>$40,000</td><td>—</td></tr>
+            <tr><td data-date="2026-01-28">Jan 28, 2026</td><td>$100,000</td><td><span class="source-moneche">Moneche</span></td><td>$100,803.00</td><td>$65,000</td><td>$35,000</td></tr>
+            <tr><td data-date="2026-03-12">Mar 12, 2026</td><td>$100,000</td><td><span class="source-moneche">Moneche</span></td><td>$194,121.00</td><td>$65,000</td><td>$35,000</td></tr>
+            <tr><td data-date="2026-04-27">Apr 27, 2026</td><td>$100,000</td><td><span class="source-moneche">Moneche</span></td><td>$311,672.00</td><td>$65,000</td><td>$35,000</td></tr>
+            <tr><td data-date="2026-05-11">May 11, 2026</td><td>$100,000</td><td><span class="source-moneche">Moneche</span></td><td>$420,590.00</td><td>$65,000</td><td>$35,000</td></tr>
+            <tr class="total-row"><td id="dep-total-label">Total deposited</td><td>$500,000</td><td></td><td></td><td>$339,000</td><td>$161,000</td></tr>
           </tbody>
         </table>
       </div>
     </div>
-    <p class="add-hint" style="margin-top:0.75rem;">Ownership calculated using unit/NAV method · Moneche deposits split 65% Fernando / 35% Dario</p>
+    <p class="add-hint" id="ownership-hint">Ownership calculated using unit/NAV method · Moneche deposits split 65% Fernando / 35% Dario</p>
   </div>
 
   <!-- Transactions -->
   <div class="section">
     <div class="tx-header">
-      <p class="section-label" style="margin-bottom:0;">Transaction history</p>
+      <p class="section-label" style="margin-bottom:0;" id="lbl-transactions">Transaction history</p>
       <div class="tabs" id="tx-tabs">
-        <button class="tab-btn active" onclick="filterTx('all',this)">All</button>
-        <button class="tab-btn" onclick="filterTx('buy',this)">Buys</button>
-        <button class="tab-btn" onclick="filterTx('sell',this)">Sells</button>
-        <button class="tab-btn" onclick="filterTx('dividend',this)">Dividends</button>
+        <button class="tab-btn active" onclick="filterTx('all',this)" id="ttab-all">All</button>
+        <button class="tab-btn" onclick="filterTx('buy',this)" id="ttab-buy">Buys</button>
+        <button class="tab-btn" onclick="filterTx('sell',this)" id="ttab-sell">Sells</button>
+        <button class="tab-btn" onclick="filterTx('dividend',this)" id="ttab-dividend">Dividends</button>
       </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.85rem;">
+      <select id="tx-filter-month" onchange="renderTx()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
+        <option value="" id="tx-all-months">All months</option>
+        <option>01 — Jan</option><option>02 — Feb</option><option>03 — Mar</option>
+        <option>04 — Apr</option><option>05 — May</option><option>06 — Jun</option>
+        <option>07 — Jul</option><option>08 — Aug</option><option>09 — Sep</option>
+        <option>10 — Oct</option><option>11 — Nov</option><option>12 — Dec</option>
+      </select>
+      <select id="tx-filter-year" onchange="renderTx()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
+        <option value="" id="tx-all-years">All years</option>
+        <option>2025</option><option>2026</option>
+      </select>
+      <button onclick="clearTxFilters()" id="tx-clear-btn" style="padding:5px 12px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:none;color:var(--text3);cursor:pointer;">Clear</button>
     </div>
     <div class="table-wrap">
       <div class="table-scroll">
         <table class="tx-table">
-          <thead><tr><th>Date</th><th>Ticker</th><th>Type</th><th>Shares</th><th>Price</th><th>Notes</th></tr></thead>
+          <thead><tr>
+            <th id="tx-col-date">Date</th>
+            <th id="tx-col-ticker">Ticker</th>
+            <th id="tx-col-type">Type</th>
+            <th id="tx-col-shares">Shares</th>
+            <th id="tx-col-price">Price</th>
+            <th id="tx-col-notes">Notes</th>
+          </tr></thead>
           <tbody id="tx-body"></tbody>
         </table>
       </div>
     </div>
-    <p class="add-hint">Transaction data imported from Interactive Brokers · Managed by Pablo</p>
+    <p class="add-hint" id="tx-hint">Transaction data imported from Interactive Brokers · Managed by Pablo</p>
   </div>
 </div>
 
 <script>
+// ── i18n ──
+const TR = {
+  en: {
+    // Login
+    loginSubtitle: "Investor portal",
+    loginPwLabel: "Access password",
+    loginPwPlaceholder: "Enter your password",
+    loginBtn: "Sign in",
+    loginError: "Incorrect password. Please try again.",
+    // Top bar
+    logoutLabel: "Sign out",
+    // Admin
+    adminHeader: "Admin — data editor",
+    atab_import: "Import IB file",
+    atab_position: "Update position",
+    atab_transaction: "Log transaction",
+    atab_performance: "Performance data",
+    ibIntro: "Upload your Interactive Brokers Activity Statement CSV to automatically update positions, transactions, and fallback prices.",
+    ibDropMain: "Drop your IB CSV here or click to browse",
+    ibDropSub: "Activity Statement export from Interactive Brokers",
+    ibPreviewLabel: "Preview — data to be imported",
+    ibApplyBtn: "Apply import",
+    ibSuccess: "✓ Data updated",
+    lbl_pos_ticker: "Ticker",
+    lbl_pos_shares: "Shares held",
+    lbl_pos_cost: "Avg cost basis ($/sh)",
+    savePosBtn: "Save position",
+    posSuccess: "✓ Position updated",
+    lbl_tx_date: "Date",
+    lbl_tx_ticker: "Ticker",
+    lbl_tx_type: "Type",
+    lbl_tx_shares: "Shares (blank for dividends)",
+    lbl_tx_price: "Price per share ($)",
+    lbl_tx_notes: "Notes",
+    saveTxBtn: "Log transaction",
+    txSuccess: "✓ Transaction logged",
+    perfIntro: "Edit portfolio value history as JSON:",
+    lbl_perf_json: "Performance JSON",
+    savePerfBtn: "Save & refresh chart",
+    perfSuccess: "✓ Chart updated",
+    // Overview
+    lbl_overview: "Portfolio overview",
+    priceLoading: "Fetching live prices…",
+    priceFailed: "Live prices unavailable — showing IB close prices (Jun 5, 2026)",
+    priceOk: "Live prices as of",
+    nav_unit_label: "Unit NAV — price per unit",
+    nav_unit_sub: "494,078 units outstanding · inception $1,000.00",
+    // Chart
+    chartTitle: "Portfolio value — historical (IB data)",
+    chartUpdatedPrefix: "IB data · ",
+    // Positions section
+    lbl_positions: "Current positions",
+    col_ticker: "Ticker", col_name: "Name", col_shares: "Shares",
+    col_price: "Live price", col_value: "Value", col_alloc: "Allocation", col_gl: "Gain / Loss",
+    // Metrics cards
+    metric_portValue: "Portfolio value",
+    metric_totalGL: "Total gain / loss",
+    metric_deposited: "Total deposited",
+    metric_inception: "Since inception",
+    metric_allTime: "all-time",
+    // Ownership
+    lbl_ownership: "Investor ownership",
+    fernando_pct: "67.84% ownership · 335,166 units",
+    fernando_deposited: "Deposited: $339,000",
+    dario_pct: "32.16% ownership · 158,912 units",
+    dario_deposited: "Deposited: $161,000",
+    dep_all_months: "All months",
+    dep_all_years: "All years",
+    clearBtn: "Clear",
+    dep_col_date: "Date", dep_col_amount: "Amount", dep_col_source: "Source",
+    dep_col_nav: "NAV at deposit", dep_col_fernando: "Fernando", dep_col_dario: "Dario",
+    dep_total_label: "Total deposited",
+    ownership_hint: "Ownership calculated using unit/NAV method · Moneche deposits split 65% Fernando / 35% Dario",
+    // Transactions
+    lbl_transactions: "Transaction history",
+    ttab_all: "All", ttab_buy: "Buys", ttab_sell: "Sells", ttab_dividend: "Dividends",
+    tx_all_months: "All months", tx_all_years: "All years",
+    tx_col_date: "Date", tx_col_ticker: "Ticker", tx_col_type: "Type",
+    tx_col_shares: "Shares", tx_col_price: "Price", tx_col_notes: "Notes",
+    tx_hint: "Transaction data imported from Interactive Brokers · Managed by Pablo",
+    tx_empty: "No transactions for selected period.",
+    // Tx types
+    type_buy: "Buy", type_sell: "Sell", type_dividend: "Dividend",
+    // Admin alerts
+    alert_pos_fill: "Please fill in shares and cost basis.",
+    alert_tx_required: "Date and price are required.",
+    alert_perf_invalid: "Invalid JSON. Check the format.",
+  },
+  es: {
+    loginSubtitle: "Portal del inversor",
+    loginPwLabel: "Contraseña de acceso",
+    loginPwPlaceholder: "Ingrese su contraseña",
+    loginBtn: "Ingresar",
+    loginError: "Contraseña incorrecta. Por favor intente de nuevo.",
+    logoutLabel: "Cerrar sesión",
+    adminHeader: "Admin — editor de datos",
+    atab_import: "Importar archivo IB",
+    atab_position: "Actualizar posición",
+    atab_transaction: "Registrar transacción",
+    atab_performance: "Datos de rendimiento",
+    ibIntro: "Suba su CSV de Estado de Actividad de Interactive Brokers para actualizar automáticamente posiciones, transacciones y precios.",
+    ibDropMain: "Suelte su CSV de IB aquí o haga clic para buscar",
+    ibDropSub: "Exportación de Estado de Actividad de Interactive Brokers",
+    ibPreviewLabel: "Vista previa — datos a importar",
+    ibApplyBtn: "Aplicar importación",
+    ibSuccess: "✓ Datos actualizados",
+    lbl_pos_ticker: "Ticker",
+    lbl_pos_shares: "Acciones en cartera",
+    lbl_pos_cost: "Costo promedio ($/acc.)",
+    savePosBtn: "Guardar posición",
+    posSuccess: "✓ Posición actualizada",
+    lbl_tx_date: "Fecha",
+    lbl_tx_ticker: "Ticker",
+    lbl_tx_type: "Tipo",
+    lbl_tx_shares: "Acciones (vacío para dividendos)",
+    lbl_tx_price: "Precio por acción ($)",
+    lbl_tx_notes: "Notas",
+    saveTxBtn: "Registrar transacción",
+    txSuccess: "✓ Transacción registrada",
+    perfIntro: "Edite el historial de valor del portafolio en JSON:",
+    lbl_perf_json: "JSON de rendimiento",
+    savePerfBtn: "Guardar y actualizar gráfico",
+    perfSuccess: "✓ Gráfico actualizado",
+    lbl_overview: "Resumen del portafolio",
+    priceLoading: "Obteniendo precios en vivo…",
+    priceFailed: "Precios en vivo no disponibles — mostrando precios de cierre IB (5 jun. 2026)",
+    priceOk: "Precios en vivo al",
+    nav_unit_label: "NAV por unidad — precio por unidad",
+    nav_unit_sub: "494.078 unidades en circulación · inicio $1.000,00",
+    chartTitle: "Valor del portafolio — histórico (datos IB)",
+    chartUpdatedPrefix: "Datos IB · ",
+    lbl_positions: "Posiciones actuales",
+    col_ticker: "Ticker", col_name: "Nombre", col_shares: "Acciones",
+    col_price: "Precio en vivo", col_value: "Valor", col_alloc: "Asignación", col_gl: "Ganancia / Pérdida",
+    metric_portValue: "Valor del portafolio",
+    metric_totalGL: "Ganancia / pérdida total",
+    metric_deposited: "Total depositado",
+    metric_inception: "Desde el inicio",
+    metric_allTime: "histórico",
+    lbl_ownership: "Participación de inversores",
+    fernando_pct: "67,84% participación · 335.166 unidades",
+    fernando_deposited: "Depositado: $339.000",
+    dario_pct: "32,16% participación · 158.912 unidades",
+    dario_deposited: "Depositado: $161.000",
+    dep_all_months: "Todos los meses",
+    dep_all_years: "Todos los años",
+    clearBtn: "Limpiar",
+    dep_col_date: "Fecha", dep_col_amount: "Monto", dep_col_source: "Fuente",
+    dep_col_nav: "NAV al depositar", dep_col_fernando: "Fernando", dep_col_dario: "Dario",
+    dep_total_label: "Total depositado",
+    ownership_hint: "Participación calculada usando el método unidad/NAV · Depósitos Moneche divididos 65% Fernando / 35% Dario",
+    lbl_transactions: "Historial de transacciones",
+    ttab_all: "Todas", ttab_buy: "Compras", ttab_sell: "Ventas", ttab_dividend: "Dividendos",
+    tx_all_months: "Todos los meses", tx_all_years: "Todos los años",
+    tx_col_date: "Fecha", tx_col_ticker: "Ticker", tx_col_type: "Tipo",
+    tx_col_shares: "Acciones", tx_col_price: "Precio", tx_col_notes: "Notas",
+    tx_hint: "Transacciones importadas desde Interactive Brokers · Administrado por Pablo",
+    tx_empty: "No hay transacciones para el período seleccionado.",
+    type_buy: "Compra", type_sell: "Venta", type_dividend: "Dividendo",
+    alert_pos_fill: "Por favor complete las acciones y el costo base.",
+    alert_tx_required: "La fecha y el precio son obligatorios.",
+    alert_perf_invalid: "JSON inválido. Revise el formato.",
+  }
+};
+
+let currentLang = "en";
+
+function t(k) { return TR[currentLang][k] || TR["en"][k] || k; }
+
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  // Sync all toggle buttons
+  ["login-lang-en","login-lang-es","app-lang-en","app-lang-es"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("active", id.endsWith(lang));
+  });
+  // Static elements by ID → key
+  const map = {
+    "login-subtitle": "loginSubtitle",
+    "login-pw-label": "loginPwLabel",
+    "login-btn-text": "loginBtn",
+    "login-error": "loginError",
+    "logout-label": "logoutLabel",
+    "admin-header-label": "adminHeader",
+    "atab-import": "atab_import",
+    "atab-position": "atab_position",
+    "atab-transaction": "atab_transaction",
+    "atab-performance": "atab_performance",
+    "ib-intro-text": "ibIntro",
+    "ib-drop-main": "ibDropMain",
+    "ib-drop-sub": "ibDropSub",
+    "ib-preview-label": "ibPreviewLabel",
+    "ib-apply-btn": "ibApplyBtn",
+    "ib-success": "ibSuccess",
+    "lbl-pos-ticker": "lbl_pos_ticker",
+    "lbl-pos-shares": "lbl_pos_shares",
+    "lbl-pos-cost": "lbl_pos_cost",
+    "save-pos-btn": "savePosBtn",
+    "pos-success": "posSuccess",
+    "lbl-tx-date": "lbl_tx_date",
+    "lbl-tx-ticker": "lbl_tx_ticker",
+    "lbl-tx-type": "lbl_tx_type",
+    "lbl-tx-shares": "lbl_tx_shares",
+    "lbl-tx-price": "lbl_tx_price",
+    "lbl-tx-notes": "lbl_tx_notes",
+    "save-tx-btn": "saveTxBtn",
+    "tx-success": "txSuccess",
+    "perf-intro-text": "perfIntro",
+    "lbl-perf-json": "lbl_perf_json",
+    "save-perf-btn": "savePerfBtn",
+    "perf-success": "perfSuccess",
+    "lbl-overview": "lbl_overview",
+    "nav-unit-label": "nav_unit_label",
+    "nav-unit-sub": "nav_unit_sub",
+    "chart-title": "chartTitle",
+    "lbl-positions": "lbl_positions",
+    "col-ticker": "col_ticker",
+    "col-name": "col_name",
+    "col-shares": "col_shares",
+    "col-price": "col_price",
+    "col-value": "col_value",
+    "col-alloc": "col_alloc",
+    "col-gl": "col_gl",
+    "lbl-ownership": "lbl_ownership",
+    "fernando-pct": "fernando_pct",
+    "fernando-deposited": "fernando_deposited",
+    "dario-pct": "dario_pct",
+    "dario-deposited": "dario_deposited",
+    "dep-all-months": "dep_all_months",
+    "dep-all-years": "dep_all_years",
+    "dep-clear-btn": "clearBtn",
+    "dep-col-date": "dep_col_date",
+    "dep-col-amount": "dep_col_amount",
+    "dep-col-source": "dep_col_source",
+    "dep-col-nav": "dep_col_nav",
+    "dep-col-fernando": "dep_col_fernando",
+    "dep-col-dario": "dep_col_dario",
+    "dep-total-label": "dep_total_label",
+    "ownership-hint": "ownership_hint",
+    "lbl-transactions": "lbl_transactions",
+    "ttab-all": "ttab_all",
+    "ttab-buy": "ttab_buy",
+    "ttab-sell": "ttab_sell",
+    "ttab-dividend": "ttab_dividend",
+    "tx-all-months": "tx_all_months",
+    "tx-all-years": "tx_all_years",
+    "tx-clear-btn": "clearBtn",
+    "tx-col-date": "tx_col_date",
+    "tx-col-ticker": "tx_col_ticker",
+    "tx-col-type": "tx_col_type",
+    "tx-col-shares": "tx_col_shares",
+    "tx-col-price": "tx_col_price",
+    "tx-col-notes": "tx_col_notes",
+    "tx-hint": "tx_hint",
+  };
+  for (const [id, key] of Object.entries(map)) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t(key);
+  }
+  // Password placeholder
+  const pwEl = document.getElementById("pw");
+  if (pwEl) pwEl.placeholder = t("loginPwPlaceholder");
+  // Re-render dynamic sections if logged in
+  if (currentUser) {
+    renderMetrics();
+    renderTx();
+    _updateChartLabel();
+    // Re-render price status with current state
+    _applyPriceStatus();
+  }
+}
+
+function _applyPriceStatus() {
+  const status = document.getElementById("price-status");
+  if (!_priceStatusState) return;
+  if (_priceStatusState === "loading") {
+    status.innerHTML = `<i class="ti ti-refresh spin"></i> ${t("priceLoading")}`;
+  } else if (_priceStatusState === "failed") {
+    status.innerHTML = `<i class="ti ti-alert-circle" style="color:var(--amber-text);"></i> ${t("priceFailed")}`;
+  } else if (_priceStatusState === "ok") {
+    status.innerHTML = `<i class="ti ti-circle-check" style="color:var(--green);"></i> ${t("priceOk")} ${_priceStatusTime}`;
+  }
+}
+
+function _updateChartLabel() {
+  const el = document.getElementById("chart-updated");
+  if (el) {
+    const locale = currentLang === "es" ? "es-ES" : "en-US";
+    el.textContent = t("chartUpdatedPrefix") + new Date().toLocaleDateString(locale, {month:"short",year:"numeric"});
+  }
+}
+
+// ── DEPOSITS FILTER ──
+function filterDeposits() {
+  const selMonth = (document.getElementById("dep-filter-month").value || "").substring(0,2);
+  const selYear  = document.getElementById("dep-filter-year").value || "";
+  const rows = document.querySelectorAll(".deposits-table tbody tr:not(.total-row)");
+  rows.forEach(row => {
+    const dateCell = row.querySelector("td[data-date]");
+    if (!dateCell) return;
+    const d = dateCell.getAttribute("data-date");
+    const monthMatch = !selMonth || d.substring(5,7) === selMonth;
+    const yearMatch  = !selYear  || d.startsWith(selYear);
+    row.style.display = (monthMatch && yearMatch) ? "" : "none";
+  });
+}
+function clearDepFilters() {
+  document.getElementById("dep-filter-month").value = "";
+  document.getElementById("dep-filter-year").value = "";
+  filterDeposits();
+}
+
+// ── DATA ──
 const USERS = {
   "dario2024":   { name:"Dario Montoya",   admin:false },
   "fernando2024":{ name:"Fernando Montoya",admin:false },
@@ -472,10 +810,11 @@ const DEFAULT_PERF = {
   values: [990.21, 100241.73, 199792.02, 289795.23, 312557.02, 530838.62, 520790.13]
 };
 
-// Ownership constants from unit/NAV method
 const FERNANDO_UNITS = 335166;
 const DARIO_UNITS    = 158912;
 const TOTAL_UNITS    = FERNANDO_UNITS + DARIO_UNITS;
+const TOTAL_UNITS_OUTSTANDING = 494078;
+const INCEPTION_NAV = 1000.00;
 
 function load(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } }
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
@@ -487,6 +826,8 @@ let livePrice    = {};
 let txFilter     = "all";
 let currentUser  = null;
 let perfChart    = null;
+let _priceStatusState = null;
+let _priceStatusTime  = null;
 
 const fmt    = n => n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2});
 const fmtPct = n => (n>=0?"+":"")+n.toFixed(2)+"%";
@@ -510,7 +851,7 @@ function tryLogin() {
 document.getElementById("pw").addEventListener("keydown", e => { if(e.key==="Enter") tryLogin(); });
 
 function logout() {
-  currentUser = null; livePrice = {};
+  currentUser = null; livePrice = {}; _priceStatusState = null;
   document.getElementById("login-screen").style.display = "flex";
   document.getElementById("app").style.display = "none";
   document.getElementById("admin-panel").style.display = "none";
@@ -520,67 +861,46 @@ function logout() {
 }
 
 async function fetchSinglePrice(ticker) {
-  // Try multiple endpoints — Yahoo frequently blocks direct browser requests
   const endpoints = [
-    // Endpoint 1: allorigins proxy → query2
     async () => {
       const inner = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
       const url = `https://api.allorigins.win/get?url=${encodeURIComponent(inner)}`;
-      const r = await fetch(url);
-      const d = await r.json();
-      const parsed = JSON.parse(d.contents);
-      return parsed.chart.result[0].meta.regularMarketPrice;
+      const r = await fetch(url); const d = await r.json();
+      return JSON.parse(d.contents).chart.result[0].meta.regularMarketPrice;
     },
-    // Endpoint 2: allorigins proxy → query1
     async () => {
       const inner = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
       const url = `https://api.allorigins.win/get?url=${encodeURIComponent(inner)}`;
-      const r = await fetch(url);
-      const d = await r.json();
-      const parsed = JSON.parse(d.contents);
-      return parsed.chart.result[0].meta.regularMarketPrice;
+      const r = await fetch(url); const d = await r.json();
+      return JSON.parse(d.contents).chart.result[0].meta.regularMarketPrice;
     },
-    // Endpoint 3: direct query2 (works in some browsers/networks)
     async () => {
       const r = await fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
-      const d = await r.json();
-      return d.chart.result[0].meta.regularMarketPrice;
+      return (await r.json()).chart.result[0].meta.regularMarketPrice;
     },
-    // Endpoint 4: direct query1
     async () => {
       const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
-      const d = await r.json();
-      return d.chart.result[0].meta.regularMarketPrice;
+      return (await r.json()).chart.result[0].meta.regularMarketPrice;
     }
   ];
   for (const fn of endpoints) {
-    try {
-      const price = await fn();
-      if (price && price > 0) return price;
-    } catch(e) { continue; }
+    try { const p = await fn(); if (p && p > 0) return p; } catch(e) { continue; }
   }
   return null;
 }
 
 async function fetchPrices() {
-  const status = document.getElementById("price-status");
-  status.innerHTML = '<i class="ti ti-refresh spin"></i> Fetching live prices…';
+  _priceStatusState = "loading";
+  _applyPriceStatus();
   let anyFailed = false;
   for (const p of positions) {
     const price = await fetchSinglePrice(p.ticker);
-    if (price) {
-      livePrice[p.ticker] = price;
-    } else {
-      livePrice[p.ticker] = p.ibClose || p.costBasis;
-      anyFailed = true;
-    }
+    if (price) { livePrice[p.ticker] = price; }
+    else { livePrice[p.ticker] = p.ibClose || p.costBasis; anyFailed = true; }
   }
-  const now = new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
-  if (anyFailed) {
-    status.innerHTML = '<i class="ti ti-alert-circle" style="color:var(--amber-text);"></i> Live prices unavailable — showing IB close prices (Jun 5, 2026)';
-  } else {
-    status.innerHTML = `<i class="ti ti-circle-check" style="color:var(--green);"></i> Live prices as of ${now}`;
-  }
+  _priceStatusTime = new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+  _priceStatusState = anyFailed ? "failed" : "ok";
+  _applyPriceStatus();
   renderPositions();
   renderMetrics();
   renderOwnership();
@@ -590,9 +910,6 @@ function getTotalValue() {
   return positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||p.costBasis), 0);
 }
 
-const TOTAL_UNITS_OUTSTANDING = 494078;
-const INCEPTION_NAV = 1000.00;
-
 function renderMetrics() {
   const totalValue = getTotalValue();
   const totalCost  = positions.reduce((s,p) => s + p.shares*(p.ibClose||p.costBasis), 0);
@@ -601,22 +918,20 @@ function renderMetrics() {
   const navPerUnit = totalValue / TOTAL_UNITS_OUTSTANDING;
   const navChange = ((navPerUnit - INCEPTION_NAV) / INCEPTION_NAV) * 100;
   document.getElementById("metrics-grid").innerHTML = `
-    <div class="metric-card"><div class="metric-label">Portfolio value</div><div class="metric-value">${fmt(totalValue)}</div></div>
-    <div class="metric-card"><div class="metric-label">Total gain / loss</div><div class="metric-value ${gl>=0?'pos':'neg'}">${fmt(gl)}</div><div class="metric-sub ${gl>=0?'pos':'neg'}">${fmtPct(glPct)} all-time</div></div>
-    <div class="metric-card"><div class="metric-label">Total deposited</div><div class="metric-value">$500,000</div></div>
-    <div class="metric-card"><div class="metric-label">Since inception</div><div class="metric-value" style="font-size:16px;">Dec 2025</div></div>
+    <div class="metric-card"><div class="metric-label">${t("metric_portValue")}</div><div class="metric-value">${fmt(totalValue)}</div></div>
+    <div class="metric-card"><div class="metric-label">${t("metric_totalGL")}</div><div class="metric-value ${gl>=0?'pos':'neg'}">${fmt(gl)}</div><div class="metric-sub ${gl>=0?'pos':'neg'}">${fmtPct(glPct)} ${t("metric_allTime")}</div></div>
+    <div class="metric-card"><div class="metric-label">${t("metric_deposited")}</div><div class="metric-value">$500,000</div></div>
+    <div class="metric-card"><div class="metric-label">${t("metric_inception")}</div><div class="metric-value" style="font-size:16px;">Dec 2025</div></div>
   `;
   document.getElementById("nav-unit-value").textContent = fmt(navPerUnit);
   const subEl = document.querySelector("#nav-unit-card .metric-sub");
-  if (subEl) subEl.innerHTML = `494,078 units outstanding &nbsp;·&nbsp; inception $1,000.00 &nbsp;·&nbsp; <span class="${navChange>=0?'pos':'neg'}">${fmtPct(navChange)} since inception</span>`;
+  if (subEl) subEl.innerHTML = `${t("nav_unit_sub")} &nbsp;·&nbsp; <span class="${navChange>=0?'pos':'neg'}">${fmtPct(navChange)} ${currentLang==="es"?"desde el inicio":"since inception"}</span>`;
 }
 
 function renderOwnership() {
   const totalValue = getTotalValue();
-  const fernandoValue = totalValue * (FERNANDO_UNITS / TOTAL_UNITS);
-  const darioValue    = totalValue * (DARIO_UNITS    / TOTAL_UNITS);
-  document.getElementById("fernando-value").textContent = fmt(fernandoValue);
-  document.getElementById("dario-value").textContent    = fmt(darioValue);
+  document.getElementById("fernando-value").textContent = fmt(totalValue * (FERNANDO_UNITS / TOTAL_UNITS));
+  document.getElementById("dario-value").textContent    = fmt(totalValue * (DARIO_UNITS    / TOTAL_UNITS));
 }
 
 function renderPositions() {
@@ -645,22 +960,35 @@ function filterTx(type, btn) {
   btn.classList.add("active");
   renderTx();
 }
+function clearTxFilters() {
+  document.getElementById("tx-filter-month").value = "";
+  document.getElementById("tx-filter-year").value = "";
+  renderTx();
+}
 function renderTx() {
-  const filtered = txFilter==="all" ? transactions : transactions.filter(t=>t.type===txFilter);
-  document.getElementById("tx-body").innerHTML = filtered.map(t => {
-    const badgeCls  = t.type==="buy"?"type-buy":t.type==="sell"?"type-sell":"type-div";
-    const typeLabel = t.type==="dividend"?"Dividend":t.type.charAt(0).toUpperCase()+t.type.slice(1);
-    const sharesStr = t.shares!=null ? Number(t.shares).toLocaleString() : "—";
-    const priceStr  = t.type==="dividend" ? fmt(t.price)+"/sh" : fmt(t.price);
+  const monthSel = document.getElementById("tx-filter-month");
+  const yearSel  = document.getElementById("tx-filter-year");
+  const selMonth = monthSel ? monthSel.value.substring(0,2) : "";
+  const selYear  = yearSel  ? yearSel.value : "";
+
+  let filtered = txFilter==="all" ? transactions : transactions.filter(tx=>tx.type===txFilter);
+  if (selMonth) filtered = filtered.filter(tx => tx.date.substring(5,7) === selMonth);
+  if (selYear)  filtered = filtered.filter(tx => tx.date.startsWith(selYear));
+
+  document.getElementById("tx-body").innerHTML = filtered.map(tx => {
+    const badgeCls  = tx.type==="buy"?"type-buy":tx.type==="sell"?"type-sell":"type-div";
+    const typeLabel = tx.type==="dividend" ? t("type_dividend") : tx.type==="buy" ? t("type_buy") : t("type_sell");
+    const sharesStr = tx.shares!=null ? Number(tx.shares).toLocaleString() : "—";
+    const priceStr  = tx.type==="dividend" ? fmt(tx.price)+"/sh" : fmt(tx.price);
     return `<tr>
-      <td>${t.date}</td>
-      <td><span class="ticker">${t.ticker}</span></td>
+      <td>${tx.date}</td>
+      <td><span class="ticker">${tx.ticker}</span></td>
       <td><span class="type-badge ${badgeCls}">${typeLabel}</span></td>
       <td>${sharesStr}</td>
       <td>${priceStr}</td>
-      <td style="color:var(--text2);">${t.notes||""}</td>
+      <td style="color:var(--text2);">${tx.notes||""}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:1.5rem;">No transactions found.</td></tr>`;
+  }).join("") || `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:1.5rem;">${t("tx_empty")}</td></tr>`;
 }
 
 function renderChart() {
@@ -681,12 +1009,11 @@ function renderChart() {
       }
     }
   });
-  document.getElementById("chart-updated").textContent = "IB data · "+new Date().toLocaleDateString("en-US",{month:"short",year:"numeric"});
+  _updateChartLabel();
 }
 
 function populateAdminFields() {
   document.getElementById("a-perf-json").value = JSON.stringify(perfData, null, 2);
-  // Show import tab by default
   ["import","position","transaction","performance"].forEach(p => {
     const el = document.getElementById("admin-"+p);
     if (el) el.style.display = p === "import" ? "flex" : "none";
@@ -696,7 +1023,7 @@ function savePosition() {
   const ticker=document.getElementById("a-pos-ticker").value;
   const shares=parseFloat(document.getElementById("a-pos-shares").value);
   const cost=parseFloat(document.getElementById("a-pos-cost").value);
-  if(isNaN(shares)||isNaN(cost)) return alert("Please fill in shares and cost basis.");
+  if(isNaN(shares)||isNaN(cost)) return alert(t("alert_pos_fill"));
   const idx=positions.findIndex(p=>p.ticker===ticker);
   if(idx>=0){positions[idx].shares=shares;positions[idx].costBasis=cost;}
   save("mff_positions",positions);
@@ -711,7 +1038,7 @@ function saveTx() {
   const shares=sharesVal?parseFloat(sharesVal):null;
   const price=parseFloat(document.getElementById("a-tx-price").value);
   const notes=document.getElementById("a-tx-notes").value;
-  if(!date||isNaN(price)) return alert("Date and price are required.");
+  if(!date||isNaN(price)) return alert(t("alert_tx_required"));
   transactions.unshift({date,ticker,type,shares,price,notes});
   save("mff_transactions",transactions);renderTx();
   const el=document.getElementById("tx-success");el.style.display="inline";setTimeout(()=>el.style.display="none",2500);
@@ -722,7 +1049,7 @@ function savePerf() {
     if(!parsed.labels||!parsed.values) throw new Error();
     perfData=parsed;save("mff_perf",perfData);renderChart();
     const el=document.getElementById("perf-success");el.style.display="inline";setTimeout(()=>el.style.display="none",2500);
-  } catch { alert("Invalid JSON. Check the format."); }
+  } catch { alert(t("alert_perf_invalid")); }
 }
 function switchAdminTab(panel,btn) {
   ["import","position","transaction","performance"].forEach(p=>document.getElementById("admin-"+p).style.display="none");
@@ -748,95 +1075,56 @@ function handleIBFile(file) {
   showIBStatus("Reading file…", "info");
   const reader = new FileReader();
   reader.onload = e => {
-    try {
-      ibParsed = parseIBCSV(e.target.result);
-      showIBPreview(ibParsed);
-    } catch(err) {
-      showIBStatus("Could not parse file: " + err.message, "error");
-    }
+    try { ibParsed = parseIBCSV(e.target.result); showIBPreview(ibParsed); }
+    catch(err) { showIBStatus("Could not parse file: " + err.message, "error"); }
   };
   reader.readAsText(file);
 }
 
 function parseIBCSV(text) {
   const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-
   function parseRow(line) {
     const result = []; let cur = ""; let inQ = false;
     for (let i = 0; i < line.length; i++) {
       const c = line[i];
-      if (c === '"' ) { inQ = !inQ; }
+      if (c === '"') { inQ = !inQ; }
       else if (c === "," && !inQ) { result.push(cur.trim()); cur = ""; }
       else { cur += c; }
     }
-    result.push(cur.trim());
-    return result;
+    result.push(cur.trim()); return result;
   }
-
   const out = { positions: [], transactions: [], period: "" };
-
-  // Statement period
   for (const line of lines) {
-    if (line.startsWith("Statement,Data,Period")) {
-      const r = parseRow(line);
-      out.period = r[3] || "";
-    }
+    if (line.startsWith("Statement,Data,Period")) { const r = parseRow(line); out.period = r[3] || ""; }
   }
-
-  // Open positions → shares, costBasis, ibClose
   for (const line of lines) {
     if (line.startsWith("Open Positions,Data,Summary,Stocks")) {
       const r = parseRow(line);
-      // Open Positions,Data,Summary,Stocks,USD,SYMBOL,Quantity,Mult,CostPrice,CostBasis,ClosePrice,Value,UnrealizedPL
-      out.positions.push({
-        ticker:    r[5],
-        shares:    parseFloat(r[6]),
-        costBasis: parseFloat(r[8]),
-        ibClose:   parseFloat(r[10])
-      });
+      out.positions.push({ ticker:r[5], shares:parseFloat(r[6]), costBasis:parseFloat(r[8]), ibClose:parseFloat(r[10]) });
     }
   }
-
-  // Trades
   for (const line of lines) {
     if (line.startsWith("Trades,Data,Order,Stocks")) {
       const r = parseRow(line);
-      // Trades,Data,Order,Stocks,USD,Symbol,DateTime,Qty,TPrice,...
       const dt = r[6].split(",")[0].trim();
-      const qty = parseFloat(r[7]);
-      const price = parseFloat(r[8]);
+      const qty = parseFloat(r[7]); const price = parseFloat(r[8]);
       const shares = Math.abs(qty);
-      out.transactions.push({
-        date:   dt,
-        ticker: r[5],
-        type:   qty > 0 ? "buy" : "sell",
-        shares: shares === Math.round(shares) ? Math.round(shares) : Math.round(shares * 10000) / 10000,
-        price:  Math.round(Math.abs(price) * 10000) / 10000,
-        notes:  ""
-      });
+      out.transactions.push({ date:dt, ticker:r[5], type:qty>0?"buy":"sell", shares:shares===Math.round(shares)?Math.round(shares):Math.round(shares*10000)/10000, price:Math.round(Math.abs(price)*10000)/10000, notes:"" });
     }
   }
-
-  // Dividends
   for (const line of lines) {
     if (line.startsWith("Dividends,Data,USD")) {
       const r = parseRow(line);
-      // Dividends,Data,USD,date,description,amount
-      const date = r[2].substring(0, 10);
-      const desc = r[3];
-      const amount = parseFloat(r[4]);
-      if (isNaN(amount) || amount <= 0) continue;
-      const ticker = desc.includes("VTI") ? "VTI" : desc.includes("BND") ? "BND" : null;
+      const date = r[2].substring(0,10); const desc = r[3]; const amount = parseFloat(r[4]);
+      if (isNaN(amount)||amount<=0) continue;
+      const ticker = desc.includes("VTI")?"VTI":desc.includes("BND")?"BND":null;
       if (!ticker) continue;
       const m = desc.match(/USD ([\d.]+) per Share/);
-      const perShare = m ? parseFloat(m[1]) : Math.round(amount * 10000) / 10000;
-      out.transactions.push({ date, ticker, type: "dividend", shares: null, price: perShare, notes: "Cash dividend" });
+      const perShare = m ? parseFloat(m[1]) : Math.round(amount*10000)/10000;
+      out.transactions.push({ date, ticker, type:"dividend", shares:null, price:perShare, notes:"Cash dividend" });
     }
   }
-
-  // Sort newest first
-  out.transactions.sort((a, b) => b.date.localeCompare(a.date));
-
+  out.transactions.sort((a,b) => b.date.localeCompare(a.date));
   if (out.positions.length === 0) throw new Error("No open positions found — is this an IB Activity Statement?");
   return out;
 }
@@ -844,10 +1132,10 @@ function parseIBCSV(text) {
 function showIBStatus(msg, type) {
   const el = document.getElementById("ib-import-status");
   el.style.display = "block";
-  const colors = { info: "var(--blue-bg)", error: "var(--red-bg)", ok: "var(--green-bg)" };
-  const textColors = { info: "var(--blue-text)", error: "var(--red)", ok: "var(--green)" };
-  el.style.background = colors[type] || colors.info;
-  el.style.color = textColors[type] || textColors.info;
+  const colors = { info:"var(--blue-bg)", error:"var(--red-bg)", ok:"var(--green-bg)" };
+  const textColors = { info:"var(--blue-text)", error:"var(--red)", ok:"var(--green)" };
+  el.style.background = colors[type]||colors.info;
+  el.style.color = textColors[type]||textColors.info;
   el.textContent = msg;
 }
 
@@ -856,46 +1144,21 @@ function showIBPreview(parsed) {
   const preview = document.getElementById("ib-import-preview");
   const content = document.getElementById("ib-preview-content");
   preview.style.display = "block";
-  const posLines = parsed.positions.map(p =>
-    `${p.ticker}: ${p.shares.toLocaleString()} shares · cost $${p.costBasis.toFixed(2)} · IB close $${p.ibClose.toFixed(2)}`
-  ).join("<br>");
-  const txCount = parsed.transactions.filter(t => t.type !== "dividend").length;
-  const divCount = parsed.transactions.filter(t => t.type === "dividend").length;
-  content.innerHTML = `
-    <strong>Period:</strong> ${parsed.period}<br>
-    <strong>Positions:</strong> ${parsed.positions.length} — ${posLines}<br>
-    <strong>Transactions:</strong> ${txCount} trades + ${divCount} dividends = ${parsed.transactions.length} total
-  `;
+  const posLines = parsed.positions.map(p => `${p.ticker}: ${p.shares.toLocaleString()} shares · cost $${p.costBasis.toFixed(2)} · IB close $${p.ibClose.toFixed(2)}`).join("<br>");
+  const txCount = parsed.transactions.filter(t=>t.type!=="dividend").length;
+  const divCount = parsed.transactions.filter(t=>t.type==="dividend").length;
+  content.innerHTML = `<strong>Period:</strong> ${parsed.period}<br><strong>Positions:</strong> ${parsed.positions.length} — ${posLines}<br><strong>Transactions:</strong> ${txCount} trades + ${divCount} dividends = ${parsed.transactions.length} total`;
 }
 
 function commitIBImport() {
   if (!ibParsed) return;
-
-  // Update positions (merge with existing name/ibClose)
-  const nameMap = { VTI: "Vanguard Total Stock Market ETF", BND: "Vanguard Total Bond Market ETF" };
-  positions = ibParsed.positions.map(p => ({
-    ticker:    p.ticker,
-    name:      nameMap[p.ticker] || p.ticker,
-    shares:    p.shares,
-    costBasis: p.costBasis,
-    ibClose:   p.ibClose
-  }));
+  const nameMap = { VTI:"Vanguard Total Stock Market ETF", BND:"Vanguard Total Bond Market ETF" };
+  positions = ibParsed.positions.map(p => ({ ticker:p.ticker, name:nameMap[p.ticker]||p.ticker, shares:p.shares, costBasis:p.costBasis, ibClose:p.ibClose }));
   save("mff_positions", positions);
-
-  // Replace transactions wholesale
   transactions = ibParsed.transactions;
   save("mff_transactions", transactions);
-
-  // Refresh all views
-  renderTx();
-  renderPositions();
-  renderMetrics();
-  renderOwnership();
-  fetchPrices();
-
-  const el = document.getElementById("ib-success");
-  el.style.display = "inline";
-  setTimeout(() => el.style.display = "none", 3000);
+  renderTx(); renderPositions(); renderMetrics(); renderOwnership(); fetchPrices();
+  const el = document.getElementById("ib-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",3000);
   ibParsed = null;
   document.getElementById("ib-import-preview").style.display = "none";
   document.getElementById("ib-file-input").value = "";
