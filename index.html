@@ -219,6 +219,7 @@
         <button class="tab-btn active" onclick="switchAdminTab('import', this)" id="atab-import">Import IB file</button>
         <button class="tab-btn" onclick="switchAdminTab('position', this)" id="atab-position">Update position</button>
         <button class="tab-btn" onclick="switchAdminTab('transaction', this)" id="atab-transaction">Log transaction</button>
+        <button class="tab-btn" onclick="switchAdminTab('deposit', this)" id="atab-deposit">Log deposit</button>
         <button class="tab-btn" onclick="switchAdminTab('performance', this)" id="atab-performance">Performance data</button>
       </div>
 
@@ -264,8 +265,31 @@
         <button class="save-btn" onclick="saveTx()" id="save-tx-btn">Log transaction</button>
         <span class="admin-success" id="tx-success">✓ Transaction logged</span>
       </div>
-      <div id="admin-performance" class="admin-form" style="display:none;">
-        <p id="perf-intro-text" style="font-size:13px;color:var(--text2);margin-bottom:0.5rem;">Edit portfolio value history as JSON: <code style="font-size:11px;background:var(--bg2);padding:2px 5px;border-radius:4px;">{"labels":[...],"values":[...]}</code></p>
+      <div id="admin-deposit" class="admin-form" style="display:none;">
+        <div class="form-row">
+          <div class="form-group"><label id="lbl-dep-date">Date</label><input type="date" id="a-dep-date" /></div>
+          <div class="form-group"><label id="lbl-dep-amount">Amount ($)</label><input type="number" step="0.01" id="a-dep-amount" placeholder="e.g. 100000" oninput="autoSplitDeposit()" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label id="lbl-dep-source">Source</label>
+            <select id="a-dep-source" onchange="autoSplitDeposit()">
+              <option value="Moneche">Moneche</option>
+              <option value="Fernando Montoya">Fernando Montoya</option>
+              <option value="Dario Montoya">Dario Montoya</option>
+            </select>
+          </div>
+          <div class="form-group"><label id="lbl-dep-nav">NAV at deposit ($)</label><input type="number" step="0.01" id="a-dep-nav" placeholder="e.g. 1050.00" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label id="lbl-dep-fernando">Fernando Montoya ($)</label><input type="number" step="0.01" id="a-dep-fernando" placeholder="auto-split for Moneche" /></div>
+          <div class="form-group"><label id="lbl-dep-dario">Dario Montoya ($)</label><input type="number" step="0.01" id="a-dep-dario" placeholder="auto-split for Moneche" /></div>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin-top:-4px;" id="dep-split-hint">Moneche deposits auto-split 65% Fernando / 35% Dario. Override manually if needed.</p>
+        <button class="save-btn" onclick="saveDeposit()" id="save-dep-btn">Log deposit</button>
+        <span class="admin-success" id="dep-log-success">✓ Deposit logged</span>
+      </div>
+      <div id="admin-performance" class="admin-form" style="display:none;">        <p id="perf-intro-text" style="font-size:13px;color:var(--text2);margin-bottom:0.5rem;">Edit portfolio value history as JSON: <code style="font-size:11px;background:var(--bg2);padding:2px 5px;border-radius:4px;">{"labels":[...],"values":[...]}</code></p>
         <div class="form-group"><label id="lbl-perf-json">Performance JSON</label><textarea id="a-perf-json" rows="5" style="padding:8px 10px;font-size:12px;font-family:monospace;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);color:var(--text);outline:none;width:100%;resize:vertical;"></textarea></div>
         <button class="save-btn" onclick="savePerf()" id="save-perf-btn">Save & refresh chart</button>
         <span class="admin-success" id="perf-success">✓ Chart updated</span>
@@ -373,17 +397,7 @@
               <th id="dep-col-dario">Dario Montoya</th>
             </tr>
           </thead>
-          <tbody>
-            <tr><td data-date="2025-12-18">Dec 18, 2025</td><td>$1,000</td><td><span class="source-moneche">Moneche</span></td><td>$1,000.00</td><td>$650</td><td>$350</td></tr>
-            <tr><td data-date="2025-12-29">Dec 29, 2025</td><td>$25,000</td><td><span class="source-moneche">Moneche</span></td><td>$998.00</td><td>$16,250</td><td>$8,750</td></tr>
-            <tr><td data-date="2025-12-29">Dec 29, 2025</td><td>$3,000</td><td><span class="source-moneche">Moneche</span></td><td>$998.00</td><td>$1,950</td><td>$1,050</td></tr>
-            <tr><td data-date="2025-12-30">Dec 30, 2025</td><td>$31,000</td><td><span class="source-moneche">Moneche</span></td><td>$997.00</td><td>$20,150</td><td>$10,850</td></tr>
-            <tr><td data-date="2026-01-02">Jan 2, 2026</td><td>$40,000</td><td><span class="source-fernando">Fernando Montoya</span></td><td>$993.00</td><td>$40,000</td><td>—</td></tr>
-            <tr><td data-date="2026-01-28">Jan 28, 2026</td><td>$100,000</td><td><span class="source-moneche">Moneche</span></td><td>$100,803.00</td><td>$65,000</td><td>$35,000</td></tr>
-            <tr><td data-date="2026-03-12">Mar 12, 2026</td><td>$100,000</td><td><span class="source-moneche">Moneche</span></td><td>$194,121.00</td><td>$65,000</td><td>$35,000</td></tr>
-            <tr><td data-date="2026-04-27">Apr 27, 2026</td><td>$100,000</td><td><span class="source-moneche">Moneche</span></td><td>$311,672.00</td><td>$65,000</td><td>$35,000</td></tr>
-            <tr><td data-date="2026-05-11">May 11, 2026</td><td>$100,000</td><td><span class="source-moneche">Moneche</span></td><td>$420,590.00</td><td>$65,000</td><td>$35,000</td></tr>
-            <tr class="total-row"><td id="dep-total-label">Total deposited</td><td>$500,000</td><td></td><td></td><td>$339,000</td><td>$161,000</td></tr>
+          <tbody id="dep-body">
           </tbody>
         </table>
       </div>
@@ -453,6 +467,7 @@ const TR = {
     atab_import: "Import IB file",
     atab_position: "Update position",
     atab_transaction: "Log transaction",
+    atab_deposit: "Log deposit",
     atab_performance: "Performance data",
     ibIntro: "Upload your Interactive Brokers Activity Statement CSV to automatically update positions, transactions, and fallback prices.",
     ibDropMain: "Drop your IB CSV here or click to browse",
@@ -477,6 +492,11 @@ const TR = {
     lbl_perf_json: "Performance JSON",
     savePerfBtn: "Save & refresh chart",
     perfSuccess: "✓ Chart updated",
+    lbl_dep_date: "Date", lbl_dep_amount: "Amount ($)", lbl_dep_source: "Source",
+    lbl_dep_nav: "NAV at deposit ($)", lbl_dep_fernando: "Fernando Montoya ($)", lbl_dep_dario: "Dario Montoya ($)",
+    dep_split_hint: "Moneche deposits auto-split 65% Fernando / 35% Dario. Override manually if needed.",
+    saveDepBtn: "Log deposit", depLogSuccess: "✓ Deposit logged",
+    alert_dep_required: "Date, amount, and NAV are required.",
     // Overview
     lbl_overview: "Portfolio overview",
     priceLoading: "Fetching live prices…",
@@ -536,6 +556,7 @@ const TR = {
     atab_import: "Importar archivo IB",
     atab_position: "Actualizar posición",
     atab_transaction: "Registrar transacción",
+    atab_deposit: "Registrar depósito",
     atab_performance: "Datos de rendimiento",
     ibIntro: "Suba su CSV de Estado de Actividad de Interactive Brokers para actualizar automáticamente posiciones, transacciones y precios.",
     ibDropMain: "Suelte su CSV de IB aquí o haga clic para buscar",
@@ -560,6 +581,11 @@ const TR = {
     lbl_perf_json: "JSON de rendimiento",
     savePerfBtn: "Guardar y actualizar gráfico",
     perfSuccess: "✓ Gráfico actualizado",
+    lbl_dep_date: "Fecha", lbl_dep_amount: "Monto ($)", lbl_dep_source: "Fuente",
+    lbl_dep_nav: "NAV al depositar ($)", lbl_dep_fernando: "Fernando Montoya ($)", lbl_dep_dario: "Dario Montoya ($)",
+    dep_split_hint: "Depósitos Moneche se dividen automáticamente 65% Fernando / 35% Dario. Puede modificar manualmente.",
+    saveDepBtn: "Registrar depósito", depLogSuccess: "✓ Depósito registrado",
+    alert_dep_required: "La fecha, el monto y el NAV son obligatorios.",
     lbl_overview: "Resumen del portafolio",
     priceLoading: "Obteniendo precios en vivo…",
     priceFailed: "Precios en vivo no disponibles — mostrando precios de cierre IB (5 jun. 2026)",
@@ -625,6 +651,7 @@ function setLang(lang) {
     "atab-import": "atab_import",
     "atab-position": "atab_position",
     "atab-transaction": "atab_transaction",
+    "atab-deposit": "atab_deposit",
     "atab-performance": "atab_performance",
     "ib-intro-text": "ibIntro",
     "ib-drop-main": "ibDropMain",
@@ -649,6 +676,15 @@ function setLang(lang) {
     "lbl-perf-json": "lbl_perf_json",
     "save-perf-btn": "savePerfBtn",
     "perf-success": "perfSuccess",
+    "lbl-dep-date": "lbl_dep_date",
+    "lbl-dep-amount": "lbl_dep_amount",
+    "lbl-dep-source": "lbl_dep_source",
+    "lbl-dep-nav": "lbl_dep_nav",
+    "lbl-dep-fernando": "lbl_dep_fernando",
+    "lbl-dep-dario": "lbl_dep_dario",
+    "dep-split-hint": "dep_split_hint",
+    "save-dep-btn": "saveDepBtn",
+    "dep-log-success": "depLogSuccess",
     "lbl-overview": "lbl_overview",
     "nav-unit-label": "nav_unit_label",
     "nav-unit-sub": "nav_unit_sub",
@@ -705,6 +741,7 @@ function setLang(lang) {
   if (currentUser) {
     renderMetrics();
     renderTx();
+    renderDeposits();
     _updateChartLabel();
     // Re-render price status with current state
     _applyPriceStatus();
@@ -732,23 +769,11 @@ function _updateChartLabel() {
 }
 
 // ── DEPOSITS FILTER ──
-function filterDeposits() {
-  const selMonth = (document.getElementById("dep-filter-month").value || "").substring(0,2);
-  const selYear  = document.getElementById("dep-filter-year").value || "";
-  const rows = document.querySelectorAll(".deposits-table tbody tr:not(.total-row)");
-  rows.forEach(row => {
-    const dateCell = row.querySelector("td[data-date]");
-    if (!dateCell) return;
-    const d = dateCell.getAttribute("data-date");
-    const monthMatch = !selMonth || d.substring(5,7) === selMonth;
-    const yearMatch  = !selYear  || d.startsWith(selYear);
-    row.style.display = (monthMatch && yearMatch) ? "" : "none";
-  });
-}
+function filterDeposits() { renderDeposits(); }
 function clearDepFilters() {
   document.getElementById("dep-filter-month").value = "";
   document.getElementById("dep-filter-year").value = "";
-  filterDeposits();
+  renderDeposits();
 }
 
 // ── DATA ──
@@ -810,6 +835,18 @@ const DEFAULT_PERF = {
   values: [990.21, 100241.73, 199792.02, 289795.23, 312557.02, 530838.62, 520790.13]
 };
 
+const DEFAULT_DEPOSITS = [
+  { date:"2025-12-18", amount:1000,    source:"Moneche",          nav:1000.00,   fernando:650,    dario:350    },
+  { date:"2025-12-29", amount:25000,   source:"Moneche",          nav:998.00,    fernando:16250,  dario:8750   },
+  { date:"2025-12-29", amount:3000,    source:"Moneche",          nav:998.00,    fernando:1950,   dario:1050   },
+  { date:"2025-12-30", amount:31000,   source:"Moneche",          nav:997.00,    fernando:20150,  dario:10850  },
+  { date:"2026-01-02", amount:40000,   source:"Fernando Montoya", nav:993.00,    fernando:40000,  dario:0      },
+  { date:"2026-01-28", amount:100000,  source:"Moneche",          nav:100803.00, fernando:65000,  dario:35000  },
+  { date:"2026-03-12", amount:100000,  source:"Moneche",          nav:194121.00, fernando:65000,  dario:35000  },
+  { date:"2026-04-27", amount:100000,  source:"Moneche",          nav:311672.00, fernando:65000,  dario:35000  },
+  { date:"2026-05-11", amount:100000,  source:"Moneche",          nav:420590.00, fernando:65000,  dario:35000  },
+];
+
 const FERNANDO_UNITS = 335166;
 const DARIO_UNITS    = 158912;
 const TOTAL_UNITS    = FERNANDO_UNITS + DARIO_UNITS;
@@ -822,6 +859,7 @@ function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 let positions    = load("mff_positions",    DEFAULT_POSITIONS);
 let transactions = load("mff_transactions", DEFAULT_TRANSACTIONS);
 let perfData     = load("mff_perf",         DEFAULT_PERF);
+let deposits     = load("mff_deposits",     DEFAULT_DEPOSITS);
 let livePrice    = {};
 let txFilter     = "all";
 let currentUser  = null;
@@ -844,6 +882,7 @@ function tryLogin() {
     fetchPrices();
     renderTx();
     renderChart();
+    renderDeposits();
   } else {
     document.getElementById("login-error").style.display = "block";
   }
@@ -1064,10 +1103,80 @@ function savePerf() {
   } catch { alert(t("alert_perf_invalid")); }
 }
 function switchAdminTab(panel,btn) {
-  ["import","position","transaction","performance"].forEach(p=>document.getElementById("admin-"+p).style.display="none");
+  ["import","position","transaction","deposit","performance"].forEach(p=>document.getElementById("admin-"+p).style.display="none");
   document.getElementById("admin-"+panel).style.display="flex";
   document.querySelectorAll("#admin-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
+}
+
+function fmtDep(n) { return n ? "$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0}) : "—"; }
+
+function renderDeposits() {
+  const selMonth = (document.getElementById("dep-filter-month").value || "").substring(0,2);
+  const selYear  = document.getElementById("dep-filter-year").value || "";
+  const sorted   = [...deposits].sort((a,b) => a.date.localeCompare(b.date));
+  const filtered = sorted.filter(d => {
+    const mOk = !selMonth || d.date.substring(5,7) === selMonth;
+    const yOk = !selYear  || d.date.startsWith(selYear);
+    return mOk && yOk;
+  });
+  const totalAmt  = deposits.reduce((s,d) => s + d.amount, 0);
+  const totalFern = deposits.reduce((s,d) => s + (d.fernando||0), 0);
+  const totalDar  = deposits.reduce((s,d) => s + (d.dario||0), 0);
+  const locale = currentLang === "es" ? "es-ES" : "en-US";
+  const rows = filtered.map(d => {
+    const dt = new Date(d.date + "T12:00:00");
+    const dateLabel = dt.toLocaleDateString(locale, {month:"short",day:"numeric",year:"numeric"});
+    const srcCls = d.source === "Moneche" ? "source-moneche" : "source-fernando";
+    const darioStr = d.dario ? fmtDep(d.dario) : "—";
+    return `<tr>
+      <td data-date="${d.date}">${dateLabel}</td>
+      <td>${fmtDep(d.amount)}</td>
+      <td><span class="${srcCls}">${d.source}</span></td>
+      <td>${fmt(d.nav)}</td>
+      <td>${fmtDep(d.fernando)}</td>
+      <td>${darioStr}</td>
+    </tr>`;
+  }).join("");
+  const totalRow = `<tr class="total-row">
+    <td id="dep-total-label">${t("dep_total_label")}</td>
+    <td>${fmtDep(totalAmt)}</td><td></td><td></td>
+    <td>${fmtDep(totalFern)}</td>
+    <td>${fmtDep(totalDar)}</td>
+  </tr>`;
+  document.getElementById("dep-body").innerHTML = rows + totalRow;
+}
+
+function autoSplitDeposit() {
+  const source = document.getElementById("a-dep-source").value;
+  const amount = parseFloat(document.getElementById("a-dep-amount").value) || 0;
+  if (source === "Moneche" && amount) {
+    document.getElementById("a-dep-fernando").value = (amount * 0.65).toFixed(2);
+    document.getElementById("a-dep-dario").value    = (amount * 0.35).toFixed(2);
+  } else if (source === "Fernando Montoya") {
+    document.getElementById("a-dep-fernando").value = amount || "";
+    document.getElementById("a-dep-dario").value    = "";
+  } else if (source === "Dario Montoya") {
+    document.getElementById("a-dep-fernando").value = "";
+    document.getElementById("a-dep-dario").value    = amount || "";
+  }
+}
+
+function saveDeposit() {
+  const date     = document.getElementById("a-dep-date").value;
+  const amount   = parseFloat(document.getElementById("a-dep-amount").value);
+  const source   = document.getElementById("a-dep-source").value;
+  const nav      = parseFloat(document.getElementById("a-dep-nav").value);
+  const fernando = parseFloat(document.getElementById("a-dep-fernando").value) || 0;
+  const dario    = parseFloat(document.getElementById("a-dep-dario").value)    || 0;
+  if (!date || isNaN(amount) || isNaN(nav)) return alert(t("alert_dep_required"));
+  deposits.push({ date, amount, source, nav, fernando, dario });
+  deposits.sort((a,b) => a.date.localeCompare(b.date));
+  save("mff_deposits", deposits);
+  renderDeposits();
+  // Clear form
+  ["a-dep-date","a-dep-amount","a-dep-nav","a-dep-fernando","a-dep-dario"].forEach(id => document.getElementById(id).value = "");
+  const el = document.getElementById("dep-log-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",2500);
 }
 
 // ── IB CSV IMPORT ──
