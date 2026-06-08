@@ -950,16 +950,17 @@ function getTotalValue() {
 }
 
 function renderMetrics() {
-  const totalValue = getTotalValue();
-  const totalCost  = positions.reduce((s,p) => s + p.shares*(p.ibClose||p.costBasis), 0);
-  const gl = totalValue - totalCost;
-  const glPct = (gl/totalCost)*100;
+  const totalValue     = getTotalValue();
+  const totalDeposited = deposits.reduce((s,d) => s + d.amount, 0);
+  const totalCost      = positions.reduce((s,p) => s + p.shares*(p.ibClose||p.costBasis), 0);
+  const gl    = totalValue - totalCost;
+  const glPct = totalCost > 0 ? (gl/totalCost)*100 : 0;
   const navPerUnit = totalValue / TOTAL_UNITS_OUTSTANDING;
-  const navChange = ((navPerUnit - INCEPTION_NAV) / INCEPTION_NAV) * 100;
+  const navChange  = ((navPerUnit - INCEPTION_NAV) / INCEPTION_NAV) * 100;
   document.getElementById("metrics-grid").innerHTML = `
     <div class="metric-card"><div class="metric-label">${t("metric_portValue")}</div><div class="metric-value">${fmt(totalValue)}</div></div>
     <div class="metric-card"><div class="metric-label">${t("metric_totalGL")}</div><div class="metric-value ${gl>=0?'pos':'neg'}">${fmt(gl)}</div><div class="metric-sub ${gl>=0?'pos':'neg'}">${fmtPct(glPct)} ${t("metric_allTime")}</div></div>
-    <div class="metric-card"><div class="metric-label">${t("metric_deposited")}</div><div class="metric-value">$500,000</div></div>
+    <div class="metric-card"><div class="metric-label">${t("metric_deposited")}</div><div class="metric-value">${fmt(totalDeposited)}</div></div>
     <div class="metric-card"><div class="metric-label">${t("metric_inception")}</div><div class="metric-value" style="font-size:16px;">Dec 2025</div></div>
   `;
   document.getElementById("nav-unit-value").textContent = fmt(navPerUnit);
