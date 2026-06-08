@@ -265,6 +265,11 @@
     <div class="metrics-grid" id="metrics-grid">
       <div class="metric-card"><div class="metric-label">Portfolio value</div><div class="metric-value" style="font-size:16px;color:var(--text3);">Loading…</div></div>
     </div>
+    <div class="metric-card" id="nav-unit-card" style="margin-top:12px;background:var(--blue-bg);border:0.5px solid var(--border);">
+      <div class="metric-label" style="color:var(--blue-text);">Unit NAV — price per unit</div>
+      <div class="metric-value" id="nav-unit-value" style="color:var(--blue);">—</div>
+      <div class="metric-sub" style="color:var(--blue-text);opacity:0.8;">494,078 units outstanding · inception $1,000.00</div>
+    </div>
   </div>
 
   <!-- Chart -->
@@ -585,17 +590,25 @@ function getTotalValue() {
   return positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||p.costBasis), 0);
 }
 
+const TOTAL_UNITS_OUTSTANDING = 494078;
+const INCEPTION_NAV = 1000.00;
+
 function renderMetrics() {
   const totalValue = getTotalValue();
   const totalCost  = positions.reduce((s,p) => s + p.shares*(p.ibClose||p.costBasis), 0);
   const gl = totalValue - totalCost;
   const glPct = (gl/totalCost)*100;
+  const navPerUnit = totalValue / TOTAL_UNITS_OUTSTANDING;
+  const navChange = ((navPerUnit - INCEPTION_NAV) / INCEPTION_NAV) * 100;
   document.getElementById("metrics-grid").innerHTML = `
     <div class="metric-card"><div class="metric-label">Portfolio value</div><div class="metric-value">${fmt(totalValue)}</div></div>
     <div class="metric-card"><div class="metric-label">Total gain / loss</div><div class="metric-value ${gl>=0?'pos':'neg'}">${fmt(gl)}</div><div class="metric-sub ${gl>=0?'pos':'neg'}">${fmtPct(glPct)} all-time</div></div>
     <div class="metric-card"><div class="metric-label">Total deposited</div><div class="metric-value">$500,000</div></div>
     <div class="metric-card"><div class="metric-label">Since inception</div><div class="metric-value" style="font-size:16px;">Dec 2025</div></div>
   `;
+  document.getElementById("nav-unit-value").textContent = fmt(navPerUnit);
+  const subEl = document.querySelector("#nav-unit-card .metric-sub");
+  if (subEl) subEl.innerHTML = `494,078 units outstanding &nbsp;·&nbsp; inception $1,000.00 &nbsp;·&nbsp; <span class="${navChange>=0?'pos':'neg'}">${fmtPct(navChange)} since inception</span>`;
 }
 
 function renderOwnership() {
