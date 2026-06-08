@@ -199,9 +199,28 @@
     </div>
     <div class="admin-body">
       <div class="tabs" id="admin-tabs" style="margin-bottom:1.25rem;">
-        <button class="tab-btn active" onclick="switchAdminTab('position', this)">Update position</button>
+        <button class="tab-btn active" onclick="switchAdminTab('import', this)">Import IB file</button>
+        <button class="tab-btn" onclick="switchAdminTab('position', this)">Update position</button>
         <button class="tab-btn" onclick="switchAdminTab('transaction', this)">Log transaction</button>
         <button class="tab-btn" onclick="switchAdminTab('performance', this)">Performance data</button>
+      </div>
+
+      <!-- IB Import -->
+      <div id="admin-import" class="admin-form">
+        <p style="font-size:13px;color:var(--text2);">Upload your Interactive Brokers Activity Statement CSV to automatically update positions, transactions, and fallback prices.</p>
+        <div id="ib-drop-zone" style="border:1.5px dashed var(--border2);border-radius:var(--radius);padding:2rem;text-align:center;cursor:pointer;transition:background 0.15s;" onclick="document.getElementById('ib-file-input').click()" ondragover="event.preventDefault();this.style.background='var(--blue-bg)'" ondragleave="this.style.background=''" ondrop="handleIBDrop(event)">
+          <i class="ti ti-file-upload" style="font-size:28px;color:var(--text3);display:block;margin-bottom:0.5rem;"></i>
+          <p style="font-size:13px;color:var(--text2);margin-bottom:4px;">Drop your IB CSV here or click to browse</p>
+          <p style="font-size:11px;color:var(--text3);">Activity Statement export from Interactive Brokers</p>
+        </div>
+        <input type="file" id="ib-file-input" accept=".csv" style="display:none;" onchange="handleIBFile(this.files[0])" />
+        <div id="ib-import-status" style="display:none;font-size:13px;border-radius:var(--radius);padding:0.75rem 1rem;margin-top:0.25rem;"></div>
+        <div id="ib-import-preview" style="display:none;">
+          <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Preview — data to be imported</p>
+          <div id="ib-preview-content" style="font-size:12px;color:var(--text2);background:var(--bg2);border-radius:var(--radius);padding:0.75rem 1rem;line-height:1.8;"></div>
+          <button class="save-btn" style="margin-top:0.75rem;" onclick="commitIBImport()">Apply import</button>
+          <span class="admin-success" id="ib-success" style="margin-left:0.75rem;">&#10003; Data updated</span>
+        </div>
       </div>
       <div id="admin-position" class="admin-form">
         <div class="form-row">
@@ -654,6 +673,11 @@ function renderChart() {
 
 function populateAdminFields() {
   document.getElementById("a-perf-json").value = JSON.stringify(perfData, null, 2);
+  // Show import tab by default
+  ["import","position","transaction","performance"].forEach(p => {
+    const el = document.getElementById("admin-"+p);
+    if (el) el.style.display = p === "import" ? "flex" : "none";
+  });
 }
 function savePosition() {
   const ticker=document.getElementById("a-pos-ticker").value;
@@ -688,10 +712,181 @@ function savePerf() {
   } catch { alert("Invalid JSON. Check the format."); }
 }
 function switchAdminTab(panel,btn) {
-  ["position","transaction","performance"].forEach(p=>document.getElementById("admin-"+p).style.display="none");
+  ["import","position","transaction","performance"].forEach(p=>document.getElementById("admin-"+p).style.display="none");
   document.getElementById("admin-"+panel).style.display="flex";
   document.querySelectorAll("#admin-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
+}
+
+// ── IB CSV IMPORT ──
+let ibParsed = null;
+
+function handleIBDrop(e) {
+  e.preventDefault();
+  document.getElementById("ib-drop-zone").style.background = "";
+  const file = e.dataTransfer.files[0];
+  if (file) handleIBFile(file);
+}
+
+function handleIBFile(file) {
+  if (!file || !file.name.endsWith(".csv")) {
+    showIBStatus("Please upload a CSV file.", "error"); return;
+  }
+  showIBStatus("Reading file…", "info");
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      ibParsed = parseIBCSV(e.target.result);
+      showIBPreview(ibParsed);
+    } catch(err) {
+      showIBStatus("Could not parse file: " + err.message, "error");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseIBCSV(text) {
+  const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+
+  function parseRow(line) {
+    const result = []; let cur = ""; let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"' ) { inQ = !inQ; }
+      else if (c === "," && !inQ) { result.push(cur.trim()); cur = ""; }
+      else { cur += c; }
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  const out = { positions: [], transactions: [], period: "" };
+
+  // Statement period
+  for (const line of lines) {
+    if (line.startsWith("Statement,Data,Period")) {
+      const r = parseRow(line);
+      out.period = r[3] || "";
+    }
+  }
+
+  // Open positions → shares, costBasis, ibClose
+  for (const line of lines) {
+    if (line.startsWith("Open Positions,Data,Summary,Stocks")) {
+      const r = parseRow(line);
+      // Open Positions,Data,Summary,Stocks,USD,SYMBOL,Quantity,Mult,CostPrice,CostBasis,ClosePrice,Value,UnrealizedPL
+      out.positions.push({
+        ticker:    r[5],
+        shares:    parseFloat(r[6]),
+        costBasis: parseFloat(r[8]),
+        ibClose:   parseFloat(r[10])
+      });
+    }
+  }
+
+  // Trades
+  for (const line of lines) {
+    if (line.startsWith("Trades,Data,Order,Stocks")) {
+      const r = parseRow(line);
+      // Trades,Data,Order,Stocks,USD,Symbol,DateTime,Qty,TPrice,...
+      const dt = r[6].split(",")[0].trim();
+      const qty = parseFloat(r[7]);
+      const price = parseFloat(r[8]);
+      const shares = Math.abs(qty);
+      out.transactions.push({
+        date:   dt,
+        ticker: r[5],
+        type:   qty > 0 ? "buy" : "sell",
+        shares: shares === Math.round(shares) ? Math.round(shares) : Math.round(shares * 10000) / 10000,
+        price:  Math.round(Math.abs(price) * 10000) / 10000,
+        notes:  ""
+      });
+    }
+  }
+
+  // Dividends
+  for (const line of lines) {
+    if (line.startsWith("Dividends,Data,USD")) {
+      const r = parseRow(line);
+      // Dividends,Data,USD,date,description,amount
+      const date = r[2].substring(0, 10);
+      const desc = r[3];
+      const amount = parseFloat(r[4]);
+      if (isNaN(amount) || amount <= 0) continue;
+      const ticker = desc.includes("VTI") ? "VTI" : desc.includes("BND") ? "BND" : null;
+      if (!ticker) continue;
+      const m = desc.match(/USD ([\d.]+) per Share/);
+      const perShare = m ? parseFloat(m[1]) : Math.round(amount * 10000) / 10000;
+      out.transactions.push({ date, ticker, type: "dividend", shares: null, price: perShare, notes: "Cash dividend" });
+    }
+  }
+
+  // Sort newest first
+  out.transactions.sort((a, b) => b.date.localeCompare(a.date));
+
+  if (out.positions.length === 0) throw new Error("No open positions found — is this an IB Activity Statement?");
+  return out;
+}
+
+function showIBStatus(msg, type) {
+  const el = document.getElementById("ib-import-status");
+  el.style.display = "block";
+  const colors = { info: "var(--blue-bg)", error: "var(--red-bg)", ok: "var(--green-bg)" };
+  const textColors = { info: "var(--blue-text)", error: "var(--red)", ok: "var(--green)" };
+  el.style.background = colors[type] || colors.info;
+  el.style.color = textColors[type] || textColors.info;
+  el.textContent = msg;
+}
+
+function showIBPreview(parsed) {
+  showIBStatus("File parsed successfully. Review and apply below.", "ok");
+  const preview = document.getElementById("ib-import-preview");
+  const content = document.getElementById("ib-preview-content");
+  preview.style.display = "block";
+  const posLines = parsed.positions.map(p =>
+    `${p.ticker}: ${p.shares.toLocaleString()} shares · cost $${p.costBasis.toFixed(2)} · IB close $${p.ibClose.toFixed(2)}`
+  ).join("<br>");
+  const txCount = parsed.transactions.filter(t => t.type !== "dividend").length;
+  const divCount = parsed.transactions.filter(t => t.type === "dividend").length;
+  content.innerHTML = `
+    <strong>Period:</strong> ${parsed.period}<br>
+    <strong>Positions:</strong> ${parsed.positions.length} — ${posLines}<br>
+    <strong>Transactions:</strong> ${txCount} trades + ${divCount} dividends = ${parsed.transactions.length} total
+  `;
+}
+
+function commitIBImport() {
+  if (!ibParsed) return;
+
+  // Update positions (merge with existing name/ibClose)
+  const nameMap = { VTI: "Vanguard Total Stock Market ETF", BND: "Vanguard Total Bond Market ETF" };
+  positions = ibParsed.positions.map(p => ({
+    ticker:    p.ticker,
+    name:      nameMap[p.ticker] || p.ticker,
+    shares:    p.shares,
+    costBasis: p.costBasis,
+    ibClose:   p.ibClose
+  }));
+  save("mff_positions", positions);
+
+  // Replace transactions wholesale
+  transactions = ibParsed.transactions;
+  save("mff_transactions", transactions);
+
+  // Refresh all views
+  renderTx();
+  renderPositions();
+  renderMetrics();
+  renderOwnership();
+  fetchPrices();
+
+  const el = document.getElementById("ib-success");
+  el.style.display = "inline";
+  setTimeout(() => el.style.display = "none", 3000);
+  ibParsed = null;
+  document.getElementById("ib-import-preview").style.display = "none";
+  document.getElementById("ib-file-input").value = "";
+  showIBStatus("Import applied. Positions, transactions, and prices updated.", "ok");
 }
 </script>
 </body>
