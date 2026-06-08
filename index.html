@@ -441,6 +441,7 @@
             <th id="tx-col-price">Price / sh</th>
             <th id="tx-col-amount">Amount</th>
             <th id="tx-col-notes">Notes</th>
+            <th id="tx-col-actions" style="width:64px;"></th>
           </tr></thead>
           <tbody id="tx-body"></tbody>
         </table>
@@ -687,7 +688,6 @@ function setLang(lang) {
     "dep-log-success": "depLogSuccess",
     "lbl-overview": "lbl_overview",
     "nav-unit-label": "nav_unit_label",
-    "nav-unit-sub": "nav_unit_sub",
     "chart-title": "chartTitle",
     "lbl-positions": "lbl_positions",
     "col-ticker": "col_ticker",
@@ -698,10 +698,6 @@ function setLang(lang) {
     "col-alloc": "col_alloc",
     "col-gl": "col_gl",
     "lbl-ownership": "lbl_ownership",
-    "fernando-pct": "fernando_pct",
-    "fernando-deposited": "fernando_deposited",
-    "dario-pct": "dario_pct",
-    "dario-deposited": "dario_deposited",
     "dep-all-months": "dep_all_months",
     "dep-all-years": "dep_all_years",
     "dep-clear-btn": "clearBtn",
@@ -740,10 +736,10 @@ function setLang(lang) {
   // Re-render dynamic sections if logged in
   if (currentUser) {
     renderMetrics();
+    renderOwnership();
     renderTx();
     renderDeposits();
     _updateChartLabel();
-    // Re-render price status with current state
     _applyPriceStatus();
   }
 }
@@ -847,11 +843,19 @@ const DEFAULT_DEPOSITS = [
   { date:"2026-05-11", amount:100000,  source:"Moneche",          nav:420590.00, fernando:65000,  dario:35000  },
 ];
 
-const FERNANDO_UNITS = 335166;
-const DARIO_UNITS    = 158912;
-const TOTAL_UNITS    = FERNANDO_UNITS + DARIO_UNITS;
-const TOTAL_UNITS_OUTSTANDING = 494078;
 const INCEPTION_NAV = 1000.00;
+
+// Compute unit ledger dynamically from deposits array
+function calcUnits() {
+  let fernandoUnits = 0, darioUnits = 0;
+  for (const d of deposits) {
+    const nav = d.nav > 0 ? d.nav : INCEPTION_NAV;
+    fernandoUnits += (d.fernando || 0) / nav;
+    darioUnits    += (d.dario    || 0) / nav;
+  }
+  const totalUnits = fernandoUnits + darioUnits;
+  return { fernandoUnits, darioUnits, totalUnits };
+}
 
 function load(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } }
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
@@ -883,6 +887,8 @@ function tryLogin() {
     renderTx();
     renderChart();
     renderDeposits();
+    renderMetrics();
+    renderOwnership();
   } else {
     document.getElementById("login-error").style.display = "block";
   }
@@ -955,7 +961,8 @@ function renderMetrics() {
   const totalCost      = positions.reduce((s,p) => s + p.shares*(p.ibClose||p.costBasis), 0);
   const gl    = totalValue - totalCost;
   const glPct = totalCost > 0 ? (gl/totalCost)*100 : 0;
-  const navPerUnit = totalValue / TOTAL_UNITS_OUTSTANDING;
+  const { totalUnits } = calcUnits();
+  const navPerUnit = totalUnits > 0 ? totalValue / totalUnits : 0;
   const navChange  = ((navPerUnit - INCEPTION_NAV) / INCEPTION_NAV) * 100;
   document.getElementById("metrics-grid").innerHTML = `
     <div class="metric-card"><div class="metric-label">${t("metric_portValue")}</div><div class="metric-value">${fmt(totalValue)}</div></div>
@@ -964,14 +971,40 @@ function renderMetrics() {
     <div class="metric-card"><div class="metric-label">${t("metric_inception")}</div><div class="metric-value" style="font-size:16px;">Dec 2025</div></div>
   `;
   document.getElementById("nav-unit-value").textContent = fmt(navPerUnit);
+  const unitsFormatted = totalUnits.toLocaleString("en-US", {maximumFractionDigits:0});
   const subEl = document.querySelector("#nav-unit-card .metric-sub");
-  if (subEl) subEl.innerHTML = `${t("nav_unit_sub")} &nbsp;·&nbsp; <span class="${navChange>=0?'pos':'neg'}">${fmtPct(navChange)} ${currentLang==="es"?"desde el inicio":"since inception"}</span>`;
+  const unitsLabel = currentLang==="es" ? `${unitsFormatted} unidades en circulación · inicio $${INCEPTION_NAV.toLocaleString("es-ES",{minimumFractionDigits:2})}` : `${unitsFormatted} units outstanding · inception $${INCEPTION_NAV.toFixed(2)}`;
+  if (subEl) subEl.innerHTML = `${unitsLabel} &nbsp;·&nbsp; <span class="${navChange>=0?'pos':'neg'}">${fmtPct(navChange)} ${currentLang==="es"?"desde el inicio":"since inception"}</span>`;
 }
 
 function renderOwnership() {
   const totalValue = getTotalValue();
-  document.getElementById("fernando-value").textContent = fmt(totalValue * (FERNANDO_UNITS / TOTAL_UNITS));
-  document.getElementById("dario-value").textContent    = fmt(totalValue * (DARIO_UNITS    / TOTAL_UNITS));
+  const { fernandoUnits, darioUnits, totalUnits } = calcUnits();
+  const fernandoPct  = totalUnits > 0 ? (fernandoUnits / totalUnits) * 100 : 0;
+  const darioPct     = totalUnits > 0 ? (darioUnits    / totalUnits) * 100 : 0;
+  const fernandoDeposited = deposits.reduce((s,d) => s + (d.fernando||0), 0);
+  const darioDeposited    = deposits.reduce((s,d) => s + (d.dario||0),    0);
+  const locale = currentLang === "es" ? "es-ES" : "en-US";
+  const fmtUnits = n => Math.round(n).toLocaleString(locale);
+  const fmtPctOwn = n => n.toLocaleString(locale, {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  document.getElementById("fernando-value").textContent = fmt(totalValue * (fernandoUnits / totalUnits));
+  document.getElementById("dario-value").textContent    = fmt(totalValue * (darioUnits    / totalUnits));
+
+  const depLabel   = currentLang==="es" ? "Depositado" : "Deposited";
+  const ownLabel   = currentLang==="es" ? "participación · " : "ownership · ";
+  const unitSuffix = currentLang==="es" ? " unidades" : " units";
+
+  document.getElementById("fernando-pct").textContent      = `${fmtPctOwn(fernandoPct)}% ${ownLabel}${fmtUnits(fernandoUnits)}${unitSuffix}`;
+  document.getElementById("dario-pct").textContent         = `${fmtPctOwn(darioPct)}% ${ownLabel}${fmtUnits(darioUnits)}${unitSuffix}`;
+  document.getElementById("fernando-deposited").textContent = `${depLabel}: ${fmt(fernandoDeposited)}`;
+  document.getElementById("dario-deposited").textContent   = `${depLabel}: ${fmt(darioDeposited)}`;
+
+  // Update ownership bar widths
+  const bars = document.querySelectorAll(".ownership-bar-fill-f");
+  bars.forEach(b => b.style.width = fernandoPct.toFixed(2) + "%");
+  const barsD = document.querySelectorAll(".ownership-bar-fill-d");
+  barsD.forEach(b => b.style.width = darioPct.toFixed(2) + "%");
 }
 
 function renderPositions() {
@@ -1015,23 +1048,28 @@ function renderTx() {
   if (selMonth) filtered = filtered.filter(tx => tx.date.substring(5,7) === selMonth);
   if (selYear)  filtered = filtered.filter(tx => tx.date.startsWith(selYear));
 
+  const isAdmin = currentUser && currentUser.admin;
+
   document.getElementById("tx-body").innerHTML = filtered.map(tx => {
+    const masterIdx = transactions.indexOf(tx);
     const badgeCls  = tx.type==="buy"?"type-buy":tx.type==="sell"?"type-sell":"type-div";
     const typeLabel = tx.type==="dividend" ? t("type_dividend") : tx.type==="buy" ? t("type_buy") : t("type_sell");
     const sharesStr = tx.shares!=null ? Number(tx.shares).toLocaleString() : "—";
     const priceStr  = fmt(tx.price);
-    // Amount: for buys/sells = shares × price; for dividends = per-share rate × shares held at time
     let amountStr = "—";
     if (tx.type === "dividend") {
       const pos = positions.find(p => p.ticker === tx.ticker);
       if (pos) amountStr = `<span class="pos">${fmt(tx.price * pos.shares)}</span>`;
     } else if (tx.shares != null) {
       const total = tx.shares * tx.price;
-      amountStr = tx.type === "sell"
-        ? `<span class="neg">${fmt(total)}</span>`
-        : fmt(total);
+      amountStr = tx.type === "sell" ? `<span class="neg">${fmt(total)}</span>` : fmt(total);
     }
-    return `<tr>
+    const adminCols = isAdmin ? `
+      <td style="width:64px;text-align:right;padding-right:10px;">
+        <button onclick="startEditTx(${masterIdx})" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:3px 5px;border-radius:4px;" title="Edit"><i class="ti ti-pencil" style="font-size:13px;"></i></button>
+        <button onclick="deleteTx(${masterIdx})" style="background:none;border:none;cursor:pointer;color:var(--red);padding:3px 5px;border-radius:4px;" title="Delete"><i class="ti ti-trash" style="font-size:13px;"></i></button>
+      </td>` : "";
+    return `<tr id="tx-row-${masterIdx}">
       <td>${tx.date}</td>
       <td><span class="ticker">${tx.ticker}</span></td>
       <td><span class="type-badge ${badgeCls}">${typeLabel}</span></td>
@@ -1039,8 +1077,70 @@ function renderTx() {
       <td>${priceStr}</td>
       <td>${amountStr}</td>
       <td class="notes-cell">${tx.notes||""}</td>
+      ${adminCols}
     </tr>`;
-  }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:1.5rem;">${t("tx_empty")}</td></tr>`;
+  }).join("") || `<tr><td colspan="${isAdmin?8:7}" style="text-align:center;color:var(--text3);padding:1.5rem;">${t("tx_empty")}</td></tr>`;
+}
+
+function startEditTx(idx) {
+  const existing = document.getElementById("tx-edit-row");
+  if (existing) existing.remove();
+  const tx = transactions[idx];
+  if (!tx) return;
+  const row = document.getElementById("tx-row-" + idx);
+  if (!row) return;
+  const inp = "padding:5px 7px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);";
+  const editRow = document.createElement("tr");
+  editRow.id = "tx-edit-row";
+  editRow.style.cssText = "background:var(--blue-bg);";
+  editRow.innerHTML = `
+    <td><input type="date" id="etx-date" value="${tx.date}" style="${inp}width:115px;"></td>
+    <td><select id="etx-ticker" style="${inp}">
+      <option ${tx.ticker==="VTI"?"selected":""}>VTI</option>
+      <option ${tx.ticker==="BND"?"selected":""}>BND</option>
+    </select></td>
+    <td><select id="etx-type" style="${inp}">
+      <option value="buy" ${tx.type==="buy"?"selected":""}>Buy</option>
+      <option value="sell" ${tx.type==="sell"?"selected":""}>Sell</option>
+      <option value="dividend" ${tx.type==="dividend"?"selected":""}>Dividend</option>
+    </select></td>
+    <td><input type="number" id="etx-shares" value="${tx.shares??""}" placeholder="—" style="${inp}width:75px;"></td>
+    <td><input type="number" step="0.0001" id="etx-price" value="${tx.price}" style="${inp}width:85px;"></td>
+    <td style="color:var(--text3);font-size:12px;">auto</td>
+    <td><input type="text" id="etx-notes" value="${tx.notes||""}" style="${inp}width:100%;"></td>
+    <td style="text-align:right;padding-right:10px;white-space:nowrap;">
+      <button onclick="commitTxEdit(${idx})" style="background:var(--blue);color:#fff;border:none;border-radius:var(--radius);padding:4px 10px;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
+      <button onclick="cancelTxEdit()" style="background:none;border:0.5px solid var(--border);border-radius:var(--radius);padding:4px 10px;font-size:12px;color:var(--text2);cursor:pointer;margin-left:4px;">✕</button>
+    </td>`;
+  row.insertAdjacentElement("afterend", editRow);
+  editRow.scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+function commitTxEdit(idx) {
+  const date   = document.getElementById("etx-date").value;
+  const ticker = document.getElementById("etx-ticker").value;
+  const type   = document.getElementById("etx-type").value;
+  const sv     = document.getElementById("etx-shares").value;
+  const shares = sv !== "" ? parseFloat(sv) : null;
+  const price  = parseFloat(document.getElementById("etx-price").value);
+  const notes  = document.getElementById("etx-notes").value;
+  if (!date || isNaN(price)) return alert(t("alert_tx_required"));
+  transactions[idx] = { date, ticker, type, shares, price, notes };
+  transactions.sort((a,b) => b.date.localeCompare(a.date));
+  save("mff_transactions", transactions);
+  renderTx();
+}
+
+function cancelTxEdit() {
+  const el = document.getElementById("tx-edit-row");
+  if (el) el.remove();
+}
+
+function deleteTx(idx) {
+  if (!confirm(currentLang==="es" ? "¿Eliminar esta transacción?" : "Delete this transaction?")) return;
+  transactions.splice(idx, 1);
+  save("mff_transactions", transactions);
+  renderTx();
 }
 
 function renderChart() {
@@ -1175,6 +1275,8 @@ function saveDeposit() {
   deposits.sort((a,b) => a.date.localeCompare(b.date));
   save("mff_deposits", deposits);
   renderDeposits();
+  renderMetrics();
+  renderOwnership();
   // Clear form
   ["a-dep-date","a-dep-amount","a-dep-nav","a-dep-fernando","a-dep-dario"].forEach(id => document.getElementById(id).value = "");
   const el = document.getElementById("dep-log-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",2500);
