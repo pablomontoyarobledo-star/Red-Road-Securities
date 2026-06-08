@@ -30,24 +30,20 @@
     }
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
-
-  /* ── LOGIN ── */
   #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
   .login-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2.5rem; width: 360px; display: flex; flex-direction: column; gap: 1.25rem; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
   .login-logo { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
   .logo-mark { width: 52px; height: 52px; border-radius: 14px; background: var(--blue); display: flex; align-items: center; justify-content: center; }
-  .login-logo h1 { font-size: 19px; font-weight: 500; color: var(--text); }
+  .login-logo h1 { font-size: 19px; font-weight: 500; }
   .login-logo p { font-size: 13px; color: var(--text2); }
   .field { display: flex; flex-direction: column; gap: 6px; }
-  .field label { font-size: 12px; color: var(--text2); font-weight: 500; letter-spacing: 0.03em; }
+  .field label { font-size: 12px; color: var(--text2); font-weight: 500; }
   .field input { width: 100%; padding: 9px 12px; font-size: 14px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); outline: none; }
   .field input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(24,95,165,0.15); }
-  .login-btn { background: var(--blue); color: #fff; border: none; border-radius: var(--radius); padding: 11px; font-size: 14px; font-weight: 500; cursor: pointer; width: 100%; transition: opacity 0.15s; }
+  .login-btn { background: var(--blue); color: #fff; border: none; border-radius: var(--radius); padding: 11px; font-size: 14px; font-weight: 500; cursor: pointer; width: 100%; }
   .login-btn:hover { opacity: 0.88; }
   .login-error { font-size: 13px; color: var(--red); text-align: center; display: none; }
-
-  /* ── APP SHELL ── */
-  #app { display: none; max-width: 960px; margin: 0 auto; padding: 0 1.5rem 3rem; }
+  #app { display: none; max-width: 980px; margin: 0 auto; padding: 0 1.5rem 3rem; }
   .top-bar { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 0; border-bottom: 0.5px solid var(--border); margin-bottom: 2rem; }
   .top-bar-left { display: flex; align-items: center; gap: 10px; }
   .logo-sm { width: 34px; height: 34px; border-radius: 9px; background: var(--blue); display: flex; align-items: center; justify-content: center; }
@@ -56,12 +52,8 @@
   .investor-badge { font-size: 12px; color: var(--text2); background: var(--bg2); border: 0.5px solid var(--border); border-radius: 20px; padding: 4px 13px; }
   .logout-btn { background: none; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 5px 12px; font-size: 13px; color: var(--text2); cursor: pointer; }
   .logout-btn:hover { background: var(--bg2); }
-
-  /* ── SECTIONS ── */
   .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; color: var(--text3); text-transform: uppercase; margin-bottom: 0.85rem; }
   .section { margin-bottom: 2rem; }
-
-  /* ── METRICS ── */
   .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
   .metric-card { background: var(--bg2); border-radius: var(--radius); padding: 1rem 1.1rem; }
   .metric-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; }
@@ -71,13 +63,9 @@
   .price-refresh { font-size: 11px; color: var(--text3); margin-top: 0.4rem; display: flex; align-items: center; gap: 5px; }
   .spin { animation: spin 1s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── CHART ── */
   .chart-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
   .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
   .chart-header h3 { font-size: 13px; font-weight: 500; color: var(--text2); }
-
-  /* ── POSITIONS TABLE ── */
   .table-wrap { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
   table { width: 100%; border-collapse: collapse; }
   th { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 14px; text-align: left; border-bottom: 0.5px solid var(--border); background: var(--bg2); }
@@ -85,36 +73,29 @@
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: var(--bg2); }
   .ticker { font-weight: 600; color: var(--blue); font-size: 13px; }
-  .name-cell { color: var(--text2); font-size: 12px; max-width: 200px; }
+  .name-cell { color: var(--text2); font-size: 12px; }
   .alloc-bar-wrap { display: flex; align-items: center; gap: 8px; }
   .alloc-bar-bg { flex: 1; height: 4px; background: var(--border); border-radius: 2px; min-width: 60px; }
-  .alloc-bar-fill { height: 4px; border-radius: 2px; background: var(--blue); transition: width 0.4s; }
-
-  /* ── TABS ── */
+  .alloc-bar-fill { height: 4px; border-radius: 2px; background: var(--blue); }
   .tabs { display: flex; gap: 4px; }
   .tab-btn { font-size: 12px; padding: 5px 13px; border-radius: 20px; border: 0.5px solid var(--border); background: none; color: var(--text2); cursor: pointer; }
   .tab-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
-
-  /* ── TX TABLE ── */
   .tx-table { table-layout: fixed; }
   .tx-table th:nth-child(1) { width: 95px; }
   .tx-table th:nth-child(2) { width: 65px; }
   .tx-table th:nth-child(3) { width: 85px; }
-  .tx-table th:nth-child(4) { width: 65px; }
-  .tx-table th:nth-child(5) { width: 80px; }
+  .tx-table th:nth-child(4) { width: 70px; }
+  .tx-table th:nth-child(5) { width: 85px; }
   .tx-table th:nth-child(6) { }
   .tx-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .type-badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; }
   .type-buy { background: var(--green-bg); color: var(--green); }
   .type-sell { background: var(--red-bg); color: var(--red); }
   .type-div { background: var(--blue-bg); color: var(--blue-text); }
-
-  /* ── ADMIN PANEL ── */
   #admin-panel { display: none; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 2rem; }
   .admin-header { display: flex; align-items: center; gap: 8px; padding: 1rem 1.25rem; border-bottom: 0.5px solid var(--border); background: var(--amber-bg); }
   .admin-header span { font-size: 13px; font-weight: 500; color: var(--amber-text); }
   .admin-body { padding: 1.25rem; }
-  .admin-tabs { display: flex; gap: 4px; margin-bottom: 1.25rem; }
   .admin-form { display: flex; flex-direction: column; gap: 1rem; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
@@ -132,7 +113,6 @@
 </head>
 <body>
 
-<!-- ── LOGIN ── -->
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo">
@@ -149,7 +129,6 @@
   </div>
 </div>
 
-<!-- ── APP ── -->
 <div id="app">
   <div class="top-bar">
     <div class="top-bar-left">
@@ -162,33 +141,28 @@
     </div>
   </div>
 
-  <!-- Admin panel (pablo only) -->
   <div id="admin-panel">
     <div class="admin-header">
       <i class="ti ti-settings" style="font-size:15px;color:var(--amber-text);"></i>
       <span>Admin — data editor</span>
     </div>
     <div class="admin-body">
-      <div class="admin-tabs" id="admin-tabs">
+      <div class="tabs" id="admin-tabs" style="margin-bottom:1.25rem;">
         <button class="tab-btn active" onclick="switchAdminTab('position', this)">Update position</button>
         <button class="tab-btn" onclick="switchAdminTab('transaction', this)">Log transaction</button>
         <button class="tab-btn" onclick="switchAdminTab('performance', this)">Performance data</button>
       </div>
-
-      <!-- Position editor -->
       <div id="admin-position" class="admin-form">
         <div class="form-row">
           <div class="form-group"><label>Ticker</label><select id="a-pos-ticker"><option value="VTI">VTI</option><option value="BND">BND</option></select></div>
-          <div class="form-group"><label>Shares held</label><input type="number" id="a-pos-shares" placeholder="e.g. 312" /></div>
+          <div class="form-group"><label>Shares held</label><input type="number" id="a-pos-shares" placeholder="e.g. 1009" /></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Avg cost basis ($/sh)</label><input type="number" step="0.01" id="a-pos-cost" placeholder="e.g. 201.30" /></div>
+          <div class="form-group"><label>Avg cost basis ($/sh)</label><input type="number" step="0.01" id="a-pos-cost" placeholder="e.g. 343.77" /></div>
         </div>
         <button class="save-btn" onclick="savePosition()">Save position</button>
         <span class="admin-success" id="pos-success">✓ Position updated</span>
       </div>
-
-      <!-- Transaction logger -->
       <div id="admin-transaction" class="admin-form" style="display:none;">
         <div class="form-row-3">
           <div class="form-group"><label>Date</label><input type="date" id="a-tx-date" /></div>
@@ -196,66 +170,54 @@
           <div class="form-group"><label>Type</label><select id="a-tx-type"><option value="buy">Buy</option><option value="sell">Sell</option><option value="dividend">Dividend</option></select></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Shares (blank for dividends)</label><input type="number" id="a-tx-shares" placeholder="e.g. 50" /></div>
-          <div class="form-group"><label>Price per share ($)</label><input type="number" step="0.01" id="a-tx-price" placeholder="e.g. 268.45" /></div>
+          <div class="form-group"><label>Shares (blank for dividends)</label><input type="number" id="a-tx-shares" placeholder="e.g. 220" /></div>
+          <div class="form-group"><label>Price per share ($)</label><input type="number" step="0.0001" id="a-tx-price" placeholder="e.g. 343.02" /></div>
         </div>
-        <div class="form-group"><label>Notes</label><input type="text" id="a-tx-notes" placeholder="e.g. Q2 rebalance" /></div>
+        <div class="form-group"><label>Notes</label><input type="text" id="a-tx-notes" placeholder="e.g. Q1 rebalance" /></div>
         <button class="save-btn" onclick="saveTx()">Log transaction</button>
         <span class="admin-success" id="tx-success">✓ Transaction logged</span>
       </div>
-
-      <!-- Performance data -->
       <div id="admin-performance" class="admin-form" style="display:none;">
-        <p style="font-size:13px;color:var(--text2);margin-bottom:0.5rem;">Edit the portfolio value history as JSON. Format: <code style="font-size:11px;background:var(--bg2);padding:2px 5px;border-radius:4px;">{"labels":["Jan '24",...],"values":[62800,...]}</code></p>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:0.5rem;">Edit the portfolio value history as JSON. Format: <code style="font-size:11px;background:var(--bg2);padding:2px 5px;border-radius:4px;">{"labels":["Dec '25",...],"values":[990,...]}</code></p>
         <div class="form-group"><label>Performance JSON</label><textarea id="a-perf-json" rows="5" style="padding:8px 10px;font-size:12px;font-family:monospace;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);color:var(--text);outline:none;width:100%;resize:vertical;"></textarea></div>
         <button class="save-btn" onclick="savePerf()">Save & refresh chart</button>
-        <span class="admin-success" id="perf-success">✓ Performance data updated</span>
+        <span class="admin-success" id="perf-success">✓ Chart updated</span>
       </div>
     </div>
   </div>
 
-  <!-- Overview metrics -->
   <div class="section">
     <div class="section-header">
       <p class="section-label" style="margin-bottom:0;">Portfolio overview</p>
-      <div class="price-refresh" id="price-status"><i class="ti ti-refresh spin" id="refresh-icon"></i> Fetching live prices…</div>
+      <div class="price-refresh" id="price-status"><i class="ti ti-refresh spin"></i> Fetching live prices…</div>
     </div>
     <div class="metrics-grid" id="metrics-grid">
       <div class="metric-card"><div class="metric-label">Portfolio value</div><div class="metric-value" style="font-size:16px;color:var(--text3);">Loading…</div></div>
-      <div class="metric-card"><div class="metric-label">Total gain / loss</div><div class="metric-value" style="font-size:16px;color:var(--text3);">—</div></div>
-      <div class="metric-card"><div class="metric-label">Positions</div><div class="metric-value">2</div></div>
-      <div class="metric-card"><div class="metric-label">Last rebalance</div><div class="metric-value" style="font-size:16px;">Jan 2025</div></div>
     </div>
   </div>
 
-  <!-- Chart -->
   <div class="section">
     <div class="chart-card">
       <div class="chart-header">
-        <h3>Portfolio value — historical</h3>
+        <h3>Portfolio value — historical (IB data)</h3>
         <span style="font-size:11px;color:var(--text3);" id="chart-updated"></span>
       </div>
       <div style="position:relative;width:100%;height:220px;">
-        <canvas id="perfChart" role="img" aria-label="Line chart of portfolio value over time">Historical portfolio value.</canvas>
+        <canvas id="perfChart" role="img" aria-label="Monthly portfolio value from Dec 2025 to Jun 2026">Historical portfolio value.</canvas>
       </div>
     </div>
   </div>
 
-  <!-- Positions -->
   <div class="section">
     <p class="section-label">Current positions</p>
     <div class="table-wrap">
-      <table id="pos-table">
-        <thead><tr>
-          <th>Ticker</th><th>Name</th><th>Shares</th>
-          <th>Live price</th><th>Value</th><th>Allocation</th><th>Gain / Loss</th>
-        </tr></thead>
-        <tbody id="pos-body"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:2rem;">Loading live prices…</td></tr></tbody>
+      <table>
+        <thead><tr><th>Ticker</th><th>Name</th><th>Shares</th><th>Live price</th><th>Value</th><th>Allocation</th><th>Gain / Loss</th></tr></thead>
+        <tbody id="pos-body"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:2rem;">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Transactions -->
   <div class="section">
     <div class="tx-header">
       <p class="section-label" style="margin-bottom:0;">Transaction history</p>
@@ -272,39 +234,71 @@
         <tbody id="tx-body"></tbody>
       </table>
     </div>
-    <p class="add-hint">Transaction history is managed by Pablo.</p>
+    <p class="add-hint">Transaction data imported from Interactive Brokers · Managed by Pablo</p>
   </div>
 </div>
 
 <script>
-// ── DATA (persisted in localStorage) ──
-const DEFAULT_POSITIONS = [
-  { ticker:"VTI", name:"Vanguard Total Stock Market ETF", shares:312, costBasis:201.30 },
-  { ticker:"BND", name:"Vanguard Total Bond Market ETF",  shares:480, costBasis:76.50  }
-];
-const DEFAULT_TRANSACTIONS = [
-  { date:"2025-01-15", ticker:"VTI",  type:"buy",      shares:50,   price:248.10, notes:"Q1 rebalance" },
-  { date:"2025-01-15", ticker:"BND",  type:"buy",      shares:80,   price:74.20,  notes:"Q1 rebalance" },
-  { date:"2024-10-10", ticker:"VTI",  type:"buy",      shares:62,   price:241.55, notes:"Q4 rebalance" },
-  { date:"2024-10-10", ticker:"BND",  type:"buy",      shares:100,  price:75.80,  notes:"Q4 rebalance" },
-  { date:"2024-07-08", ticker:"BND",  type:"dividend", shares:null, price:0.19,   notes:"Monthly dividend" },
-  { date:"2024-07-08", ticker:"VTI",  type:"dividend", shares:null, price:0.94,   notes:"Quarterly dividend" },
-  { date:"2024-04-12", ticker:"VTI",  type:"buy",      shares:50,   price:228.40, notes:"Q2 rebalance" },
-  { date:"2024-04-12", ticker:"BND",  type:"buy",      shares:100,  price:76.90,  notes:"Q2 rebalance" },
-  { date:"2024-01-08", ticker:"VTI",  type:"buy",      shares:150,  price:210.20, notes:"Initial purchase" },
-  { date:"2024-01-08", ticker:"BND",  type:"buy",      shares:200,  price:77.50,  notes:"Initial purchase" }
-];
-const DEFAULT_PERF = {
-  labels:["Jan '24","Apr '24","Jul '24","Oct '24","Jan '25","Apr '25"],
-  values:[62800,71400,79200,83600,87100,92300]
-};
 const USERS = {
   "dario2024":   { name:"Dario Montoya",   admin:false },
   "fernando2024":{ name:"Fernando Montoya",admin:false },
   "pablo_admin": { name:"Pablo — Manager", admin:true  }
 };
 
-function load(key, def) { try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; } }
+// ── DEFAULT DATA (from IB export) ──
+const DEFAULT_POSITIONS = [
+  { ticker:"VTI", name:"Vanguard Total Stock Market ETF", shares:1009, costBasis:343.77 },
+  { ticker:"BND", name:"Vanguard Total Bond Market ETF",  shares:2106, costBasis:73.39  }
+];
+
+const DEFAULT_TRANSACTIONS = [
+  {"date":"2026-05-19","ticker":"BND","type":"buy","shares":730,"price":72.5,"notes":""},
+  {"date":"2026-05-19","ticker":"BND","type":"buy","shares":30,"price":72.505,"notes":""},
+  {"date":"2026-05-19","ticker":"BND","type":"buy","shares":6,"price":72.4893,"notes":""},
+  {"date":"2026-05-19","ticker":"VTI","type":"buy","shares":110,"price":360.9,"notes":""},
+  {"date":"2026-05-19","ticker":"VTI","type":"buy","shares":9,"price":360.74,"notes":""},
+  {"date":"2026-05-19","ticker":"VTI","type":"buy","shares":5,"price":360.7,"notes":""},
+  {"date":"2026-05-18","ticker":"VTI","type":"buy","shares":1,"price":363.34,"notes":""},
+  {"date":"2026-05-05","ticker":"BND","type":"dividend","shares":null,"price":0.241713,"notes":"Cash dividend"},
+  {"date":"2026-05-01","ticker":"BND","type":"buy","shares":350,"price":73.438,"notes":""},
+  {"date":"2026-05-01","ticker":"BND","type":"buy","shares":10,"price":73.4393,"notes":""},
+  {"date":"2026-05-01","ticker":"VTI","type":"buy","shares":205,"price":356.41,"notes":""},
+  {"date":"2026-04-09","ticker":"BND","type":"buy","shares":4,"price":73.7493,"notes":""},
+  {"date":"2026-04-06","ticker":"BND","type":"dividend","shares":null,"price":0.250016,"notes":"Cash dividend"},
+  {"date":"2026-04-01","ticker":"BND","type":"buy","shares":10,"price":73.44,"notes":""},
+  {"date":"2026-04-01","ticker":"BND","type":"sell","shares":1,"price":73.4307,"notes":""},
+  {"date":"2026-03-31","ticker":"VTI","type":"dividend","shares":null,"price":0.9982,"notes":"Cash dividend"},
+  {"date":"2026-03-31","ticker":"BND","type":"sell","shares":77,"price":73.66,"notes":""},
+  {"date":"2026-03-31","ticker":"VTI","type":"buy","shares":17,"price":316.5593,"notes":""},
+  {"date":"2026-03-31","ticker":"VTI","type":"buy","shares":1,"price":316.22,"notes":""},
+  {"date":"2026-03-18","ticker":"BND","type":"buy","shares":360,"price":73.9,"notes":""},
+  {"date":"2026-03-18","ticker":"BND","type":"buy","shares":10,"price":73.8793,"notes":""},
+  {"date":"2026-03-18","ticker":"BND","type":"buy","shares":2,"price":73.88,"notes":""},
+  {"date":"2026-03-18","ticker":"VTI","type":"buy","shares":220,"price":329.41,"notes":""},
+  {"date":"2026-03-12","ticker":"BND","type":"buy","shares":2,"price":73.655,"notes":""},
+  {"date":"2026-03-04","ticker":"BND","type":"dividend","shares":null,"price":0.227824,"notes":"Cash dividend"},
+  {"date":"2026-02-24","ticker":"BND","type":"buy","shares":3,"price":74.9293,"notes":""},
+  {"date":"2026-02-04","ticker":"BND","type":"dividend","shares":null,"price":0.24547,"notes":"Cash dividend"},
+  {"date":"2026-02-03","ticker":"BND","type":"buy","shares":338,"price":73.86,"notes":""},
+  {"date":"2026-02-03","ticker":"BND","type":"sell","shares":6,"price":73.86,"notes":""},
+  {"date":"2026-02-03","ticker":"VTI","type":"buy","shares":220,"price":343.02,"notes":""},
+  {"date":"2026-01-07","ticker":"BND","type":"buy","shares":335,"price":74.3,"notes":""},
+  {"date":"2026-01-07","ticker":"VTI","type":"buy","shares":43,"price":341.36,"notes":""},
+  {"date":"2026-01-07","ticker":"VTI","type":"buy","shares":1.5,"price":341.2533,"notes":""},
+  {"date":"2026-01-06","ticker":"VTI","type":"buy","shares":85,"price":338.9486,"notes":""},
+  {"date":"2026-01-06","ticker":"VTI","type":"buy","shares":6,"price":338.9485,"notes":""},
+  {"date":"2026-01-05","ticker":"VTI","type":"buy","shares":85,"price":339.25,"notes":""},
+  {"date":"2026-01-05","ticker":"VTI","type":"sell","shares":2,"price":339.2809,"notes":""},
+  {"date":"2026-06-03","ticker":"BND","type":"dividend","shares":null,"price":0.247259,"notes":"Cash dividend"},
+  {"date":"2025-12-23","ticker":"VTI","type":"buy","shares":2.5,"price":338.788,"notes":""}
+];
+
+const DEFAULT_PERF = {
+  labels: ["Dec '25","Jan '26","Feb '26","Mar '26","Apr '26","May '26","Jun '26"],
+  values: [990.21, 100241.73, 199792.02, 289795.23, 312557.02, 530838.62, 520790.13]
+};
+
+function load(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } }
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
 let positions    = load("mff_positions",    DEFAULT_POSITIONS);
@@ -315,11 +309,9 @@ let txFilter     = "all";
 let currentUser  = null;
 let perfChart    = null;
 
-// ── HELPERS ──
 const fmt = n => n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2});
 const fmtPct = n => (n>=0?"+":"")+n.toFixed(2)+"%";
 
-// ── LOGIN ──
 function tryLogin() {
   const pw = document.getElementById("pw").value.trim();
   const user = USERS[pw];
@@ -328,16 +320,16 @@ function tryLogin() {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
     document.getElementById("investor-badge").textContent = user.name;
-    if (user.admin) document.getElementById("admin-panel").style.display = "block";
+    if (user.admin) { document.getElementById("admin-panel").style.display = "block"; populateAdminFields(); }
     fetchPrices();
     renderTx();
     renderChart();
-    if (user.admin) populateAdminFields();
   } else {
     document.getElementById("login-error").style.display = "block";
   }
 }
 document.getElementById("pw").addEventListener("keydown", e => { if(e.key==="Enter") tryLogin(); });
+
 function logout() {
   currentUser = null; livePrice = {};
   document.getElementById("login-screen").style.display = "flex";
@@ -348,11 +340,10 @@ function logout() {
   if (perfChart) { perfChart.destroy(); perfChart = null; }
 }
 
-// ── LIVE PRICES via Yahoo Finance (unofficial public endpoint, no key needed) ──
 async function fetchPrices() {
   const tickers = positions.map(p=>p.ticker);
   const status = document.getElementById("price-status");
-  status.innerHTML = '<i class="ti ti-refresh spin" id="refresh-icon"></i> Fetching live prices…';
+  status.innerHTML = '<i class="ti ti-refresh spin"></i> Fetching live prices…';
   try {
     for (const ticker of tickers) {
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
@@ -362,32 +353,28 @@ async function fetchPrices() {
       livePrice[ticker] = meta.regularMarketPrice || meta.previousClose;
     }
     const now = new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
-    status.innerHTML = `<i class="ti ti-circle-check" style="color:var(--green);"></i> Prices as of ${now}`;
-    renderPositions();
-    renderMetrics();
+    status.innerHTML = `<i class="ti ti-circle-check" style="color:var(--green);"></i> Live prices as of ${now}`;
   } catch(e) {
-    status.innerHTML = '<i class="ti ti-alert-circle" style="color:var(--red);"></i> Could not fetch live prices — showing cost basis';
+    status.innerHTML = '<i class="ti ti-alert-circle" style="color:var(--red);"></i> Could not fetch live prices — using IB close prices';
     positions.forEach(p => { livePrice[p.ticker] = p.costBasis; });
-    renderPositions();
-    renderMetrics();
   }
+  renderPositions();
+  renderMetrics();
 }
 
-// ── METRICS ──
 function renderMetrics() {
-  const totalValue = positions.reduce((s,p) => s + p.shares * (livePrice[p.ticker]||p.costBasis), 0);
-  const totalCost  = positions.reduce((s,p) => s + p.shares * p.costBasis, 0);
+  const totalValue = positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.costBasis), 0);
+  const totalCost  = positions.reduce((s,p) => s + p.shares*p.costBasis, 0);
   const gl = totalValue - totalCost;
   const glPct = (gl/totalCost)*100;
   document.getElementById("metrics-grid").innerHTML = `
     <div class="metric-card"><div class="metric-label">Portfolio value</div><div class="metric-value">${fmt(totalValue)}</div></div>
     <div class="metric-card"><div class="metric-label">Total gain / loss</div><div class="metric-value ${gl>=0?'pos':'neg'}">${fmt(gl)}</div><div class="metric-sub ${gl>=0?'pos':'neg'}">${fmtPct(glPct)} all-time</div></div>
     <div class="metric-card"><div class="metric-label">Positions</div><div class="metric-value">${positions.length}</div></div>
-    <div class="metric-card"><div class="metric-label">Last rebalance</div><div class="metric-value" style="font-size:16px;">Jan 2025</div></div>
+    <div class="metric-card"><div class="metric-label">Since inception</div><div class="metric-value" style="font-size:16px;">Dec 2025</div></div>
   `;
 }
 
-// ── POSITIONS TABLE ──
 function renderPositions() {
   const totalValue = positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.costBasis), 0);
   document.getElementById("pos-body").innerHTML = positions.map(p => {
@@ -408,7 +395,6 @@ function renderPositions() {
   }).join("");
 }
 
-// ── TRANSACTIONS ──
 function filterTx(type, btn) {
   txFilter = type;
   document.querySelectorAll("#tx-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
@@ -419,8 +405,8 @@ function renderTx() {
   const filtered = txFilter==="all" ? transactions : transactions.filter(t=>t.type===txFilter);
   document.getElementById("tx-body").innerHTML = filtered.map(t => {
     const badgeCls = t.type==="buy"?"type-buy":t.type==="sell"?"type-sell":"type-div";
-    const typeLabel = t.type.charAt(0).toUpperCase()+t.type.slice(1);
-    const sharesStr = t.shares!=null ? t.shares.toLocaleString() : "—";
+    const typeLabel = t.type==="dividend"?"Dividend":t.type.charAt(0).toUpperCase()+t.type.slice(1);
+    const sharesStr = t.shares!=null ? Number(t.shares).toLocaleString() : "—";
     const priceStr  = t.type==="dividend" ? fmt(t.price)+"/sh" : fmt(t.price);
     return `<tr>
       <td>${t.date}</td>
@@ -433,77 +419,67 @@ function renderTx() {
   }).join("") || `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:1.5rem;">No transactions found.</td></tr>`;
 }
 
-// ── CHART ──
 function renderChart() {
   perfData = load("mff_perf", DEFAULT_PERF);
   const isDark = matchMedia("(prefers-color-scheme:dark)").matches;
-  const lc = "#378ADD", gc = isDark?"rgba(55,138,221,0.15)":"rgba(24,95,165,0.08)";
-  const tc = isDark?"#6a6966":"#888780", bgc = isDark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)";
+  const lc="#378ADD", gc=isDark?"rgba(55,138,221,0.15)":"rgba(24,95,165,0.08)";
+  const tc=isDark?"#6a6966":"#888780", bgc=isDark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)";
   if (perfChart) perfChart.destroy();
   perfChart = new Chart(document.getElementById("perfChart"), {
     type:"line",
-    data:{
-      labels:perfData.labels,
-      datasets:[{label:"Portfolio value",data:perfData.values,borderColor:lc,backgroundColor:gc,borderWidth:2,pointRadius:3,pointBackgroundColor:lc,fill:true,tension:0.35}]
-    },
+    data:{ labels:perfData.labels, datasets:[{label:"Portfolio value",data:perfData.values,borderColor:lc,backgroundColor:gc,borderWidth:2,pointRadius:3,pointBackgroundColor:lc,fill:true,tension:0.35}] },
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}},
       scales:{
         x:{grid:{color:bgc},ticks:{color:tc,font:{size:11}}},
-        y:{grid:{color:bgc},ticks:{color:tc,font:{size:11},callback:v=>"$"+(v/1000).toFixed(0)+"k"}}
+        y:{grid:{color:bgc},ticks:{color:tc,font:{size:11},callback:v=>"$"+(v>=1000?(v/1000).toFixed(0)+"k":v)}}
       }
     }
   });
-  document.getElementById("chart-updated").textContent = "Updated "+new Date().toLocaleDateString("en-US",{month:"short",year:"numeric"});
+  document.getElementById("chart-updated").textContent = "IB data · "+new Date().toLocaleDateString("en-US",{month:"short",year:"numeric"});
 }
 
-// ── ADMIN: POSITION ──
 function populateAdminFields() {
   document.getElementById("a-perf-json").value = JSON.stringify(perfData, null, 2);
 }
 function savePosition() {
-  const ticker = document.getElementById("a-pos-ticker").value;
-  const shares = parseFloat(document.getElementById("a-pos-shares").value);
-  const cost   = parseFloat(document.getElementById("a-pos-cost").value);
-  if (isNaN(shares)||isNaN(cost)) return alert("Please fill in shares and cost basis.");
-  const idx = positions.findIndex(p=>p.ticker===ticker);
-  if (idx>=0) { positions[idx].shares=shares; positions[idx].costBasis=cost; }
-  save("mff_positions", positions);
-  renderPositions(); renderMetrics();
-  const el = document.getElementById("pos-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",2500);
+  const ticker=document.getElementById("a-pos-ticker").value;
+  const shares=parseFloat(document.getElementById("a-pos-shares").value);
+  const cost=parseFloat(document.getElementById("a-pos-cost").value);
+  if(isNaN(shares)||isNaN(cost)) return alert("Please fill in shares and cost basis.");
+  const idx=positions.findIndex(p=>p.ticker===ticker);
+  if(idx>=0){positions[idx].shares=shares;positions[idx].costBasis=cost;}
+  save("mff_positions",positions);
+  renderPositions();renderMetrics();
+  const el=document.getElementById("pos-success");el.style.display="inline";setTimeout(()=>el.style.display="none",2500);
 }
-
-// ── ADMIN: TRANSACTION ──
 function saveTx() {
-  const date   = document.getElementById("a-tx-date").value;
-  const ticker = document.getElementById("a-tx-ticker").value;
-  const type   = document.getElementById("a-tx-type").value;
-  const shares = document.getElementById("a-tx-shares").value ? parseFloat(document.getElementById("a-tx-shares").value) : null;
-  const price  = parseFloat(document.getElementById("a-tx-price").value);
-  const notes  = document.getElementById("a-tx-notes").value;
-  if (!date||isNaN(price)) return alert("Date and price are required.");
-  transactions.unshift({ date, ticker, type, shares, price, notes });
-  save("mff_transactions", transactions);
+  const date=document.getElementById("a-tx-date").value;
+  const ticker=document.getElementById("a-tx-ticker").value;
+  const type=document.getElementById("a-tx-type").value;
+  const sharesVal=document.getElementById("a-tx-shares").value;
+  const shares=sharesVal?parseFloat(sharesVal):null;
+  const price=parseFloat(document.getElementById("a-tx-price").value);
+  const notes=document.getElementById("a-tx-notes").value;
+  if(!date||isNaN(price)) return alert("Date and price are required.");
+  transactions.unshift({date,ticker,type,shares,price,notes});
+  save("mff_transactions",transactions);
   renderTx();
-  const el = document.getElementById("tx-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",2500);
+  const el=document.getElementById("tx-success");el.style.display="inline";setTimeout(()=>el.style.display="none",2500);
 }
-
-// ── ADMIN: PERFORMANCE ──
 function savePerf() {
   try {
-    const parsed = JSON.parse(document.getElementById("a-perf-json").value);
-    if (!parsed.labels||!parsed.values) throw new Error();
-    perfData = parsed; save("mff_perf", perfData);
-    renderChart();
-    const el = document.getElementById("perf-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",2500);
-  } catch { alert("Invalid JSON. Please check the format."); }
+    const parsed=JSON.parse(document.getElementById("a-perf-json").value);
+    if(!parsed.labels||!parsed.values) throw new Error();
+    perfData=parsed;save("mff_perf",perfData);renderChart();
+    const el=document.getElementById("perf-success");el.style.display="inline";setTimeout(()=>el.style.display="none",2500);
+  } catch { alert("Invalid JSON. Check the format."); }
 }
-
-function switchAdminTab(panel, btn) {
-  ["position","transaction","performance"].forEach(p => document.getElementById("admin-"+p).style.display="none");
+function switchAdminTab(panel,btn) {
+  ["position","transaction","performance"].forEach(p=>document.getElementById("admin-"+p).style.display="none");
   document.getElementById("admin-"+panel).style.display="flex";
-  document.querySelectorAll(".admin-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".tabs.admin-tabs .tab-btn, #admin-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
 }
 </script>
