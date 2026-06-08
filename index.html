@@ -108,13 +108,11 @@
   .tab-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
 
   /* TX TABLE */
-  .tx-table { table-layout: fixed; min-width: 560px; }
+  .tx-table { min-width: 680px; }
   .tx-table th:nth-child(1) { width: 115px; }
   .tx-table th:nth-child(2) { width: 65px; }
-  .tx-table th:nth-child(3) { width: 85px; }
-  .tx-table th:nth-child(4) { width: 70px; }
-  .tx-table th:nth-child(5) { width: 85px; }
-  .tx-table td { overflow: hidden; text-overflow: ellipsis; }
+  .tx-table th:nth-child(3) { width: 90px; }
+  .tx-table td.notes-cell { color: var(--text2); max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
   .type-badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; }
   .type-buy { background: var(--green-bg); color: var(--green); }
   .type-sell { background: var(--red-bg); color: var(--red); }
@@ -426,7 +424,8 @@
             <th id="tx-col-ticker">Ticker</th>
             <th id="tx-col-type">Type</th>
             <th id="tx-col-shares">Shares</th>
-            <th id="tx-col-price">Price</th>
+            <th id="tx-col-price">Price / sh</th>
+            <th id="tx-col-amount">Amount</th>
             <th id="tx-col-notes">Notes</th>
           </tr></thead>
           <tbody id="tx-body"></tbody>
@@ -516,7 +515,7 @@ const TR = {
     ttab_all: "All", ttab_buy: "Buys", ttab_sell: "Sells", ttab_dividend: "Dividends",
     tx_all_months: "All months", tx_all_years: "All years",
     tx_col_date: "Date", tx_col_ticker: "Ticker", tx_col_type: "Type",
-    tx_col_shares: "Shares", tx_col_price: "Price", tx_col_notes: "Notes",
+    tx_col_shares: "Shares", tx_col_price: "Price / sh", tx_col_amount: "Amount", tx_col_notes: "Notes",
     tx_hint: "Transaction data imported from Interactive Brokers · Managed by Pablo",
     tx_empty: "No transactions for selected period.",
     // Tx types
@@ -593,7 +592,7 @@ const TR = {
     ttab_all: "Todas", ttab_buy: "Compras", ttab_sell: "Ventas", ttab_dividend: "Dividendos",
     tx_all_months: "Todos los meses", tx_all_years: "Todos los años",
     tx_col_date: "Fecha", tx_col_ticker: "Ticker", tx_col_type: "Tipo",
-    tx_col_shares: "Acciones", tx_col_price: "Precio", tx_col_notes: "Notas",
+    tx_col_shares: "Acciones", tx_col_price: "Precio / acc.", tx_col_amount: "Monto", tx_col_notes: "Notas",
     tx_hint: "Transacciones importadas desde Interactive Brokers · Administrado por Pablo",
     tx_empty: "No hay transacciones para el período seleccionado.",
     type_buy: "Compra", type_sell: "Venta", type_dividend: "Dividendo",
@@ -691,6 +690,7 @@ function setLang(lang) {
     "tx-col-type": "tx_col_type",
     "tx-col-shares": "tx_col_shares",
     "tx-col-price": "tx_col_price",
+    "tx-col-amount": "tx_col_amount",
     "tx-col-notes": "tx_col_notes",
     "tx-hint": "tx_hint",
   };
@@ -979,16 +979,28 @@ function renderTx() {
     const badgeCls  = tx.type==="buy"?"type-buy":tx.type==="sell"?"type-sell":"type-div";
     const typeLabel = tx.type==="dividend" ? t("type_dividend") : tx.type==="buy" ? t("type_buy") : t("type_sell");
     const sharesStr = tx.shares!=null ? Number(tx.shares).toLocaleString() : "—";
-    const priceStr  = tx.type==="dividend" ? fmt(tx.price)+"/sh" : fmt(tx.price);
+    const priceStr  = fmt(tx.price);
+    // Amount: for buys/sells = shares × price; for dividends = per-share rate × shares held at time
+    let amountStr = "—";
+    if (tx.type === "dividend") {
+      const pos = positions.find(p => p.ticker === tx.ticker);
+      if (pos) amountStr = `<span class="pos">${fmt(tx.price * pos.shares)}</span>`;
+    } else if (tx.shares != null) {
+      const total = tx.shares * tx.price;
+      amountStr = tx.type === "sell"
+        ? `<span class="neg">${fmt(total)}</span>`
+        : fmt(total);
+    }
     return `<tr>
       <td>${tx.date}</td>
       <td><span class="ticker">${tx.ticker}</span></td>
       <td><span class="type-badge ${badgeCls}">${typeLabel}</span></td>
       <td>${sharesStr}</td>
       <td>${priceStr}</td>
-      <td style="color:var(--text2);">${tx.notes||""}</td>
+      <td>${amountStr}</td>
+      <td class="notes-cell">${tx.notes||""}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:1.5rem;">${t("tx_empty")}</td></tr>`;
+  }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:1.5rem;">${t("tx_empty")}</td></tr>`;
 }
 
 function renderChart() {
