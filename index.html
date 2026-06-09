@@ -164,6 +164,51 @@
   @media (max-width: 600px) {
     .ownership-cards { grid-template-columns: 1fr; }
   }
+
+  @media (max-width: 640px) {
+    /* App shell */
+    #app { padding: 0 1rem 3rem; }
+    .top-bar { flex-wrap: wrap; gap: 8px; padding: 1rem 0; }
+    .top-bar-right { gap: 6px; flex-wrap: wrap; }
+    .top-bar-left h2 { font-size: 13px; }
+    .investor-badge { font-size: 11px; padding: 3px 10px; }
+    .logout-btn { font-size: 12px; padding: 4px 10px; }
+
+    /* Login */
+    .login-card { width: 92vw; padding: 2rem 1.5rem; }
+
+    /* Metrics */
+    .metrics-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .metric-value { font-size: 18px; }
+    #nav-unit-card .metric-value { font-size: 20px; }
+
+    /* Admin tabs — scrollable row */
+    #admin-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; gap: 4px; }
+    #admin-tabs .tab-btn { white-space: nowrap; flex-shrink: 0; font-size: 11px; padding: 5px 10px; }
+    #atab-export, #atab-reset { margin-left: 0; }
+
+    /* Admin forms */
+    .form-row { grid-template-columns: 1fr; }
+    .form-row-3 { grid-template-columns: 1fr; }
+
+    /* Section headers */
+    .tx-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .section-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+
+    /* TX filter row */
+    #tx-tabs { flex-wrap: wrap; }
+
+    /* Chart */
+    .chart-card { padding: 1rem; }
+
+    /* Positions table — make scrollable */
+    .table-wrap { overflow-x: auto; }
+    table { min-width: 520px; }
+
+    /* Ownership cards */
+    .ownership-cards { grid-template-columns: 1fr; }
+    .ownership-value { font-size: 20px; }
+  }
 </style>
 </head>
 <body>
