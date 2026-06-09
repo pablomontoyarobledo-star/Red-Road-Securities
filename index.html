@@ -224,6 +224,9 @@
         <button class="tab-btn" onclick="exportData()" id="atab-export" style="margin-left:auto;background:var(--bg2);border-color:var(--border2);">
           <i class="ti ti-clipboard-copy" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="export-btn-label">Export data</span>
         </button>
+        <button class="tab-btn" onclick="resetAllData()" id="atab-reset" style="background:var(--red-bg);border-color:var(--red);color:var(--red);" title="Reset all localStorage to defaults">
+          <i class="ti ti-refresh-alert" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="reset-btn-label">Reset data</span>
+        </button>
       </div>
 
       <!-- IB Import -->
@@ -245,7 +248,7 @@
       </div>
       <div id="admin-position" class="admin-form" style="display:none;">
         <div class="form-row">
-          <div class="form-group"><label id="lbl-pos-ticker">Ticker</label><select id="a-pos-ticker"><option value="VTI">VTI</option><option value="BND">BND</option></select></div>
+          <div class="form-group"><label id="lbl-pos-ticker">Ticker</label><select id="a-pos-ticker"><option value="VTI">VTI</option><option value="BND">BND</option><option value="CASH">CASH</option></select></div>
           <div class="form-group"><label id="lbl-pos-shares">Shares held</label><input type="number" id="a-pos-shares" placeholder="e.g. 1009" /></div>
         </div>
         <div class="form-row">
@@ -518,9 +521,11 @@ const TR = {
     col_price: "Live price", col_value: "Value", col_alloc: "Allocation", col_gl: "Gain / Loss",
     // Metrics cards
     metric_portValue: "Portfolio value",
-    metric_totalGL: "Total gain / loss",
+    metric_totalGL: "Gain / loss vs deposited",
     metric_deposited: "Total deposited",
-    metric_inception: "Since inception",
+    metric_vsDeposited: "vs deposited",
+    metric_twr: "TWR since inception",
+    metric_twrSub: "time-weighted return · Dec 2025",
     metric_allTime: "all-time",
     // Ownership
     lbl_ownership: "Investor ownership",
@@ -604,9 +609,11 @@ const TR = {
     col_ticker: "Ticker", col_name: "Nombre", col_shares: "Acciones",
     col_price: "Precio en vivo", col_value: "Valor", col_alloc: "Asignación", col_gl: "Ganancia / Pérdida",
     metric_portValue: "Valor del portafolio",
-    metric_totalGL: "Ganancia / pérdida total",
+    metric_totalGL: "Ganancia / pérdida vs depositado",
     metric_deposited: "Total depositado",
-    metric_inception: "Desde el inicio",
+    metric_vsDeposited: "vs depositado",
+    metric_twr: "TWR desde el inicio",
+    metric_twrSub: "retorno ponderado por tiempo · dic 2025",
     metric_allTime: "histórico",
     lbl_ownership: "Participación de inversores",
     fernando_pct: "67,84% participación · 335.166 unidades",
@@ -786,11 +793,15 @@ const USERS = {
 };
 
 const DEFAULT_POSITIONS = [
-  { ticker:"VTI", name:"Vanguard Total Stock Market ETF", shares:1009, costBasis:343.77, ibClose:363.38 },
-  { ticker:"BND", name:"Vanguard Total Bond Market ETF",  shares:2106, costBasis:73.39,  ibClose:72.83  }
+  { ticker:"VTI", name:"Vanguard Total Stock Market ETF", shares:1499.8884, costBasis:351.540712, ibClose:367.49  },
+  { ticker:"BND", name:"Vanguard Total Bond Market ETF",  shares:3196,      costBasis:73.210501,  ibClose:72.875  },
 ];
 
 const DEFAULT_TRANSACTIONS = [
+  {"date":"2026-06-09","ticker":"BND","type":"buy","shares":690,      "price":72.865,      "notes":""},
+  {"date":"2026-06-09","ticker":"VTI","type":"buy","shares":220,      "price":367.49,      "notes":""},
+  {"date":"2026-06-09","ticker":"BND","type":"buy","shares":400,      "price":72.875,      "notes":""},
+  {"date":"2026-06-09","ticker":"VTI","type":"buy","shares":270.8884, "price":367.529916,  "notes":""},
   {"date":"2026-06-03","ticker":"BND","type":"dividend","shares":null,"price":0.247259,"notes":"Cash dividend"},
   {"date":"2026-05-19","ticker":"BND","type":"buy","shares":730,"price":72.5,"notes":""},
   {"date":"2026-05-19","ticker":"BND","type":"buy","shares":30,"price":72.505,"notes":""},
@@ -834,24 +845,24 @@ const DEFAULT_TRANSACTIONS = [
 
 const DEFAULT_PERF = {
   labels: ["Dec '25","Jan '26","Feb '26","Mar '26","Apr '26","May '26","Jun '26"],
-  values: [990.21, 100241.73, 199792.02, 289795.23, 312557.02, 530838.62, 780790.13]
+  values: [990.21, 100241.73, 199792.02, 289795.23, 312557.02, 530838.62, 780016]
 };
 
 const DEFAULT_DEPOSITS = [
-  { date:"2025-12-18", amount:1000,   source:"Moneche",          nav:1000.0000, fernando:650,   dario:350   },
-  { date:"2025-12-29", amount:25000,  source:"Moneche",          nav:990.2100,  fernando:16250, dario:8750  },
-  { date:"2025-12-29", amount:3000,   source:"Moneche",          nav:990.2100,  fernando:1950,  dario:1050  },
-  { date:"2025-12-30", amount:31000,  source:"Moneche",          nav:990.2100,  fernando:20150, dario:10850 },
-  { date:"2026-01-02", amount:40000,  source:"Fernando Montoya", nav:990.2100,  fernando:40000, dario:0     },
-  { date:"2026-01-28", amount:100000, source:"Moneche",          nav:990.2100,  fernando:65000, dario:35000 },
-  { date:"2026-03-12", amount:100000, source:"Moneche",          nav:989.2287,  fernando:65000, dario:35000 },
-  { date:"2026-04-27", amount:100000, source:"Moneche",          nav:956.2421,  fernando:65000, dario:35000 },
-  { date:"2026-05-11", amount:100000, source:"Moneche",          nav:766.7621,  fernando:65000, dario:35000 },
-  { date:"2026-06-08", amount:160000, source:"Fernando Montoya", nav:986.5955,  fernando:160000,dario:0     },
-  { date:"2026-06-08", amount:100000, source:"Dario Montoya",    nav:986.5955,  fernando:0,     dario:100000},
+  { date:"2025-12-18", amount:1000,   source:"Moneche",          nav:1.000000, fernando:650,    dario:350    },
+  { date:"2025-12-29", amount:25000,  source:"Moneche",          nav:0.992810, fernando:16250,  dario:8750   },
+  { date:"2025-12-29", amount:3000,   source:"Moneche",          nav:0.992810, fernando:1950,   dario:1050   },
+  { date:"2025-12-30", amount:31000,  source:"Moneche",          nav:0.991905, fernando:20150,  dario:10850  },
+  { date:"2026-01-02", amount:40000,  source:"Fernando Montoya", nav:0.998880, fernando:40000,  dario:0      },
+  { date:"2026-01-28", amount:100000, source:"Moneche",          nav:0.997424, fernando:65000,  dario:35000  },
+  { date:"2026-03-12", amount:100000, source:"Moneche",          nav:0.979526, fernando:65000,  dario:35000  },
+  { date:"2026-04-27", amount:100000, source:"Moneche",          nav:1.032055, fernando:65000,  dario:35000  },
+  { date:"2026-05-11", amount:100000, source:"Moneche",          nav:1.051073, fernando:65000,  dario:35000  },
+  { date:"2026-06-08", amount:160000, source:"Fernando Montoya", nav:1.052348, fernando:160000, dario:0      },
+  { date:"2026-06-08", amount:100000, source:"Dario Montoya",    nav:1.052348, fernando:0,      dario:100000 },
 ];
 
-const INCEPTION_NAV = 1000.00;
+const INCEPTION_NAV = 1.00;
 
 // Compute unit ledger dynamically from deposits array
 function calcUnits() {
@@ -868,18 +879,28 @@ function calcUnits() {
 function load(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } }
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
-// Migration: reset deposits if they contain old wrong nav values (nav > 5000 on any deposit)
+// Migration: must run BEFORE any load() calls
 function migrateDeposits() {
-  const stored = load("mff_deposits", null);
-  if (!stored) return; // will use DEFAULT_DEPOSITS
-  const hasWrongNav = stored.some(d => d.nav > 5000);
-  if (hasWrongNav) { localStorage.removeItem("mff_deposits"); }
+  const storedDep = load("mff_deposits", null);
+  if (storedDep && storedDep.some(d => d.nav > 2)) {
+    localStorage.removeItem("mff_deposits");
+  }
+  const storedPerf = load("mff_perf", null);
+  if (storedPerf && storedPerf.values) {
+    const lastVal = storedPerf.values[storedPerf.values.length - 1];
+    if (lastVal < 700000) { localStorage.removeItem("mff_perf"); }
+  }
+  // Reset positions if CASH row present or old share counts (VTI < 1400)
+  const storedPos = load("mff_positions", null);
+  if (storedPos && (storedPos.some(p => p.ticker === "CASH") || storedPos.some(p => p.ticker === "VTI" && p.shares < 1400))) {
+    localStorage.removeItem("mff_positions");
+  }
 }
+migrateDeposits();
 
 let positions    = load("mff_positions",    DEFAULT_POSITIONS);
 let transactions = load("mff_transactions", DEFAULT_TRANSACTIONS);
 let perfData     = load("mff_perf",         DEFAULT_PERF);
-migrateDeposits();
 let deposits     = load("mff_deposits",     DEFAULT_DEPOSITS);
 let livePrice    = {};
 let txFilter     = "all";
@@ -956,6 +977,7 @@ async function fetchPrices() {
   _applyPriceStatus();
   let anyFailed = false;
   for (const p of positions) {
+    if (p.ticker === "CASH") { livePrice["CASH"] = 1.00; continue; }
     const price = await fetchSinglePrice(p.ticker);
     if (price) { livePrice[p.ticker] = price; }
     else { livePrice[p.ticker] = p.ibClose || p.costBasis; anyFailed = true; }
@@ -975,23 +997,24 @@ function getTotalValue() {
 function renderMetrics() {
   const totalValue     = getTotalValue();
   const totalDeposited = deposits.reduce((s,d) => s + d.amount, 0);
-  const totalCost      = positions.reduce((s,p) => s + p.shares*(p.ibClose||p.costBasis), 0);
-  const gl    = totalValue - totalCost;
-  const glPct = totalCost > 0 ? (gl/totalCost)*100 : 0;
+  const gl    = totalValue - totalDeposited;
+  const glPct = totalDeposited > 0 ? (gl / totalDeposited) * 100 : 0;
   const { totalUnits } = calcUnits();
   const navPerUnit = totalUnits > 0 ? totalValue / totalUnits : 0;
-  const navChange  = ((navPerUnit - INCEPTION_NAV) / INCEPTION_NAV) * 100;
+  const twr = ((navPerUnit - INCEPTION_NAV) / INCEPTION_NAV) * 100;  // TWR = NAV change since inception
   document.getElementById("metrics-grid").innerHTML = `
     <div class="metric-card"><div class="metric-label">${t("metric_portValue")}</div><div class="metric-value">${fmt(totalValue)}</div></div>
-    <div class="metric-card"><div class="metric-label">${t("metric_totalGL")}</div><div class="metric-value ${gl>=0?'pos':'neg'}">${fmt(gl)}</div><div class="metric-sub ${gl>=0?'pos':'neg'}">${fmtPct(glPct)} ${t("metric_allTime")}</div></div>
+    <div class="metric-card"><div class="metric-label">${t("metric_totalGL")}</div><div class="metric-value ${gl>=0?'pos':'neg'}">${fmt(gl)}</div><div class="metric-sub ${gl>=0?'pos':'neg'}">${fmtPct(glPct)} ${t("metric_vsDeposited")}</div></div>
     <div class="metric-card"><div class="metric-label">${t("metric_deposited")}</div><div class="metric-value">${fmt(totalDeposited)}</div></div>
-    <div class="metric-card"><div class="metric-label">${t("metric_inception")}</div><div class="metric-value" style="font-size:16px;">Dec 2025</div></div>
+    <div class="metric-card"><div class="metric-label">${t("metric_twr")}</div><div class="metric-value ${twr>=0?'pos':'neg'}" style="font-size:20px;">${fmtPct(twr)}</div><div class="metric-sub" style="color:var(--text3);">${t("metric_twrSub")}</div></div>
   `;
   document.getElementById("nav-unit-value").textContent = fmt(navPerUnit);
   const unitsFormatted = totalUnits.toLocaleString("en-US", {maximumFractionDigits:0});
   const subEl = document.querySelector("#nav-unit-card .metric-sub");
-  const unitsLabel = currentLang==="es" ? `${unitsFormatted} unidades en circulación · inicio $${INCEPTION_NAV.toLocaleString("es-ES",{minimumFractionDigits:2})}` : `${unitsFormatted} units outstanding · inception $${INCEPTION_NAV.toFixed(2)}`;
-  if (subEl) subEl.innerHTML = `${unitsLabel} &nbsp;·&nbsp; <span class="${navChange>=0?'pos':'neg'}">${fmtPct(navChange)} ${currentLang==="es"?"desde el inicio":"since inception"}</span>`;
+  const unitsLabel = currentLang==="es"
+    ? `${unitsFormatted} unidades en circulación · inicio $1,00`
+    : `${unitsFormatted} units outstanding · inception $1.00`;
+  if (subEl) subEl.innerHTML = `${unitsLabel} &nbsp;·&nbsp; <span class="${twr>=0?'pos':'neg'}">${fmtPct(twr)} ${currentLang==="es"?"desde el inicio":"since inception"}</span>`;
 }
 
 function renderOwnership() {
@@ -1027,19 +1050,26 @@ function renderOwnership() {
 function renderPositions() {
   const totalValue = getTotalValue();
   document.getElementById("pos-body").innerHTML = positions.map(p => {
-    const price = livePrice[p.ticker] || p.ibClose || p.costBasis;
-    const val   = p.shares * price;
-    const gl    = (price - p.costBasis) * p.shares;
-    const glPct = ((price - p.costBasis)/p.costBasis)*100;
-    const alloc = (val/totalValue)*100;
+    const isCash = p.ticker === "CASH";
+    const price  = isCash ? 1.00 : (livePrice[p.ticker] || p.ibClose || p.costBasis);
+    const val    = p.shares * price;
+    const alloc  = (val / totalValue) * 100;
+    const gl     = isCash ? 0 : (price - p.costBasis) * p.shares;
+    const glPct  = isCash ? 0 : ((price - p.costBasis) / p.costBasis) * 100;
+    const glCell = isCash
+      ? `<span style="color:var(--text3);font-size:12px;">—</span>`
+      : `<span class="${gl>=0?'pos':'neg'}">${fmt(gl)} <span style="font-size:11px;">(${fmtPct(glPct)})</span></span>`;
+    const priceCell = isCash
+      ? `<span style="color:var(--text3);">$1.00</span>`
+      : fmt(price);
     return `<tr>
-      <td><span class="ticker">${p.ticker}</span></td>
+      <td><span class="ticker" style="${isCash?'color:var(--text2);':''}">${p.ticker}</span></td>
       <td class="name-cell">${p.name}</td>
-      <td>${p.shares.toLocaleString()}</td>
-      <td>${fmt(price)}</td>
+      <td>${isCash ? fmt(p.shares) : p.shares.toLocaleString()}</td>
+      <td>${priceCell}</td>
       <td style="font-weight:500;">${fmt(val)}</td>
-      <td><div class="alloc-bar-wrap"><div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:${alloc.toFixed(1)}%"></div></div><span style="font-size:12px;color:var(--text2);min-width:36px;">${alloc.toFixed(1)}%</span></div></td>
-      <td class="${gl>=0?'pos':'neg'}">${fmt(gl)} <span style="font-size:11px;">(${fmtPct(glPct)})</span></td>
+      <td><div class="alloc-bar-wrap"><div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:${alloc.toFixed(1)}%;${isCash?'background:var(--text3);':''}"></div></div><span style="font-size:12px;color:var(--text2);min-width:36px;">${alloc.toFixed(1)}%</span></div></td>
+      <td>${glCell}</td>
     </tr>`;
   }).join("");
 }
@@ -1194,7 +1224,9 @@ function savePosition() {
   const cost=parseFloat(document.getElementById("a-pos-cost").value);
   if(isNaN(shares)||isNaN(cost)) return alert(t("alert_pos_fill"));
   const idx=positions.findIndex(p=>p.ticker===ticker);
-  if(idx>=0){positions[idx].shares=shares;positions[idx].costBasis=cost;}
+  const nameMap = { VTI:"Vanguard Total Stock Market ETF", BND:"Vanguard Total Bond Market ETF", CASH:"Cash / Uninvested (pending deployment)" };
+  if(idx>=0){positions[idx].shares=shares;positions[idx].costBasis=cost;positions[idx].ibClose=ticker==="CASH"?1.00:cost;}
+  else { positions.push({ticker,name:nameMap[ticker]||ticker,shares,costBasis:cost,ibClose:ticker==="CASH"?1.00:cost}); }
   save("mff_positions",positions);
   renderPositions();renderMetrics();renderOwnership();
   const el=document.getElementById("pos-success");el.style.display="inline";setTimeout(()=>el.style.display="none",2500);
@@ -1289,6 +1321,28 @@ function exportData() {
     if (confirm) confirm.style.display = "inline";
     setTimeout(() => modal.remove(), 1800);
   }
+}
+
+function resetAllData() {
+  const msg = currentLang === "es"
+    ? "¿Restablecer todos los datos a los valores predeterminados? Se perderán los cambios guardados en este dispositivo."
+    : "Reset all data to defaults? Any changes saved on this device will be lost.";
+  if (!confirm(msg)) return;
+  ["mff_positions","mff_transactions","mff_perf","mff_deposits"].forEach(k => localStorage.removeItem(k));
+  positions    = DEFAULT_POSITIONS;
+  transactions = DEFAULT_TRANSACTIONS;
+  perfData     = DEFAULT_PERF;
+  deposits     = DEFAULT_DEPOSITS;
+  livePrice    = {};
+  renderMetrics();
+  renderOwnership();
+  renderPositions();
+  renderTx();
+  renderDeposits();
+  renderChart();
+  fetchPrices();
+  const btn = document.getElementById("atab-reset");
+  if (btn) { btn.style.background = "var(--green-bg)"; btn.style.color = "var(--green)"; btn.style.borderColor = "var(--green)"; setTimeout(() => { btn.style.background=""; btn.style.color=""; btn.style.borderColor=""; }, 2000); }
 }
 
 function fmtDep(n) { return n ? "$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0}) : "—"; }
