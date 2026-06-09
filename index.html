@@ -221,6 +221,9 @@
         <button class="tab-btn" onclick="switchAdminTab('transaction', this)" id="atab-transaction">Log transaction</button>
         <button class="tab-btn" onclick="switchAdminTab('deposit', this)" id="atab-deposit">Log deposit</button>
         <button class="tab-btn" onclick="switchAdminTab('performance', this)" id="atab-performance">Performance data</button>
+        <button class="tab-btn" onclick="exportData()" id="atab-export" style="margin-left:auto;background:var(--bg2);border-color:var(--border2);">
+          <i class="ti ti-clipboard-copy" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="export-btn-label">Export data</span>
+        </button>
       </div>
 
       <!-- IB Import -->
