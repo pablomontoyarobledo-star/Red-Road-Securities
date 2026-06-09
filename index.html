@@ -256,6 +256,14 @@
         </div>
         <button class="save-btn" onclick="savePosition()" id="save-pos-btn">Save position</button>
         <span class="admin-success" id="pos-success">✓ Position updated</span>
+        <div style="margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border);">
+          <div class="form-group" style="max-width:220px;">
+            <label id="lbl-cash-balance">Cash balance (IB)</label>
+            <input type="number" step="0.01" id="a-cash-balance" placeholder="e.g. 917.58" />
+          </div>
+          <button class="save-btn" onclick="saveCashBalance()" style="margin-top:0.5rem;" id="save-cash-btn">Update cash</button>
+          <span class="admin-success" id="cash-success">✓ Cash updated</span>
+        </div>
       </div>
       <div id="admin-transaction" class="admin-form" style="display:none;">
         <div class="form-row-3">
@@ -902,6 +910,7 @@ let positions    = load("mff_positions",    DEFAULT_POSITIONS);
 let transactions = load("mff_transactions", DEFAULT_TRANSACTIONS);
 let perfData     = load("mff_perf",         DEFAULT_PERF);
 let deposits     = load("mff_deposits",     DEFAULT_DEPOSITS);
+let cashBalance  = load("mff_cash",         917.58);
 let livePrice    = {};
 let txFilter     = "all";
 let currentUser  = null;
@@ -991,7 +1000,7 @@ async function fetchPrices() {
 }
 
 function getTotalValue() {
-  return positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||p.costBasis), 0);
+  return positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||p.costBasis), 0) + cashBalance;
 }
 
 function renderMetrics() {
@@ -1049,29 +1058,34 @@ function renderOwnership() {
 
 function renderPositions() {
   const totalValue = getTotalValue();
-  document.getElementById("pos-body").innerHTML = positions.map(p => {
-    const isCash = p.ticker === "CASH";
-    const price  = isCash ? 1.00 : (livePrice[p.ticker] || p.ibClose || p.costBasis);
-    const val    = p.shares * price;
-    const alloc  = (val / totalValue) * 100;
-    const gl     = isCash ? 0 : (price - p.costBasis) * p.shares;
-    const glPct  = isCash ? 0 : ((price - p.costBasis) / p.costBasis) * 100;
-    const glCell = isCash
-      ? `<span style="color:var(--text3);font-size:12px;">—</span>`
-      : `<span class="${gl>=0?'pos':'neg'}">${fmt(gl)} <span style="font-size:11px;">(${fmtPct(glPct)})</span></span>`;
-    const priceCell = isCash
-      ? `<span style="color:var(--text3);">$1.00</span>`
-      : fmt(price);
+  const rows = positions.map(p => {
+    const price = livePrice[p.ticker] || p.ibClose || p.costBasis;
+    const val   = p.shares * price;
+    const gl    = (price - p.costBasis) * p.shares;
+    const glPct = ((price - p.costBasis)/p.costBasis)*100;
+    const alloc = (val/totalValue)*100;
     return `<tr>
-      <td><span class="ticker" style="${isCash?'color:var(--text2);':''}">${p.ticker}</span></td>
+      <td><span class="ticker">${p.ticker}</span></td>
       <td class="name-cell">${p.name}</td>
-      <td>${isCash ? fmt(p.shares) : p.shares.toLocaleString()}</td>
-      <td>${priceCell}</td>
+      <td>${Number(p.shares).toLocaleString("en-US",{maximumFractionDigits:4})}</td>
+      <td>${fmt(price)}</td>
       <td style="font-weight:500;">${fmt(val)}</td>
-      <td><div class="alloc-bar-wrap"><div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:${alloc.toFixed(1)}%;${isCash?'background:var(--text3);':''}"></div></div><span style="font-size:12px;color:var(--text2);min-width:36px;">${alloc.toFixed(1)}%</span></div></td>
-      <td>${glCell}</td>
+      <td><div class="alloc-bar-wrap"><div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:${alloc.toFixed(1)}%"></div></div><span style="font-size:12px;color:var(--text2);min-width:36px;">${alloc.toFixed(1)}%</span></div></td>
+      <td class="${gl>=0?'pos':'neg'}">${fmt(gl)} <span style="font-size:11px;">(${fmtPct(glPct)})</span></td>
     </tr>`;
   }).join("");
+  // Cash row
+  const cashAlloc = (cashBalance / totalValue) * 100;
+  const cashRow = cashBalance > 0 ? `<tr>
+    <td><span class="ticker" style="color:var(--text2);">CASH</span></td>
+    <td class="name-cell">Cash & equivalents (IB)</td>
+    <td>—</td>
+    <td>—</td>
+    <td style="font-weight:500;">${fmt(cashBalance)}</td>
+    <td><div class="alloc-bar-wrap"><div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:${cashAlloc.toFixed(1)}%;background:var(--text3);"></div></div><span style="font-size:12px;color:var(--text2);min-width:36px;">${cashAlloc.toFixed(1)}%</span></div></td>
+    <td style="color:var(--text3);font-size:12px;">—</td>
+  </tr>` : "";
+  document.getElementById("pos-body").innerHTML = rows + cashRow;
 }
 
 function filterTx(type, btn) {
@@ -1213,10 +1227,19 @@ function renderChart() {
 
 function populateAdminFields() {
   document.getElementById("a-perf-json").value = JSON.stringify(perfData, null, 2);
+  document.getElementById("a-cash-balance").value = cashBalance;
   ["import","position","transaction","performance"].forEach(p => {
     const el = document.getElementById("admin-"+p);
     if (el) el.style.display = p === "import" ? "flex" : "none";
   });
+}
+function saveCashBalance() {
+  const val = parseFloat(document.getElementById("a-cash-balance").value);
+  if (isNaN(val) || val < 0) return alert("Enter a valid cash amount.");
+  cashBalance = val;
+  save("mff_cash", cashBalance);
+  renderPositions(); renderMetrics(); renderOwnership();
+  const el = document.getElementById("cash-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",2500);
 }
 function savePosition() {
   const ticker=document.getElementById("a-pos-ticker").value;
@@ -1266,6 +1289,7 @@ function exportData() {
     deposits,
     transactions,
     perf: perfData,
+    cash: cashBalance,
   }, null, 2);
 
   const modal = document.createElement("div");
@@ -1328,11 +1352,12 @@ function resetAllData() {
     ? "¿Restablecer todos los datos a los valores predeterminados? Se perderán los cambios guardados en este dispositivo."
     : "Reset all data to defaults? Any changes saved on this device will be lost.";
   if (!confirm(msg)) return;
-  ["mff_positions","mff_transactions","mff_perf","mff_deposits"].forEach(k => localStorage.removeItem(k));
+  ["mff_positions","mff_transactions","mff_perf","mff_deposits","mff_cash"].forEach(k => localStorage.removeItem(k));
   positions    = DEFAULT_POSITIONS;
   transactions = DEFAULT_TRANSACTIONS;
   perfData     = DEFAULT_PERF;
   deposits     = DEFAULT_DEPOSITS;
+  cashBalance  = 917.58;
   livePrice    = {};
   renderMetrics();
   renderOwnership();
