@@ -828,19 +828,21 @@ const DEFAULT_TRANSACTIONS = [
 
 const DEFAULT_PERF = {
   labels: ["Dec '25","Jan '26","Feb '26","Mar '26","Apr '26","May '26","Jun '26"],
-  values: [990.21, 100241.73, 199792.02, 289795.23, 312557.02, 530838.62, 520790.13]
+  values: [990.21, 100241.73, 199792.02, 289795.23, 312557.02, 530838.62, 780790.13]
 };
 
 const DEFAULT_DEPOSITS = [
-  { date:"2025-12-18", amount:1000,    source:"Moneche",          nav:1000.00,   fernando:650,    dario:350    },
-  { date:"2025-12-29", amount:25000,   source:"Moneche",          nav:998.00,    fernando:16250,  dario:8750   },
-  { date:"2025-12-29", amount:3000,    source:"Moneche",          nav:998.00,    fernando:1950,   dario:1050   },
-  { date:"2025-12-30", amount:31000,   source:"Moneche",          nav:997.00,    fernando:20150,  dario:10850  },
-  { date:"2026-01-02", amount:40000,   source:"Fernando Montoya", nav:993.00,    fernando:40000,  dario:0      },
-  { date:"2026-01-28", amount:100000,  source:"Moneche",          nav:100803.00, fernando:65000,  dario:35000  },
-  { date:"2026-03-12", amount:100000,  source:"Moneche",          nav:194121.00, fernando:65000,  dario:35000  },
-  { date:"2026-04-27", amount:100000,  source:"Moneche",          nav:311672.00, fernando:65000,  dario:35000  },
-  { date:"2026-05-11", amount:100000,  source:"Moneche",          nav:420590.00, fernando:65000,  dario:35000  },
+  { date:"2025-12-18", amount:1000,   source:"Moneche",          nav:1000.0000, fernando:650,   dario:350   },
+  { date:"2025-12-29", amount:25000,  source:"Moneche",          nav:990.2100,  fernando:16250, dario:8750  },
+  { date:"2025-12-29", amount:3000,   source:"Moneche",          nav:990.2100,  fernando:1950,  dario:1050  },
+  { date:"2025-12-30", amount:31000,  source:"Moneche",          nav:990.2100,  fernando:20150, dario:10850 },
+  { date:"2026-01-02", amount:40000,  source:"Fernando Montoya", nav:990.2100,  fernando:40000, dario:0     },
+  { date:"2026-01-28", amount:100000, source:"Moneche",          nav:990.2100,  fernando:65000, dario:35000 },
+  { date:"2026-03-12", amount:100000, source:"Moneche",          nav:989.2287,  fernando:65000, dario:35000 },
+  { date:"2026-04-27", amount:100000, source:"Moneche",          nav:956.2421,  fernando:65000, dario:35000 },
+  { date:"2026-05-11", amount:100000, source:"Moneche",          nav:766.7621,  fernando:65000, dario:35000 },
+  { date:"2026-06-08", amount:160000, source:"Fernando Montoya", nav:986.5955,  fernando:160000,dario:0     },
+  { date:"2026-06-08", amount:100000, source:"Dario Montoya",    nav:986.5955,  fernando:0,     dario:100000},
 ];
 
 const INCEPTION_NAV = 1000.00;
@@ -860,9 +862,18 @@ function calcUnits() {
 function load(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } }
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
+// Migration: reset deposits if they contain old wrong nav values (nav > 5000 on any deposit)
+function migrateDeposits() {
+  const stored = load("mff_deposits", null);
+  if (!stored) return; // will use DEFAULT_DEPOSITS
+  const hasWrongNav = stored.some(d => d.nav > 5000);
+  if (hasWrongNav) { localStorage.removeItem("mff_deposits"); }
+}
+
 let positions    = load("mff_positions",    DEFAULT_POSITIONS);
 let transactions = load("mff_transactions", DEFAULT_TRANSACTIONS);
 let perfData     = load("mff_perf",         DEFAULT_PERF);
+migrateDeposits();
 let deposits     = load("mff_deposits",     DEFAULT_DEPOSITS);
 let livePrice    = {};
 let txFilter     = "all";
