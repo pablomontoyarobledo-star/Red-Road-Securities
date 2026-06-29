@@ -26,6 +26,7 @@ export default async function handler(req) {
     access: "public",
     contentType: "application/json",
     allowOverwrite: true,
+    addRandomSuffix: false,
   });
 
   return new Response(JSON.stringify({ ok: true }), {

@@ -1,0 +1,4 @@
+.vercel
+.env*
+
+fund-data-init.json
