@@ -612,6 +612,12 @@
         <button class="tab-btn" onclick="exportData()" id="atab-export" style="margin-left:auto;background:var(--bg2);border-color:var(--border2);">
           <i class="ti ti-clipboard-copy" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="export-btn-label">Export data</span>
         </button>
+        <button class="tab-btn" onclick="syncToCloud()" id="atab-sync" style="background:var(--blue-bg);border-color:var(--blue);color:var(--blue);" title="Save current data to cloud for automated statements">
+          <i class="ti ti-cloud-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="sync-btn-label">Sync to cloud</span>
+        </button>
+        <button class="tab-btn" onclick="sendStatementsNow()" id="atab-send" style="background:var(--green-bg);border-color:var(--green);color:var(--green);" title="Send investor statements right now">
+          <i class="ti ti-send" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="send-btn-label">Send statements</span>
+        </button>
         <button class="tab-btn" onclick="resetAllData()" id="atab-reset" style="background:var(--red-bg);border-color:var(--red);color:var(--red);" title="Reset all localStorage to defaults">
           <i class="ti ti-refresh-alert" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="reset-btn-label">Reset data</span>
         </button>
@@ -1613,6 +1619,74 @@ function switchAdminTab(panel,btn) {
   document.getElementById("admin-"+panel).style.display="flex";
   document.querySelectorAll("#admin-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
+}
+
+async function syncToCloud() {
+  const btn = document.getElementById("atab-sync");
+  const label = document.getElementById("sync-btn-label");
+  const secret = prompt("Enter your sync secret:");
+  if (!secret) return;
+
+  const payload = {
+    positions,
+    deposits,
+    perfData,
+    cashBalance,
+    transactions,
+  };
+
+  btn.disabled = true;
+  label.textContent = "Syncing…";
+
+  try {
+    const res = await fetch("/api/sync-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-sync-secret": secret },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    label.textContent = "✓ Synced!";
+    btn.style.background = "var(--green-bg)";
+    btn.style.borderColor = "var(--green)";
+    btn.style.color = "var(--green)";
+    setTimeout(() => {
+      label.textContent = "Sync to cloud";
+      btn.style.background = "var(--blue-bg)";
+      btn.style.borderColor = "var(--blue)";
+      btn.style.color = "var(--blue)";
+      btn.disabled = false;
+    }, 3000);
+  } catch (err) {
+    alert("Sync failed: " + err.message);
+    label.textContent = "Sync to cloud";
+    btn.disabled = false;
+  }
+}
+
+async function sendStatementsNow() {
+  const btn = document.getElementById("atab-send");
+  const label = document.getElementById("send-btn-label");
+  const secret = prompt("Enter your sync secret to send statements now:");
+  if (!secret) return;
+  if (!confirm("This will email statements to Fernando and Dario right now. Continue?")) return;
+
+  btn.disabled = true;
+  label.textContent = "Sending…";
+
+  try {
+    const res = await fetch("/api/send-statements", {
+      method: "POST",
+      headers: { "x-sync-secret": secret },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(JSON.stringify(data));
+    label.textContent = "✓ Sent!";
+    setTimeout(() => { label.textContent = "Send statements"; btn.disabled = false; }, 4000);
+  } catch (err) {
+    alert("Send failed: " + err.message);
+    label.textContent = "Send statements";
+    btn.disabled = false;
+  }
 }
 
 function exportData() {
