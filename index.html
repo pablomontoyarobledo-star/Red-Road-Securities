@@ -154,7 +154,7 @@
   .total-row td { font-weight: 600; background: var(--bg2); border-top: 0.5px solid var(--border2); }
 
   /* ADMIN */
-  #admin-panel { display: none; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 2rem; }
+  #admin-panel { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 2rem; }
   .admin-header { display: flex; align-items: center; gap: 8px; padding: 1rem 1.25rem; border-bottom: 0.5px solid var(--border); background: var(--amber-bg); }
   .admin-header span { font-size: 13px; font-weight: 500; color: var(--amber-text); }
   .admin-body { padding: 1.25rem; }
@@ -169,6 +169,40 @@
   .save-btn:hover { opacity: 0.88; }
   .admin-success { font-size: 12px; color: var(--green); display: none; margin-top: 4px; }
   .add-hint { font-size: 12px; color: var(--text3); margin-top: 0.75rem; text-align: center; }
+
+  /* PAGE NAV */
+  .page-nav { display: flex; gap: 0; border-bottom: 0.5px solid var(--border); margin-bottom: 2rem; overflow-x: auto; scrollbar-width: none; }
+  .page-nav::-webkit-scrollbar { display: none; }
+  .page-tab { font-size: 13px; font-weight: 500; padding: 10px 18px; border: none; background: none; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -0.5px; white-space: nowrap; transition: color 0.15s; flex-shrink: 0; }
+  .page-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .page-tab:hover:not(.active) { color: var(--text); }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* PERIOD RETURNS */
+  .period-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+  .period-card { background: var(--bg2); border-radius: var(--radius); padding: 0.85rem 1rem; }
+  .period-label { font-size: 11px; color: var(--text3); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+  .period-value { font-size: 18px; font-weight: 500; }
+
+  /* INCOME CARD */
+  .income-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .income-item { display: flex; flex-direction: column; gap: 3px; }
+  .income-label { font-size: 11px; color: var(--text3); }
+  .income-value { font-size: 16px; font-weight: 500; }
+
+  /* BENCHMARK TABLE */
+  .bench-table { min-width: 500px; }
+  .bench-table td, .bench-table th { text-align: right; }
+  .bench-table td:first-child, .bench-table th:first-child { text-align: left; }
+  .bench-badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; display: inline-block; }
+  .best-worst-row { display: flex; gap: 10px; margin-top: 12px; }
+  .best-worst-card { flex: 1; background: var(--bg2); border-radius: var(--radius); padding: 0.85rem 1rem; }
+
+  @media (max-width: 600px) {
+    .period-grid { grid-template-columns: 1fr 1fr; }
+    .income-grid { grid-template-columns: 1fr 1fr; }
+  }
 
   @media (max-width: 600px) {
     .ownership-cards { grid-template-columns: 1fr; }
@@ -263,171 +297,262 @@
     </div>
   </div>
 
-  <!-- Overview metrics -->
-  <div class="section">
-    <div class="section-header">
-      <p class="section-label" style="margin-bottom:0;" id="lbl-overview">Portfolio overview</p>
-      <div class="price-refresh" id="price-status"><i class="ti ti-refresh spin"></i> <span id="price-status-text">Fetching live prices…</span></div>
-    </div>
-    <div class="metrics-grid" id="metrics-grid">
-      <div class="metric-card"><div class="metric-label" id="lbl-loading">Portfolio value</div><div class="metric-value" style="font-size:16px;color:var(--text3);">Loading…</div></div>
-    </div>
-    <div class="metric-card" id="nav-unit-card" style="margin-top:12px;background:var(--blue-bg);border:0.5px solid var(--border);">
-      <div class="metric-label" style="color:var(--blue-text);" id="nav-unit-label">Unit NAV — price per unit</div>
-      <div class="metric-value" id="nav-unit-value" style="color:var(--blue);">—</div>
-      <div class="metric-sub" style="color:var(--blue-text);opacity:0.8;" id="nav-unit-sub">494,078 units outstanding · inception $1,000.00</div>
-    </div>
-    <div class="metric-card" id="fx-card" style="margin-top:12px;background:var(--bg);border:0.5px solid var(--border);display:flex;flex-direction:column;gap:4px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div class="metric-label" id="fx-label">USD / COP exchange rate</div>
-        <div style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;" id="fx-status"><i class="ti ti-refresh spin"></i> <span id="fx-status-text">Fetching rate…</span></div>
-      </div>
-      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
-        <div class="metric-value" id="fx-rate" style="font-size:26px;">—</div>
-        <div style="font-size:13px;color:var(--text2);">COP per USD</div>
-      </div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:2px;">
-        <div style="font-size:12px;color:var(--text2);">$1,000 USD = <span id="fx-1k" style="font-weight:500;color:var(--text);">—</span> COP</div>
-        <div style="font-size:12px;color:var(--text2);">$10,000 USD = <span id="fx-10k" style="font-weight:500;color:var(--text);">—</span> COP</div>
-      </div>
-    </div>
-  </div>
+  <!-- Page navigation -->
+  <nav class="page-nav">
+    <button class="page-tab active" onclick="showPage('overview',this)" id="ptab-overview">Overview</button>
+    <button class="page-tab" onclick="showPage('performance',this)" id="ptab-performance">Performance</button>
+    <button class="page-tab" onclick="showPage('positions',this)" id="ptab-positions">Positions</button>
+    <button class="page-tab" onclick="showPage('ownership',this)" id="ptab-ownership">Ownership</button>
+    <button class="page-tab" onclick="showPage('transactions',this)" id="ptab-transactions">Transactions</button>
+  </nav>
 
-  <!-- Chart -->
-  <div class="section">
-    <div class="chart-card">
-      <div class="chart-header">
-        <h3 id="chart-title">Portfolio value — historical (IB data)</h3>
-        <span style="font-size:11px;color:var(--text3);" id="chart-updated"></span>
+  <!-- PAGE: Overview -->
+  <div id="page-overview" class="page active">
+    <div class="section">
+      <div class="section-header">
+        <p class="section-label" style="margin-bottom:0;" id="lbl-overview">Portfolio overview</p>
+        <div class="price-refresh" id="price-status"><i class="ti ti-refresh spin"></i> <span id="price-status-text">Fetching live prices…</span></div>
       </div>
-      <div style="position:relative;width:100%;height:220px;">
-        <canvas id="perfChart" role="img" aria-label="Monthly portfolio value Dec 2025 to Jun 2026">Historical portfolio value.</canvas>
+      <div class="metrics-grid" id="metrics-grid">
+        <div class="metric-card"><div class="metric-label" id="lbl-loading">Portfolio value</div><div class="metric-value" style="font-size:16px;color:var(--text3);">Loading…</div></div>
       </div>
     </div>
-  </div>
 
-  <!-- Positions -->
-  <div class="section">
-    <p class="section-label" id="lbl-positions">Current positions</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th id="col-ticker">Ticker</th>
-          <th id="col-name">Name</th>
-          <th id="col-shares">Shares</th>
-          <th id="col-price">Live price</th>
-          <th id="col-value">Value</th>
-          <th id="col-alloc">Allocation</th>
-          <th id="col-gl">Gain / Loss</th>
-        </tr></thead>
-        <tbody id="pos-body"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:2rem;">Loading…</td></tr></tbody>
-      </table>
+    <div class="section">
+      <p class="section-label" id="lbl-period-returns">Period returns</p>
+      <div class="period-grid">
+        <div class="period-card"><div class="period-label" id="lbl-mtd">MTD</div><div class="period-value neg" id="period-mtd">-1.84%</div></div>
+        <div class="period-card"><div class="period-label" id="lbl-qtd">QTD</div><div class="period-value pos" id="period-qtd">+10.21%</div></div>
+        <div class="period-card"><div class="period-label" id="lbl-ytd">YTD</div><div class="period-value pos" id="period-ytd">+6.51%</div></div>
+        <div class="period-card" style="background:var(--blue-bg);"><div class="period-label" style="color:var(--blue-text);" id="lbl-inception">Since inception</div><div class="period-value pos" id="period-inception" style="color:var(--blue);">+5.47%</div></div>
+      </div>
     </div>
-  </div>
 
-  <!-- Ownership -->
-  <div class="section">
-    <p class="section-label" id="lbl-ownership">Investor ownership</p>
-    <div class="ownership-cards" id="ownership-cards">
-      <div class="ownership-card">
-        <div class="ownership-card-header">
-          <div class="avatar avatar-f">FM</div>
-          <div><div class="ownership-name">Fernando Montoya</div><div class="ownership-pct" id="fernando-pct">67.84% ownership · 335,166 units</div></div>
+    <div class="section">
+      <div class="metric-card" id="nav-unit-card" style="background:var(--blue-bg);border:0.5px solid var(--border);">
+        <div class="metric-label" style="color:var(--blue-text);" id="nav-unit-label">Unit NAV — price per unit</div>
+        <div class="metric-value" id="nav-unit-value" style="color:var(--blue);">—</div>
+        <div class="metric-sub" style="color:var(--blue-text);opacity:0.8;" id="nav-unit-sub">units outstanding · inception $1.00</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-label" id="lbl-income">Income &amp; costs — since inception</p>
+      <div class="metric-card" style="background:var(--bg);">
+        <div class="income-grid">
+          <div class="income-item">
+            <div class="income-label" id="lbl-dividends">Dividends</div>
+            <div class="income-value pos">$1,894.06</div>
+          </div>
+          <div class="income-item">
+            <div class="income-label" id="lbl-interest">Interest</div>
+            <div class="income-value pos">$284.03</div>
+          </div>
+          <div class="income-item">
+            <div class="income-label" id="lbl-fees">Fees &amp; commissions</div>
+            <div class="income-value neg">-$46.45</div>
+          </div>
         </div>
-        <div class="ownership-value pos" id="fernando-value">—</div>
-        <div class="ownership-deposited" id="fernando-deposited">Deposited: $339,000</div>
-        <div class="ownership-bar-wrap"><div class="ownership-bar-bg"><div class="ownership-bar-fill-f" style="width:67.84%"></div></div></div>
-      </div>
-      <div class="ownership-card">
-        <div class="ownership-card-header">
-          <div class="avatar avatar-d">DM</div>
-          <div><div class="ownership-name">Dario Montoya</div><div class="ownership-pct" id="dario-pct">32.16% ownership · 158,912 units</div></div>
-        </div>
-        <div class="ownership-value pos" id="dario-value">—</div>
-        <div class="ownership-deposited" id="dario-deposited">Deposited: $161,000</div>
-        <div class="ownership-bar-wrap"><div class="ownership-bar-bg"><div class="ownership-bar-fill-d" style="width:32.16%"></div></div></div>
       </div>
     </div>
 
-    <!-- Deposits table -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.85rem;">
-      <select id="dep-filter-month" onchange="filterDeposits()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
-        <option value="" id="dep-all-months">All months</option>
-        <option>01 — Jan</option><option>02 — Feb</option><option>03 — Mar</option>
-        <option>04 — Apr</option><option>05 — May</option><option>06 — Jun</option>
-        <option>07 — Jul</option><option>08 — Aug</option><option>09 — Sep</option>
-        <option>10 — Oct</option><option>11 — Nov</option><option>12 — Dec</option>
-      </select>
-      <select id="dep-filter-year" onchange="filterDeposits()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
-        <option value="" id="dep-all-years">All years</option>
-        <option>2025</option><option>2026</option>
-      </select>
-      <button onclick="clearDepFilters()" id="dep-clear-btn" style="padding:5px 12px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:none;color:var(--text3);cursor:pointer;">Clear</button>
-    </div>
-    <div class="table-wrap">
-      <div class="table-scroll">
-        <table class="deposits-table">
-          <thead>
-            <tr>
-              <th id="dep-col-date">Date</th>
-              <th id="dep-col-amount">Amount</th>
-              <th id="dep-col-source">Source</th>
-              <th id="dep-col-nav">NAV at deposit</th>
-              <th id="dep-col-fernando">Fernando Montoya</th>
-              <th id="dep-col-dario">Dario Montoya</th>
-            </tr>
-          </thead>
-          <tbody id="dep-body">
-          </tbody>
-        </table>
+    <div class="section">
+      <div class="metric-card" id="fx-card" style="background:var(--bg);border:0.5px solid var(--border);display:flex;flex-direction:column;gap:4px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="metric-label" id="fx-label">USD / COP exchange rate</div>
+          <div style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;" id="fx-status"><i class="ti ti-refresh spin"></i> <span id="fx-status-text">Fetching rate…</span></div>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+          <div class="metric-value" id="fx-rate" style="font-size:26px;">—</div>
+          <div style="font-size:13px;color:var(--text2);">COP per USD</div>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:2px;">
+          <div style="font-size:12px;color:var(--text2);">$1,000 USD = <span id="fx-1k" style="font-weight:500;color:var(--text);">—</span> COP</div>
+          <div style="font-size:12px;color:var(--text2);">$10,000 USD = <span id="fx-10k" style="font-weight:500;color:var(--text);">—</span> COP</div>
+        </div>
       </div>
     </div>
-    <p class="add-hint" id="ownership-hint">Ownership calculated using unit/NAV method · Each deposit tagged to individual investor</p>
   </div>
 
-  <!-- Transactions -->
-  <div class="section">
-    <div class="tx-header">
-      <p class="section-label" style="margin-bottom:0;" id="lbl-transactions">Transaction history</p>
-      <div class="tabs" id="tx-tabs">
-        <button class="tab-btn active" onclick="filterTx('all',this)" id="ttab-all">All</button>
-        <button class="tab-btn" onclick="filterTx('buy',this)" id="ttab-buy">Buys</button>
-        <button class="tab-btn" onclick="filterTx('sell',this)" id="ttab-sell">Sells</button>
-        <button class="tab-btn" onclick="filterTx('dividend',this)" id="ttab-dividend">Dividends</button>
+  <!-- PAGE: Performance -->
+  <div id="page-performance" class="page">
+    <div class="section">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3 id="chart-title">Portfolio value — historical (IB data)</h3>
+          <span style="font-size:11px;color:var(--text3);" id="chart-updated"></span>
+        </div>
+        <div style="position:relative;width:100%;height:260px;">
+          <canvas id="perfChart" role="img" aria-label="Monthly portfolio value Dec 2025 to Jun 2026">Historical portfolio value.</canvas>
+        </div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.85rem;">
-      <select id="tx-filter-month" onchange="renderTx()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
-        <option value="" id="tx-all-months">All months</option>
-        <option>01 — Jan</option><option>02 — Feb</option><option>03 — Mar</option>
-        <option>04 — Apr</option><option>05 — May</option><option>06 — Jun</option>
-        <option>07 — Jul</option><option>08 — Aug</option><option>09 — Sep</option>
-        <option>10 — Oct</option><option>11 — Nov</option><option>12 — Dec</option>
-      </select>
-      <select id="tx-filter-year" onchange="renderTx()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
-        <option value="" id="tx-all-years">All years</option>
-        <option>2025</option><option>2026</option>
-      </select>
-      <button onclick="clearTxFilters()" id="tx-clear-btn" style="padding:5px 12px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:none;color:var(--text3);cursor:pointer;">Clear</button>
+
+    <div class="section">
+      <p class="section-label" id="lbl-bench">Monthly returns vs benchmarks</p>
+      <div class="best-worst-row">
+        <div class="best-worst-card">
+          <div class="period-label" id="lbl-best-month">Best month</div>
+          <div class="period-value pos" style="margin-top:4px;">+7.85%</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;" id="best-month-date">April 2026</div>
+        </div>
+        <div class="best-worst-card">
+          <div class="period-label" id="lbl-worst-month">Worst month</div>
+          <div class="period-value neg" style="margin-top:4px;">-4.03%</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;" id="worst-month-date">March 2026</div>
+        </div>
+      </div>
     </div>
-    <div class="table-wrap">
-      <div class="table-scroll">
-        <table class="tx-table">
+
+    <div class="section">
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table class="bench-table">
+            <thead><tr>
+              <th id="bench-col-month">Month</th>
+              <th id="bench-col-portfolio">Portfolio</th>
+              <th>SPXTR</th>
+              <th>EFA</th>
+              <th>VT</th>
+            </tr></thead>
+            <tbody id="bench-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Positions -->
+  <div id="page-positions" class="page">
+    <div class="section">
+      <div class="section-header" style="margin-bottom:0.85rem;">
+        <p class="section-label" style="margin-bottom:0;" id="lbl-positions">Current positions</p>
+        <div class="price-refresh" id="price-status-pos"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
           <thead><tr>
-            <th id="tx-col-date">Date</th>
-            <th id="tx-col-ticker">Ticker</th>
-            <th id="tx-col-type">Type</th>
-            <th id="tx-col-shares">Shares</th>
-            <th id="tx-col-price">Price / sh</th>
-            <th id="tx-col-amount">Amount</th>
-            <th id="tx-col-notes">Notes</th>
-            <th id="tx-col-actions" style="width:64px;"></th>
+            <th id="col-ticker">Ticker</th>
+            <th id="col-name">Name</th>
+            <th id="col-shares">Shares</th>
+            <th id="col-price">Live price</th>
+            <th id="col-value">Value</th>
+            <th id="col-alloc">Allocation</th>
+            <th id="col-gl">Gain / Loss</th>
           </tr></thead>
-          <tbody id="tx-body"></tbody>
+          <tbody id="pos-body"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:2rem;">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
-    <p class="add-hint" id="tx-hint">Transaction data imported from Interactive Brokers · Managed by Pablo Montoya</p>
+  </div>
+
+  <!-- PAGE: Ownership -->
+  <div id="page-ownership" class="page">
+    <div class="section">
+      <p class="section-label" id="lbl-ownership">Investor ownership</p>
+      <div class="ownership-cards" id="ownership-cards">
+        <div class="ownership-card">
+          <div class="ownership-card-header">
+            <div class="avatar avatar-f">FM</div>
+            <div><div class="ownership-name">Fernando Montoya</div><div class="ownership-pct" id="fernando-pct">—</div></div>
+          </div>
+          <div class="ownership-value pos" id="fernando-value">—</div>
+          <div class="ownership-deposited" id="fernando-deposited">—</div>
+          <div class="ownership-bar-wrap"><div class="ownership-bar-bg"><div class="ownership-bar-fill-f" style="width:0%"></div></div></div>
+        </div>
+        <div class="ownership-card">
+          <div class="ownership-card-header">
+            <div class="avatar avatar-d">DM</div>
+            <div><div class="ownership-name">Dario Montoya</div><div class="ownership-pct" id="dario-pct">—</div></div>
+          </div>
+          <div class="ownership-value pos" id="dario-value">—</div>
+          <div class="ownership-deposited" id="dario-deposited">—</div>
+          <div class="ownership-bar-wrap"><div class="ownership-bar-bg"><div class="ownership-bar-fill-d" style="width:0%"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.85rem;">
+        <select id="dep-filter-month" onchange="filterDeposits()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
+          <option value="" id="dep-all-months">All months</option>
+          <option>01 — Jan</option><option>02 — Feb</option><option>03 — Mar</option>
+          <option>04 — Apr</option><option>05 — May</option><option>06 — Jun</option>
+          <option>07 — Jul</option><option>08 — Aug</option><option>09 — Sep</option>
+          <option>10 — Oct</option><option>11 — Nov</option><option>12 — Dec</option>
+        </select>
+        <select id="dep-filter-year" onchange="filterDeposits()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
+          <option value="" id="dep-all-years">All years</option>
+          <option>2025</option><option>2026</option>
+        </select>
+        <button onclick="clearDepFilters()" id="dep-clear-btn" style="padding:5px 12px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:none;color:var(--text3);cursor:pointer;">Clear</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table class="deposits-table">
+            <thead>
+              <tr>
+                <th id="dep-col-date">Date</th>
+                <th id="dep-col-amount">Amount</th>
+                <th id="dep-col-source">Source</th>
+                <th id="dep-col-nav">NAV at deposit</th>
+                <th id="dep-col-fernando">Fernando Montoya</th>
+                <th id="dep-col-dario">Dario Montoya</th>
+              </tr>
+            </thead>
+            <tbody id="dep-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <p class="add-hint" id="ownership-hint">Ownership calculated using unit/NAV method · Each deposit tagged to individual investor</p>
+    </div>
+  </div>
+
+  <!-- PAGE: Transactions -->
+  <div id="page-transactions" class="page">
+    <div class="section">
+      <div class="tx-header">
+        <p class="section-label" style="margin-bottom:0;" id="lbl-transactions">Transaction history</p>
+        <div class="tabs" id="tx-tabs">
+          <button class="tab-btn active" onclick="filterTx('all',this)" id="ttab-all">All</button>
+          <button class="tab-btn" onclick="filterTx('buy',this)" id="ttab-buy">Buys</button>
+          <button class="tab-btn" onclick="filterTx('sell',this)" id="ttab-sell">Sells</button>
+          <button class="tab-btn" onclick="filterTx('dividend',this)" id="ttab-dividend">Dividends</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.85rem;margin-top:0.85rem;">
+        <select id="tx-filter-month" onchange="renderTx()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
+          <option value="" id="tx-all-months">All months</option>
+          <option>01 — Jan</option><option>02 — Feb</option><option>03 — Mar</option>
+          <option>04 — Apr</option><option>05 — May</option><option>06 — Jun</option>
+          <option>07 — Jul</option><option>08 — Aug</option><option>09 — Sep</option>
+          <option>10 — Oct</option><option>11 — Nov</option><option>12 — Dec</option>
+        </select>
+        <select id="tx-filter-year" onchange="renderTx()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
+          <option value="" id="tx-all-years">All years</option>
+          <option>2025</option><option>2026</option>
+        </select>
+        <button onclick="clearTxFilters()" id="tx-clear-btn" style="padding:5px 12px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:none;color:var(--text3);cursor:pointer;">Clear</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table class="tx-table">
+            <thead><tr>
+              <th id="tx-col-date">Date</th>
+              <th id="tx-col-ticker">Ticker</th>
+              <th id="tx-col-type">Type</th>
+              <th id="tx-col-shares">Shares</th>
+              <th id="tx-col-price">Price / sh</th>
+              <th id="tx-col-amount">Amount</th>
+              <th id="tx-col-notes">Notes</th>
+              <th id="tx-col-actions" style="width:64px;"></th>
+            </tr></thead>
+            <tbody id="tx-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <p class="add-hint" id="tx-hint">Transaction data imported from Interactive Brokers · Managed by Pablo Montoya</p>
+    </div>
   </div>
 </div>
 
@@ -607,8 +732,22 @@ const TR = {
     fxLoading: "Fetching rate…",
     fxFailed: "Rate unavailable",
     fxUpdated: "Updated",
+    // Page tabs
+    tab_overview: "Overview", tab_performance: "Performance", tab_positions: "Positions",
+    tab_ownership: "Ownership", tab_transactions: "Transactions",
+    // Period returns
+    lbl_period_returns: "Period returns",
+    lbl_mtd: "MTD", lbl_qtd: "QTD", lbl_ytd: "YTD", lbl_inception: "Since inception",
+    // Income
+    lbl_income: "Income & costs — since inception",
+    lbl_dividends: "Dividends", lbl_interest: "Interest", lbl_fees: "Fees & commissions",
+    // Benchmarks
+    lbl_bench: "Monthly returns vs benchmarks",
+    bench_col_month: "Month", bench_col_portfolio: "Portfolio",
+    lbl_best_month: "Best month", lbl_worst_month: "Worst month",
+    best_month_date: "April 2026", worst_month_date: "March 2026",
     nav_unit_label: "Unit NAV — price per unit",
-    nav_unit_sub: "494,078 units outstanding · inception $1,000.00",
+    nav_unit_sub: "units outstanding · inception $1.00",
     // Chart
     chartTitle: "Portfolio value — historical (IB data)",
     chartUpdatedPrefix: "IB data · ",
@@ -702,8 +841,18 @@ const TR = {
     fxLoading: "Obteniendo tasa…",
     fxFailed: "Tasa no disponible",
     fxUpdated: "Actualizado",
+    tab_overview: "Resumen", tab_performance: "Rendimiento", tab_positions: "Posiciones",
+    tab_ownership: "Participación", tab_transactions: "Transacciones",
+    lbl_period_returns: "Retornos por período",
+    lbl_mtd: "MTD", lbl_qtd: "QTD", lbl_ytd: "YTD", lbl_inception: "Desde el inicio",
+    lbl_income: "Ingresos y costos — desde el inicio",
+    lbl_dividends: "Dividendos", lbl_interest: "Intereses", lbl_fees: "Comisiones y gastos",
+    lbl_bench: "Retornos mensuales vs benchmarks",
+    bench_col_month: "Mes", bench_col_portfolio: "Portafolio",
+    lbl_best_month: "Mejor mes", lbl_worst_month: "Peor mes",
+    best_month_date: "Abril 2026", worst_month_date: "Marzo 2026",
     nav_unit_label: "NAV por unidad — precio por unidad",
-    nav_unit_sub: "494.078 unidades en circulación · inicio $1.000,00",
+    nav_unit_sub: "unidades en circulación · inicio $1,00",
     chartTitle: "Valor del portafolio — histórico (datos IB)",
     chartUpdatedPrefix: "Datos IB · ",
     lbl_positions: "Posiciones actuales",
@@ -839,6 +988,17 @@ function setLang(lang) {
     "tx-col-amount": "tx_col_amount",
     "tx-col-notes": "tx_col_notes",
     "tx-hint": "tx_hint",
+    "ptab-overview": "tab_overview", "ptab-performance": "tab_performance",
+    "ptab-positions": "tab_positions", "ptab-ownership": "tab_ownership",
+    "ptab-transactions": "tab_transactions",
+    "lbl-period-returns": "lbl_period_returns",
+    "lbl-mtd": "lbl_mtd", "lbl-qtd": "lbl_qtd", "lbl-ytd": "lbl_ytd", "lbl-inception": "lbl_inception",
+    "lbl-income": "lbl_income",
+    "lbl-dividends": "lbl_dividends", "lbl-interest": "lbl_interest", "lbl-fees": "lbl_fees",
+    "lbl-bench": "lbl_bench",
+    "bench-col-month": "bench_col_month", "bench-col-portfolio": "bench_col_portfolio",
+    "lbl-best-month": "lbl_best_month", "lbl-worst-month": "lbl_worst_month",
+    "best-month-date": "best_month_date", "worst-month-date": "worst_month_date",
   };
   for (const [id, key] of Object.entries(map)) {
     const el = document.getElementById(id);
@@ -853,22 +1013,28 @@ function setLang(lang) {
     renderOwnership();
     renderTx();
     renderDeposits();
+    renderBenchmarks();
     _updateChartLabel();
     _applyPriceStatus();
     _updateFXLabels();
+    _applyPageTabLabels();
   }
 }
 
 function _applyPriceStatus() {
-  const status = document.getElementById("price-status");
   if (!_priceStatusState) return;
+  let html = "";
   if (_priceStatusState === "loading") {
-    status.innerHTML = `<i class="ti ti-refresh spin"></i> ${t("priceLoading")}`;
+    html = `<i class="ti ti-refresh spin"></i> ${t("priceLoading")}`;
   } else if (_priceStatusState === "failed") {
-    status.innerHTML = `<i class="ti ti-alert-circle" style="color:var(--amber-text);"></i> ${t("priceFailed")}`;
+    html = `<i class="ti ti-alert-circle" style="color:var(--amber-text);"></i> ${t("priceFailed")}`;
   } else if (_priceStatusState === "ok") {
-    status.innerHTML = `<i class="ti ti-circle-check" style="color:var(--green);"></i> ${t("priceOk")} ${_priceStatusTime}`;
+    html = `<i class="ti ti-circle-check" style="color:var(--green);"></i> ${t("priceOk")} ${_priceStatusTime}`;
   }
+  ["price-status", "price-status-pos"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
 }
 
 function _updateChartLabel() {
@@ -1039,6 +1205,8 @@ function tryLogin() {
     renderDeposits();
     renderMetrics();
     renderOwnership();
+    renderBenchmarks();
+    _applyPageTabLabels();
   } else {
     document.getElementById("login-error").style.display = "block";
   }
@@ -1473,7 +1641,7 @@ function resetAllData() {
   transactions = DEFAULT_TRANSACTIONS;
   perfData     = DEFAULT_PERF;
   deposits     = DEFAULT_DEPOSITS;
-  cashBalance  = 917.58;
+  cashBalance  = 2506.374634;
   livePrice    = {};
   renderMetrics();
   renderOwnership();
@@ -1553,6 +1721,52 @@ function saveDeposit() {
   // Clear form
   ["a-dep-date","a-dep-amount","a-dep-nav","a-dep-fernando","a-dep-dario"].forEach(id => document.getElementById(id).value = "");
   const el = document.getElementById("dep-log-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",2500);
+}
+
+// ── PAGE NAVIGATION ──
+function showPage(name, btn) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".page-tab").forEach(b => b.classList.remove("active"));
+  document.getElementById("page-" + name).classList.add("active");
+  btn.classList.add("active");
+  window.scrollTo(0, 0);
+  if (name === "performance" && perfChart) { perfChart.resize(); }
+}
+
+function _applyPageTabLabels() {
+  ["overview","performance","positions","ownership","transactions"].forEach(n => {
+    const el = document.getElementById("ptab-" + n);
+    if (el) el.textContent = t("tab_" + n);
+  });
+}
+
+// ── BENCHMARK DATA ──
+const BENCHMARK_DATA = [
+  { month:"Jan '26", label_es:"Ene '26", portfolio:0.729,  spxtr:1.450,   efa:4.905,  vt:3.112  },
+  { month:"Feb '26", label_es:"Feb '26", portfolio:-0.028, spxtr:-0.760,  efa:4.606,  vt:1.643  },
+  { month:"Mar '26", label_es:"Mar '26", portfolio:-4.032, spxtr:-4.980,  efa:-7.829, vt:-6.215 },
+  { month:"Apr '26", label_es:"Abr '26", portfolio:7.854,  spxtr:10.493,  efa:5.343,  vt:9.312  },
+  { month:"May '26", label_es:"May '26", portfolio:4.098,  spxtr:5.263,   efa:2.424,  vt:4.577  },
+];
+
+function renderBenchmarks() {
+  const fmtR = n => {
+    const s = (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
+    const cls = n >= 0 ? "pos" : "neg";
+    return `<span class="${cls}">${s}</span>`;
+  };
+  const rows = BENCHMARK_DATA.map(d => {
+    const monthLabel = currentLang === "es" ? d.label_es : d.month;
+    return `<tr>
+      <td style="font-weight:500;">${monthLabel}</td>
+      <td>${fmtR(d.portfolio)}</td>
+      <td style="color:var(--text2);">${fmtR(d.spxtr)}</td>
+      <td style="color:var(--text2);">${fmtR(d.efa)}</td>
+      <td style="color:var(--text2);">${fmtR(d.vt)}</td>
+    </tr>`;
+  }).join("");
+  const el = document.getElementById("bench-body");
+  if (el) el.innerHTML = rows;
 }
 
 // ── USD/COP EXCHANGE RATE ──
