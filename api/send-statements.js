@@ -59,11 +59,10 @@ function statementHtml({ investor, data, period }) {
   const myGL = myValue - myDeposited;
   const myReturn = myDeposited > 0 ? (myGL / myDeposited) * 100 : 0;
 
-  // Performance: TWR since inception (last value vs first)
-  const perfValues = perfData.values || [];
-  const perfLabels = perfData.labels || [];
-  const twr = perfValues.length >= 2
-    ? ((perfValues[perfValues.length - 1] / perfValues[1] - 1) * 100)
+  // TWR: use indexed return series (base 100), not absolute dollar values
+  const twrSeries = (data.twrSeries || []);
+  const twr = twrSeries.length >= 2
+    ? ((twrSeries[twrSeries.length - 1] / twrSeries[0] - 1) * 100)
     : 0;
 
   // Investor's own deposits
