@@ -218,7 +218,7 @@ export default async function handler(req, res) {
 
   let data;
   try {
-    const blobRes = await fetch(blobUrl);
+    const blobRes = await fetch(`${blobUrl}?t=${Date.now()}`, { cache: "no-store" });
     if (!blobRes.ok) throw new Error(`Blob fetch failed: ${blobRes.status}`);
     data = await blobRes.json();
   } catch (err) {
@@ -260,5 +260,5 @@ export default async function handler(req, res) {
     results.push({ investor: investor.name, status: emailRes.status, result });
   }
 
-  return res.status(200).json({ sent: results });
+  return res.status(200).json({ sent: results, debug: { twrSeriesLength: data.twrSeries?.length, twrSeriesFirst: data.twrSeries?.[0], twrSeriesLast: data.twrSeries?.[data.twrSeries?.length-1] } });
 }
