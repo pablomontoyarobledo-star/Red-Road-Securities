@@ -42,8 +42,8 @@ function statementHtml({ investor, data, period }) {
 
   // Compute totals
   const totalDeposited = deposits.reduce((s, d) => s + (parseFloat(d.amount) || 0), 0);
-  const fernandoDeposited = deposits.reduce((s, d) => s + (parseFloat(d.fernandoAmount) || 0), 0);
-  const darioDeposited = deposits.reduce((s, d) => s + (parseFloat(d.darioAmount) || 0), 0);
+  const fernandoDeposited = deposits.reduce((s, d) => s + (parseFloat(d.fernando) || 0), 0);
+  const darioDeposited = deposits.reduce((s, d) => s + (parseFloat(d.dario) || 0), 0);
 
   const posValue = positions.reduce((s, p) => s + (parseFloat(p.shares) * parseFloat(p.ibClose || p.costBasis)), 0);
   const totalValue = posValue + cashBalance;
