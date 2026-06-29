@@ -1,8 +1,6 @@
 // Vercel Cron: runs daily on days 28-31, checks if today is the last day of the month.
 // Schedule in vercel.json: "0 13 28-31 * *" (1pm UTC)
 
-export const config = { runtime: "edge" };
-
 function isLastDayOfMonth() {
   const now = new Date();
   const tomorrow = new Date(now);
@@ -202,46 +200,36 @@ function statementHtml({ investor, data, period }) {
 </html>`;
 }
 
-export default async function handler(req) {
-  // Allow manual trigger via POST with secret, or cron (GET from Vercel)
+export default async function handler(req, res) {
   const isManual = req.method === "POST";
+
   if (isManual) {
-    const auth = req.headers.get("x-sync-secret");
+    const auth = req.headers["x-sync-secret"];
     if (auth !== process.env.SYNC_SECRET) {
-      return new Response("Unauthorized", { status: 401 });
+      return res.status(401).json({ error: "Unauthorized" });
     }
   }
 
-  // Only send on the last day of the month (for cron calls)
   if (!isManual && !isLastDayOfMonth()) {
-    return new Response(JSON.stringify({ skipped: true, reason: "Not the last day of the month" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return res.status(200).json({ skipped: true, reason: "Not the last day of the month" });
   }
 
-  // Fetch fund data from Vercel Blob
   const blobUrl = process.env.FUND_DATA_BLOB_URL;
-  if (!blobUrl) {
-    return new Response("FUND_DATA_BLOB_URL not set", { status: 500 });
-  }
+  if (!blobUrl) return res.status(500).json({ error: "FUND_DATA_BLOB_URL not set" });
 
   let data;
   try {
-    const res = await fetch(blobUrl);
-    if (!res.ok) throw new Error(`Blob fetch failed: ${res.status}`);
-    data = await res.json();
+    const blobRes = await fetch(blobUrl);
+    if (!blobRes.ok) throw new Error(`Blob fetch failed: ${blobRes.status}`);
+    data = await blobRes.json();
   } catch (err) {
-    return new Response(`Failed to load fund data: ${err.message}`, { status: 500 });
+    return res.status(500).json({ error: `Failed to load fund data: ${err.message}` });
   }
 
   const resendKey = process.env.RESEND_API_KEY;
-  if (!resendKey) {
-    return new Response("RESEND_API_KEY not set", { status: 500 });
-  }
+  if (!resendKey) return res.status(500).json({ error: "RESEND_API_KEY not set" });
 
   const now = new Date();
-  // Period = previous month (statement covers the month just ended)
   const periodDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const period = periodDate.toLocaleString("en-US", { month: "long", year: "numeric" });
 
@@ -255,14 +243,14 @@ export default async function handler(req) {
   for (const investor of investors) {
     const html = statementHtml({ investor, data, period });
 
-    const res = await fetch("https://api.resend.com/emails", {
+    const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${resendKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Fund ONE <statements@redroadsecurities.com>",
+        from: "Fund ONE <onboarding@resend.dev>",
         to: [investor.email],
         bcc: ["pablomontoyarobledo@gmail.com"],
         subject: `Fund ONE — ${period} Investor Statement`,
@@ -270,12 +258,9 @@ export default async function handler(req) {
       }),
     });
 
-    const result = await res.json();
-    results.push({ investor: investor.name, status: res.status, result });
+    const result = await emailRes.json();
+    results.push({ investor: investor.name, status: emailRes.status, result });
   }
 
-  return new Response(JSON.stringify({ sent: results }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+  return res.status(200).json({ sent: results });
 }
