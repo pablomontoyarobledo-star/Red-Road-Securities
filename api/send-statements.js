@@ -260,5 +260,7 @@ export default async function handler(req, res) {
     results.push({ investor: investor.name, status: emailRes.status, result });
   }
 
-  return res.status(200).json({ sent: results, debug: { twrSeriesLength: data.twrSeries?.length, twrSeriesFirst: data.twrSeries?.[0], twrSeriesLast: data.twrSeries?.[data.twrSeries?.length-1] } });
+  const ts = data.twrSeries || [];
+  const computedTwr = ts.length >= 2 ? ((ts[ts.length-1] / ts[0] - 1) * 100) : 0;
+  return res.status(200).json({ sent: results, debug: { twrSeriesLength: ts.length, twrFirst: ts[0], twrLast: ts[ts.length-1], computedTwr } });
 }
