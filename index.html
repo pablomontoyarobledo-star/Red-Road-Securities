@@ -382,7 +382,7 @@
         </table>
       </div>
     </div>
-    <p class="add-hint" id="ownership-hint">Ownership calculated using unit/NAV method · Moneche deposits split 65% Fernando Montoya / 35% Dario Montoya</p>
+    <p class="add-hint" id="ownership-hint">Ownership calculated using unit/NAV method · Each deposit tagged to individual investor</p>
   </div>
 
   <!-- Transactions -->
@@ -526,7 +526,6 @@
           <div class="form-group">
             <label id="lbl-dep-source">Source</label>
             <select id="a-dep-source" onchange="autoSplitDeposit()">
-              <option value="Moneche">Moneche</option>
               <option value="Fernando Montoya">Fernando Montoya</option>
               <option value="Dario Montoya">Dario Montoya</option>
             </select>
@@ -537,7 +536,7 @@
           <div class="form-group"><label id="lbl-dep-fernando">Fernando Montoya ($)</label><input type="number" step="0.01" id="a-dep-fernando" placeholder="auto-split for Moneche" /></div>
           <div class="form-group"><label id="lbl-dep-dario">Dario Montoya ($)</label><input type="number" step="0.01" id="a-dep-dario" placeholder="auto-split for Moneche" /></div>
         </div>
-        <p style="font-size:11px;color:var(--text3);margin-top:-4px;" id="dep-split-hint">Moneche deposits auto-split 65% Fernando / 35% Dario. Override manually if needed.</p>
+        <p style="font-size:11px;color:var(--text3);margin-top:-4px;" id="dep-split-hint">Each deposit is tagged to the individual investor.</p>
         <button class="save-btn" onclick="saveDeposit()" id="save-dep-btn">Log deposit</button>
         <span class="admin-success" id="dep-log-success">✓ Deposit logged</span>
       </div>
@@ -596,7 +595,7 @@ const TR = {
     perfSuccess: "✓ Chart updated",
     lbl_dep_date: "Date", lbl_dep_amount: "Amount ($)", lbl_dep_source: "Source",
     lbl_dep_nav: "NAV at deposit ($)", lbl_dep_fernando: "Fernando Montoya ($)", lbl_dep_dario: "Dario Montoya ($)",
-    dep_split_hint: "Moneche deposits auto-split 65% Fernando / 35% Dario. Override manually if needed.",
+    dep_split_hint: "Each deposit is tagged to the individual investor.",
     saveDepBtn: "Log deposit", depLogSuccess: "✓ Deposit logged",
     alert_dep_required: "Date, amount, and NAV are required.",
     // Overview
@@ -637,7 +636,7 @@ const TR = {
     dep_col_date: "Date", dep_col_amount: "Amount", dep_col_source: "Source",
     dep_col_nav: "NAV at deposit", dep_col_fernando: "Fernando Montoya", dep_col_dario: "Dario Montoya",
     dep_total_label: "Total deposited",
-    ownership_hint: "Ownership calculated using unit/NAV method · Moneche deposits split 65% Fernando Montoya / 35% Dario Montoya",
+    ownership_hint: "Ownership calculated using unit/NAV method · Each deposit tagged to individual investor",
     // Transactions
     lbl_transactions: "Transaction history",
     ttab_all: "All", ttab_buy: "Buys", ttab_sell: "Sells", ttab_dividend: "Dividends",
@@ -692,7 +691,7 @@ const TR = {
     perfSuccess: "✓ Gráfico actualizado",
     lbl_dep_date: "Fecha", lbl_dep_amount: "Monto ($)", lbl_dep_source: "Fuente",
     lbl_dep_nav: "NAV al depositar ($)", lbl_dep_fernando: "Fernando Montoya ($)", lbl_dep_dario: "Dario Montoya ($)",
-    dep_split_hint: "Depósitos Moneche se dividen automáticamente 65% Fernando / 35% Dario. Puede modificar manualmente.",
+    dep_split_hint: "Cada depósito se asigna al inversor individual.",
     saveDepBtn: "Registrar depósito", depLogSuccess: "✓ Depósito registrado",
     alert_dep_required: "La fecha, el monto y el NAV son obligatorios.",
     lbl_overview: "Resumen del portafolio",
@@ -728,7 +727,7 @@ const TR = {
     dep_col_date: "Fecha", dep_col_amount: "Monto", dep_col_source: "Fuente",
     dep_col_nav: "NAV al depositar", dep_col_fernando: "Fernando Montoya", dep_col_dario: "Dario Montoya",
     dep_total_label: "Total depositado",
-    ownership_hint: "Participación calculada usando el método unidad/NAV · Depósitos Moneche divididos 65% Fernando Montoya / 35% Dario Montoya",
+    ownership_hint: "Participación calculada usando el método unidad/NAV · Cada depósito asignado al inversor individual",
     lbl_transactions: "Historial de transacciones",
     ttab_all: "Todas", ttab_buy: "Compras", ttab_sell: "Ventas", ttab_dividend: "Dividendos",
     tx_all_months: "Todos los meses", tx_all_years: "Todos los años",
@@ -952,15 +951,23 @@ const DEFAULT_PERF = {
 };
 
 const DEFAULT_DEPOSITS = [
-  { date:"2025-12-18", amount:1000,   source:"Moneche",          nav:1.000000, fernando:650,    dario:350    },
-  { date:"2025-12-29", amount:25000,  source:"Moneche",          nav:0.992810, fernando:16250,  dario:8750   },
-  { date:"2025-12-29", amount:3000,   source:"Moneche",          nav:0.992810, fernando:1950,   dario:1050   },
-  { date:"2025-12-30", amount:31000,  source:"Moneche",          nav:0.991905, fernando:20150,  dario:10850  },
+  { date:"2025-12-18", amount:650,    source:"Fernando Montoya", nav:1.000000, fernando:650,    dario:0      },
+  { date:"2025-12-18", amount:350,    source:"Dario Montoya",    nav:1.000000, fernando:0,      dario:350    },
+  { date:"2025-12-29", amount:16250,  source:"Fernando Montoya", nav:0.992810, fernando:16250,  dario:0      },
+  { date:"2025-12-29", amount:8750,   source:"Dario Montoya",    nav:0.992810, fernando:0,      dario:8750   },
+  { date:"2025-12-29", amount:1950,   source:"Fernando Montoya", nav:0.992810, fernando:1950,   dario:0      },
+  { date:"2025-12-29", amount:1050,   source:"Dario Montoya",    nav:0.992810, fernando:0,      dario:1050   },
+  { date:"2025-12-30", amount:20150,  source:"Fernando Montoya", nav:0.991905, fernando:20150,  dario:0      },
+  { date:"2025-12-30", amount:10850,  source:"Dario Montoya",    nav:0.991905, fernando:0,      dario:10850  },
   { date:"2026-01-02", amount:40000,  source:"Fernando Montoya", nav:0.998880, fernando:40000,  dario:0      },
-  { date:"2026-01-28", amount:100000, source:"Moneche",          nav:0.997424, fernando:65000,  dario:35000  },
-  { date:"2026-03-12", amount:100000, source:"Moneche",          nav:0.979526, fernando:65000,  dario:35000  },
-  { date:"2026-04-27", amount:100000, source:"Moneche",          nav:1.032055, fernando:65000,  dario:35000  },
-  { date:"2026-05-11", amount:100000, source:"Moneche",          nav:1.051073, fernando:65000,  dario:35000  },
+  { date:"2026-01-28", amount:65000,  source:"Fernando Montoya", nav:0.997424, fernando:65000,  dario:0      },
+  { date:"2026-01-28", amount:35000,  source:"Dario Montoya",    nav:0.997424, fernando:0,      dario:35000  },
+  { date:"2026-03-12", amount:65000,  source:"Fernando Montoya", nav:0.979526, fernando:65000,  dario:0      },
+  { date:"2026-03-12", amount:35000,  source:"Dario Montoya",    nav:0.979526, fernando:0,      dario:35000  },
+  { date:"2026-04-27", amount:65000,  source:"Fernando Montoya", nav:1.032055, fernando:65000,  dario:0      },
+  { date:"2026-04-27", amount:35000,  source:"Dario Montoya",    nav:1.032055, fernando:0,      dario:35000  },
+  { date:"2026-05-11", amount:65000,  source:"Fernando Montoya", nav:1.051073, fernando:65000,  dario:0      },
+  { date:"2026-05-11", amount:35000,  source:"Dario Montoya",    nav:1.051073, fernando:0,      dario:35000  },
   { date:"2026-06-08", amount:160000, source:"Fernando Montoya", nav:1.052348, fernando:160000, dario:0      },
   { date:"2026-06-08", amount:100000, source:"Dario Montoya",    nav:1.052348, fernando:0,      dario:100000 },
 ];
@@ -983,7 +990,7 @@ function load(key, def) { try { const v = localStorage.getItem(key); return v ? 
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
 // Migration: must run BEFORE any load() calls
-const DATA_VERSION = "2026-06-09-v2";
+const DATA_VERSION = "2026-06-28-v3";
 function migrateDeposits() {
   // If version doesn't match, wipe everything and set new version
   if (localStorage.getItem("mff_version") !== DATA_VERSION) {
@@ -1497,7 +1504,7 @@ function renderDeposits() {
   const rows = filtered.map(d => {
     const dt = new Date(d.date + "T12:00:00");
     const dateLabel = dt.toLocaleDateString(locale, {month:"short",day:"numeric",year:"numeric"});
-    const srcCls = d.source === "Moneche" ? "source-moneche" : "source-fernando";
+    const srcCls = d.source === "Dario Montoya" ? "source-moneche" : "source-fernando";
     const darioStr = d.dario ? fmtDep(d.dario) : "—";
     return `<tr>
       <td data-date="${d.date}">${dateLabel}</td>
@@ -1520,10 +1527,7 @@ function renderDeposits() {
 function autoSplitDeposit() {
   const source = document.getElementById("a-dep-source").value;
   const amount = parseFloat(document.getElementById("a-dep-amount").value) || 0;
-  if (source === "Moneche" && amount) {
-    document.getElementById("a-dep-fernando").value = (amount * 0.65).toFixed(2);
-    document.getElementById("a-dep-dario").value    = (amount * 0.35).toFixed(2);
-  } else if (source === "Fernando Montoya") {
+  if (source === "Fernando Montoya") {
     document.getElementById("a-dep-fernando").value = amount || "";
     document.getElementById("a-dep-dario").value    = "";
   } else if (source === "Dario Montoya") {
