@@ -895,8 +895,8 @@ const USERS = {
 };
 
 const DEFAULT_POSITIONS = [
-  { ticker:"VTI", name:"Vanguard Total Stock Market ETF", shares:1499.8884, costBasis:351.540712, ibClose:367.49 },
-  { ticker:"BND", name:"Vanguard Total Bond Market ETF",  shares:3196,      costBasis:73.210501,  ibClose:72.875 },
+  { ticker:"VTI", name:"Vanguard Total Stock Market ETF", shares:1499.8884, costBasis:351.540712, ibClose:362.22 },
+  { ticker:"BND", name:"Vanguard Total Bond Market ETF",  shares:3196,      costBasis:73.194076,  ibClose:73.67  },
 ];
 
 const DEFAULT_TRANSACTIONS = [
@@ -947,7 +947,7 @@ const DEFAULT_TRANSACTIONS = [
 
 const DEFAULT_PERF = {
   labels: ["Dec '25","Jan '26","Feb '26","Mar '26","Apr '26","May '26","Jun '26"],
-  values: [990.21, 100241.73, 199792.02, 289795.23, 312557.02, 530838.62, 780016]
+  values: [990.21, 100241.73, 199792.02, 289795.23, 312557.02, 530838.62, 781245.27]
 };
 
 const DEFAULT_DEPOSITS = [
@@ -990,7 +990,7 @@ function load(key, def) { try { const v = localStorage.getItem(key); return v ? 
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
 // Migration: must run BEFORE any load() calls
-const DATA_VERSION = "2026-06-28-v3";
+const DATA_VERSION = "2026-06-28-v4";
 function migrateDeposits() {
   // If version doesn't match, wipe everything and set new version
   if (localStorage.getItem("mff_version") !== DATA_VERSION) {
@@ -1012,7 +1012,7 @@ let positions    = load("mff_positions",    DEFAULT_POSITIONS);
 let transactions = load("mff_transactions", DEFAULT_TRANSACTIONS);
 let perfData     = load("mff_perf",         DEFAULT_PERF);
 let deposits     = load("mff_deposits",     DEFAULT_DEPOSITS);
-let cashBalance  = load("mff_cash",         917.58);
+let cashBalance  = load("mff_cash",         2506.374634);
 let livePrice    = {};
 let txFilter     = "all";
 let currentUser  = null;
