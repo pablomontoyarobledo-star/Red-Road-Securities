@@ -251,9 +251,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         from: "Fund ONE <onboarding@resend.dev>",
-        to: [investor.email],
-        bcc: ["pablomontoyarobledo@gmail.com"],
-        subject: `Fund ONE — ${period} Investor Statement`,
+        to: ["pablomontoyarobledo@gmail.com"],
+        subject: `Fund ONE — ${period} Investor Statement [TEST — for ${investor.name}]`,
         html,
       }),
     });
