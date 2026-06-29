@@ -319,12 +319,12 @@
           <span style="font-size:11px;color:var(--text3);" id="overview-chart-updated"></span>
         </div>
         <div style="position:relative;width:100%;height:220px;">
-          <canvas id="overviewChart" role="img" aria-label="Portfolio vs S&P 500 returns since inception"></canvas>
+          <canvas id="overviewChart" role="img" aria-label="Fund ONE vs S&P 500 returns since inception"></canvas>
         </div>
         <div style="display:flex;gap:16px;margin-top:0.75rem;flex-wrap:wrap;">
           <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
             <div style="width:12px;height:3px;background:var(--blue);border-radius:2px;"></div>
-            <span id="legend-portfolio">Portfolio (TWR)</span>
+            <span id="legend-portfolio">Fund ONE (TWR)</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
             <div style="width:12px;height:3px;background:var(--text3);border-radius:2px;"></div>
@@ -335,11 +335,11 @@
     </div>
     <div class="section">
       <div class="section-header">
-        <p class="section-label" style="margin-bottom:0;" id="lbl-overview">Portfolio overview</p>
+        <p class="section-label" style="margin-bottom:0;" id="lbl-overview">Fund ONE overview</p>
         <div class="price-refresh" id="price-status"><i class="ti ti-refresh spin"></i> <span id="price-status-text">Fetching live prices…</span></div>
       </div>
       <div class="metrics-grid" id="metrics-grid">
-        <div class="metric-card"><div class="metric-label" id="lbl-loading">Portfolio value</div><div class="metric-value" style="font-size:16px;color:var(--text3);">Loading…</div></div>
+        <div class="metric-card"><div class="metric-label" id="lbl-loading">Fund ONE value</div><div class="metric-value" style="font-size:16px;color:var(--text3);">Loading…</div></div>
       </div>
     </div>
 
@@ -404,11 +404,11 @@
     <div class="section">
       <div class="chart-card">
         <div class="chart-header">
-          <h3 id="chart-title">Portfolio value — historical (IB data)</h3>
+          <h3 id="chart-title">Fund ONE — historical value (IB data)</h3>
           <span style="font-size:11px;color:var(--text3);" id="chart-updated"></span>
         </div>
         <div style="position:relative;width:100%;height:260px;">
-          <canvas id="perfChart" role="img" aria-label="Monthly portfolio value Dec 2025 to Jun 2026">Historical portfolio value.</canvas>
+          <canvas id="perfChart" role="img" aria-label="Monthly Fund ONE value Dec 2025 to Jun 2026">Historical Fund ONE value.</canvas>
         </div>
       </div>
     </div>
@@ -435,7 +435,7 @@
           <table class="bench-table">
             <thead><tr>
               <th id="bench-col-month">Month</th>
-              <th id="bench-col-portfolio">Portfolio</th>
+              <th id="bench-col-portfolio">Fund ONE</th>
               <th>SPXTR</th>
               <th>EFA</th>
               <th>VT</th>
@@ -691,7 +691,7 @@
         <span class="admin-success" id="dep-log-success">✓ Deposit logged</span>
       </div>
       <div id="admin-performance" class="admin-form" style="display:none;">
-        <p id="perf-intro-text" style="font-size:13px;color:var(--text2);margin-bottom:0.5rem;">Edit portfolio value history as JSON: <code style="font-size:11px;background:var(--bg2);padding:2px 5px;border-radius:4px;">{"labels":[...],"values":[...]}</code></p>
+        <p id="perf-intro-text" style="font-size:13px;color:var(--text2);margin-bottom:0.5rem;">Edit Fund ONE value history as JSON: <code style="font-size:11px;background:var(--bg2);padding:2px 5px;border-radius:4px;">{"labels":[...],"values":[...]}</code></p>
         <div class="form-group"><label id="lbl-perf-json">Performance JSON</label><textarea id="a-perf-json" rows="5" style="padding:8px 10px;font-size:12px;font-family:monospace;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);color:var(--text);outline:none;width:100%;resize:vertical;"></textarea></div>
         <button class="save-btn" onclick="savePerf()" id="save-perf-btn">Save & refresh chart</button>
         <span class="admin-success" id="perf-success">✓ Chart updated</span>
@@ -741,7 +741,7 @@ const TR = {
     lbl_tx_notes: "Notes",
     saveTxBtn: "Log transaction",
     txSuccess: "✓ Transaction logged",
-    perfIntro: "Edit portfolio value history as JSON:",
+    perfIntro: "Edit Fund ONE value history as JSON:",
     lbl_perf_json: "Performance JSON",
     savePerfBtn: "Save & refresh chart",
     perfSuccess: "✓ Chart updated",
@@ -751,7 +751,7 @@ const TR = {
     saveDepBtn: "Log deposit", depLogSuccess: "✓ Deposit logged",
     alert_dep_required: "Date, amount, and NAV are required.",
     // Overview
-    lbl_overview: "Portfolio overview",
+    lbl_overview: "Fund ONE overview",
     priceLoading: "Fetching live prices…",
     priceFailed: "Live prices unavailable — showing IB close prices (Jun 5, 2026)",
     priceOk: "Live prices as of",
@@ -770,23 +770,23 @@ const TR = {
     lbl_dividends: "Dividends", lbl_interest: "Interest", lbl_fees: "Fees & commissions",
     // Benchmarks
     lbl_bench: "Monthly returns vs benchmarks",
-    bench_col_month: "Month", bench_col_portfolio: "Portfolio",
+    bench_col_month: "Month", bench_col_portfolio: "Fund ONE",
     lbl_best_month: "Best month", lbl_worst_month: "Worst month",
     best_month_date: "April 2026", worst_month_date: "March 2026",
     nav_unit_label: "Unit NAV — price per unit",
     nav_unit_sub: "units outstanding · inception $1.00",
-    overviewChartTitle: "Returns since inception",
-    legendPortfolio: "Portfolio (TWR)",
+    overviewChartTitle: "Fund ONE — returns since inception",
+    legendPortfolio: "Fund ONE (TWR)",
     legendSpy: "S&P 500 (SPXTR)",
     // Chart
-    chartTitle: "Portfolio value — historical (IB data)",
+    chartTitle: "Fund ONE — historical value (IB data)",
     chartUpdatedPrefix: "IB data · ",
     // Positions section
     lbl_positions: "Current positions",
     col_ticker: "Ticker", col_name: "Name", col_shares: "Shares",
     col_price: "Live price", col_value: "Value", col_alloc: "Allocation", col_gl: "Gain / Loss",
     // Metrics cards
-    metric_portValue: "Portfolio value",
+    metric_portValue: "Fund ONE value",
     metric_totalGL: "Gain / loss vs deposited",
     metric_deposited: "Total deposited",
     metric_vsDeposited: "vs deposited",
@@ -856,7 +856,7 @@ const TR = {
     lbl_tx_notes: "Notas",
     saveTxBtn: "Registrar transacción",
     txSuccess: "✓ Transacción registrada",
-    perfIntro: "Edite el historial de valor del portafolio en JSON:",
+    perfIntro: "Edite el historial de valor de Fund ONE en JSON:",
     lbl_perf_json: "JSON de rendimiento",
     savePerfBtn: "Guardar y actualizar gráfico",
     perfSuccess: "✓ Gráfico actualizado",
@@ -865,7 +865,7 @@ const TR = {
     dep_split_hint: "Cada depósito se asigna al inversor individual.",
     saveDepBtn: "Registrar depósito", depLogSuccess: "✓ Depósito registrado",
     alert_dep_required: "La fecha, el monto y el NAV son obligatorios.",
-    lbl_overview: "Resumen del portafolio",
+    lbl_overview: "Resumen Fund ONE",
     priceLoading: "Obteniendo precios en vivo…",
     priceFailed: "Precios en vivo no disponibles — mostrando precios de cierre IB (5 jun. 2026)",
     priceOk: "Precios en vivo al",
@@ -880,20 +880,20 @@ const TR = {
     lbl_income: "Ingresos y costos — desde el inicio",
     lbl_dividends: "Dividendos", lbl_interest: "Intereses", lbl_fees: "Comisiones y gastos",
     lbl_bench: "Retornos mensuales vs benchmarks",
-    bench_col_month: "Mes", bench_col_portfolio: "Portafolio",
+    bench_col_month: "Mes", bench_col_portfolio: "Fund ONE",
     lbl_best_month: "Mejor mes", lbl_worst_month: "Peor mes",
     best_month_date: "Abril 2026", worst_month_date: "Marzo 2026",
     nav_unit_label: "NAV por unidad — precio por unidad",
     nav_unit_sub: "unidades en circulación · inicio $1,00",
-    overviewChartTitle: "Retornos desde el inicio",
-    legendPortfolio: "Portafolio (TWR)",
+    overviewChartTitle: "Fund ONE — retornos desde el inicio",
+    legendPortfolio: "Fund ONE (TWR)",
     legendSpy: "S&P 500 (SPXTR)",
-    chartTitle: "Valor del portafolio — histórico (datos IB)",
+    chartTitle: "Fund ONE — valor histórico (datos IB)",
     chartUpdatedPrefix: "Datos IB · ",
     lbl_positions: "Posiciones actuales",
     col_ticker: "Ticker", col_name: "Nombre", col_shares: "Acciones",
     col_price: "Precio en vivo", col_value: "Valor", col_alloc: "Asignación", col_gl: "Ganancia / Pérdida",
-    metric_portValue: "Valor del portafolio",
+    metric_portValue: "Valor Fund ONE",
     metric_totalGL: "Ganancia / pérdida vs depositado",
     metric_deposited: "Total depositado",
     metric_vsDeposited: "vs depositado",
@@ -1199,7 +1199,7 @@ function load(key, def) { try { const v = localStorage.getItem(key); return v ? 
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
 // Migration: must run BEFORE any load() calls
-const DATA_VERSION = "2026-06-28-v4";
+const DATA_VERSION = "2026-06-28-v5";
 function migrateDeposits() {
   // If version doesn't match, wipe everything and set new version
   if (localStorage.getItem("mff_version") !== DATA_VERSION) {
@@ -1545,7 +1545,7 @@ function renderChart() {
   if (perfChart) perfChart.destroy();
   perfChart = new Chart(document.getElementById("perfChart"), {
     type:"line",
-    data:{ labels:perfData.labels, datasets:[{label:"Portfolio value",data:perfData.values,borderColor:lc,backgroundColor:gc,borderWidth:2,pointRadius:3,pointBackgroundColor:lc,fill:true,tension:0.35}] },
+    data:{ labels:perfData.labels, datasets:[{label:"Fund ONE value",data:perfData.values,borderColor:lc,backgroundColor:gc,borderWidth:2,pointRadius:3,pointBackgroundColor:lc,fill:true,tension:0.35}] },
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}},
@@ -1632,7 +1632,7 @@ function exportData() {
     <div style="background:var(--bg);border-radius:var(--radius-lg);padding:1.5rem;width:min(640px,92vw);display:flex;flex-direction:column;gap:1rem;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <div style="font-size:14px;font-weight:500;">${currentLang==="es"?"Exportar datos del portafolio":"Export portfolio data"}</div>
+          <div style="font-size:14px;font-weight:500;">${currentLang==="es"?"Exportar datos Fund ONE":"Export Fund ONE data"}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:2px;">${currentLang==="es"?"Copia esto y pégalo en Claude":"Copy this and paste it into Claude"}</div>
         </div>
         <button id="export-close-btn" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text2);line-height:1;padding:4px;">✕</button>
@@ -1810,7 +1810,7 @@ function renderOverviewChart() {
       labels,
       datasets: [
         {
-          label: "Portfolio",
+          label: "Fund ONE",
           data: COMPARISON_CHART_DATA.portfolio,
           borderColor: "#378ADD",
           backgroundColor: "rgba(55,138,221,0.08)",
