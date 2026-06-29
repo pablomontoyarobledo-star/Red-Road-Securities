@@ -370,6 +370,20 @@
       <div class="metric-value" id="nav-unit-value" style="color:var(--blue);">—</div>
       <div class="metric-sub" style="color:var(--blue-text);opacity:0.8;" id="nav-unit-sub">494,078 units outstanding · inception $1,000.00</div>
     </div>
+    <div class="metric-card" id="fx-card" style="margin-top:12px;background:var(--bg);border:0.5px solid var(--border);display:flex;flex-direction:column;gap:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="metric-label" id="fx-label">USD / COP exchange rate</div>
+        <div style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;" id="fx-status"><i class="ti ti-refresh spin"></i> <span id="fx-status-text">Fetching rate…</span></div>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+        <div class="metric-value" id="fx-rate" style="font-size:26px;">—</div>
+        <div style="font-size:13px;color:var(--text2);">COP per USD</div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:2px;">
+        <div style="font-size:12px;color:var(--text2);">$1,000 USD = <span id="fx-1k" style="font-weight:500;color:var(--text);">—</span> COP</div>
+        <div style="font-size:12px;color:var(--text2);">$10,000 USD = <span id="fx-10k" style="font-weight:500;color:var(--text);">—</span> COP</div>
+      </div>
+    </div>
   </div>
 
   <!-- Chart -->
@@ -563,6 +577,10 @@ const TR = {
     priceLoading: "Fetching live prices…",
     priceFailed: "Live prices unavailable — showing IB close prices (Jun 5, 2026)",
     priceOk: "Live prices as of",
+    fxLabel: "USD / COP exchange rate",
+    fxLoading: "Fetching rate…",
+    fxFailed: "Rate unavailable",
+    fxUpdated: "Updated",
     nav_unit_label: "Unit NAV — price per unit",
     nav_unit_sub: "494,078 units outstanding · inception $1,000.00",
     // Chart
@@ -654,6 +672,10 @@ const TR = {
     priceLoading: "Obteniendo precios en vivo…",
     priceFailed: "Precios en vivo no disponibles — mostrando precios de cierre IB (5 jun. 2026)",
     priceOk: "Precios en vivo al",
+    fxLabel: "Tasa de cambio USD / COP",
+    fxLoading: "Obteniendo tasa…",
+    fxFailed: "Tasa no disponible",
+    fxUpdated: "Actualizado",
     nav_unit_label: "NAV por unidad — precio por unidad",
     nav_unit_sub: "494.078 unidades en circulación · inicio $1.000,00",
     chartTitle: "Valor del portafolio — histórico (datos IB)",
@@ -807,6 +829,7 @@ function setLang(lang) {
     renderDeposits();
     _updateChartLabel();
     _applyPriceStatus();
+    _updateFXLabels();
   }
 }
 
@@ -976,6 +999,7 @@ function tryLogin() {
     document.getElementById("investor-badge").textContent = user.name;
     if (user.admin) { document.getElementById("admin-panel").style.display = "block"; populateAdminFields(); }
     fetchPrices();
+    fetchFXRate();
     renderTx();
     renderChart();
     renderDeposits();
@@ -1485,6 +1509,46 @@ function saveDeposit() {
   // Clear form
   ["a-dep-date","a-dep-amount","a-dep-nav","a-dep-fernando","a-dep-dario"].forEach(id => document.getElementById(id).value = "");
   const el = document.getElementById("dep-log-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",2500);
+}
+
+// ── USD/COP EXCHANGE RATE ──
+async function fetchFXRate() {
+  const statusEl = document.getElementById("fx-status");
+  const statusText = document.getElementById("fx-status-text");
+  statusEl.innerHTML = `<i class="ti ti-refresh spin"></i> <span id="fx-status-text">${t("fxLoading")}</span>`;
+
+  let rate = null;
+  try {
+    const r = await fetch("https://api.frankfurter.app/latest?from=USD&to=COP");
+    const d = await r.json();
+    rate = d.rates && d.rates.COP;
+  } catch(e) {}
+
+  if (!rate) {
+    try {
+      const r = await fetch("https://open.er-api.com/v6/latest/USD");
+      const d = await r.json();
+      rate = d.rates && d.rates.COP;
+    } catch(e) {}
+  }
+
+  if (!rate) {
+    document.getElementById("fx-status").innerHTML = `<i class="ti ti-alert-circle" style="color:var(--amber-text);"></i> <span>${t("fxFailed")}</span>`;
+    return;
+  }
+
+  const fmtCOP = n => Math.round(n).toLocaleString("es-CO");
+  document.getElementById("fx-rate").textContent = fmtCOP(rate);
+  document.getElementById("fx-1k").textContent  = fmtCOP(rate * 1000);
+  document.getElementById("fx-10k").textContent = fmtCOP(rate * 10000);
+
+  const now = new Date().toLocaleTimeString(currentLang === "es" ? "es-CO" : "en-US", {hour:"2-digit", minute:"2-digit"});
+  document.getElementById("fx-status").innerHTML = `<i class="ti ti-circle-check" style="color:var(--green);"></i> <span>${t("fxUpdated")} ${now}</span>`;
+}
+
+function _updateFXLabels() {
+  const lbl = document.getElementById("fx-label");
+  if (lbl) lbl.textContent = t("fxLabel");
 }
 
 // ── IB CSV IMPORT ──
