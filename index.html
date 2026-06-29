@@ -609,6 +609,7 @@
         <button class="tab-btn" onclick="switchAdminTab('transaction', this)" id="atab-transaction">Log transaction</button>
         <button class="tab-btn" onclick="switchAdminTab('deposit', this)" id="atab-deposit">Log deposit</button>
         <button class="tab-btn" onclick="switchAdminTab('performance', this)" id="atab-performance">Performance data</button>
+        <button class="tab-btn" onclick="switchAdminTab('investors', this)" id="atab-investors">Investors</button>
         <button class="tab-btn" onclick="exportData()" id="atab-export" style="margin-left:auto;background:var(--bg2);border-color:var(--border2);">
           <i class="ti ti-clipboard-copy" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="export-btn-label">Export data</span>
         </button>
@@ -701,6 +702,14 @@
         <div class="form-group"><label id="lbl-perf-json">Performance JSON</label><textarea id="a-perf-json" rows="5" style="padding:8px 10px;font-size:12px;font-family:monospace;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);color:var(--text);outline:none;width:100%;resize:vertical;"></textarea></div>
         <button class="save-btn" onclick="savePerf()" id="save-perf-btn">Save & refresh chart</button>
         <span class="admin-success" id="perf-success">✓ Chart updated</span>
+      </div>
+
+      <!-- Investors -->
+      <div id="admin-investors" class="admin-form" style="display:none;">
+        <div id="investor-list"></div>
+        <button class="save-btn" onclick="addInvestor()" style="margin-top:1rem;background:var(--bg2);color:var(--text);border-color:var(--border2);">
+          <i class="ti ti-user-plus" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Add investor
+        </button>
       </div>
     </div>
   </div>
@@ -1189,6 +1198,11 @@ const DEFAULT_DEPOSITS = [
 
 const INCEPTION_NAV = 1.00;
 
+const DEFAULT_INVESTORS = [
+  { id:"inv_fernando", firstName:"Fernando", middleName:"", lastName:"Montoya", email:"fernando.montoya@mdosas.com", mailingAddress:"", phone:"", nationality:"Colombian", lang:"es" },
+  { id:"inv_dario",    firstName:"Dario",    middleName:"", lastName:"Montoya", email:"dario.montoya@mdosas.com",    mailingAddress:"", phone:"", nationality:"Colombian", lang:"es" },
+];
+
 // Compute unit ledger dynamically from deposits array
 function calcUnits() {
   let fernandoUnits = 0, darioUnits = 0;
@@ -1228,6 +1242,7 @@ let transactions = load("mff_transactions", DEFAULT_TRANSACTIONS);
 let perfData     = load("mff_perf",         DEFAULT_PERF);
 let deposits     = load("mff_deposits",     DEFAULT_DEPOSITS);
 let cashBalance  = load("mff_cash",         2506.374634);
+let investors    = load("mff_investors",    DEFAULT_INVESTORS);
 let livePrice    = {};
 let txFilter     = "all";
 let currentUser  = null;
@@ -1615,10 +1630,100 @@ function savePerf() {
   } catch { alert(t("alert_perf_invalid")); }
 }
 function switchAdminTab(panel,btn) {
-  ["import","position","transaction","deposit","performance"].forEach(p=>document.getElementById("admin-"+p).style.display="none");
+  ["import","position","transaction","deposit","performance","investors"].forEach(p=>document.getElementById("admin-"+p).style.display="none");
   document.getElementById("admin-"+panel).style.display="flex";
   document.querySelectorAll("#admin-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
+  if (panel === "investors") renderInvestors();
+}
+
+// ── INVESTOR DB ──
+function renderInvestors() {
+  const list = document.getElementById("investor-list");
+  if (!list) return;
+  if (!investors.length) { list.innerHTML = '<p style="font-size:13px;color:var(--text3);">No investors yet.</p>'; return; }
+  list.innerHTML = investors.map((inv, i) => `
+    <div id="inv-row-${i}" style="border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:0.75rem;background:var(--bg2);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <span style="font-size:13px;font-weight:600;color:var(--text);">${inv.firstName} ${inv.middleName ? inv.middleName + " " : ""}${inv.lastName}</span>
+        <div style="display:flex;gap:8px;">
+          <button onclick="toggleInvestorEdit(${i})" style="font-size:11px;padding:4px 10px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;" id="inv-edit-btn-${i}">Edit</button>
+          <button onclick="deleteInvestor(${i})" style="font-size:11px;padding:4px 10px;border-radius:var(--radius);border:0.5px solid var(--red);background:var(--red-bg);color:var(--red);cursor:pointer;">Delete</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:12px;color:var(--text2);" id="inv-summary-${i}">
+        <span>📧 ${inv.email || "—"}</span>
+        <span>📞 ${inv.phone || "—"}</span>
+        <span>🌍 ${inv.nationality || "—"}</span>
+        <span>🌐 ${inv.lang === "es" ? "Español" : "English"}</span>
+        ${inv.mailingAddress ? `<span style="grid-column:1/-1;">📬 ${inv.mailingAddress}</span>` : ""}
+      </div>
+      <div id="inv-form-${i}" style="display:none;margin-top:0.75rem;border-top:0.5px solid var(--border);padding-top:0.75rem;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">First name</label><input id="inv-fn-${i}" value="${inv.firstName}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">Middle name</label><input id="inv-mn-${i}" value="${inv.middleName || ""}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">Last name</label><input id="inv-ln-${i}" value="${inv.lastName}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">Email</label><input id="inv-em-${i}" value="${inv.email}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">Phone</label><input id="inv-ph-${i}" value="${inv.phone || ""}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">Nationality</label><input id="inv-nat-${i}" value="${inv.nationality || ""}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">Preferred language</label>
+            <select id="inv-lang-${i}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;">
+              <option value="en" ${inv.lang === "en" ? "selected" : ""}>English</option>
+              <option value="es" ${inv.lang === "es" ? "selected" : ""}>Español</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin:0 0 0.5rem;"><label style="font-size:11px;">Mailing address</label><input id="inv-addr-${i}" value="${inv.mailingAddress || ""}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
+        <button onclick="saveInvestor(${i})" class="save-btn" style="font-size:12px;padding:6px 14px;">Save</button>
+        <span id="inv-saved-${i}" style="font-size:12px;color:var(--green);margin-left:8px;display:none;">✓ Saved</span>
+      </div>
+    </div>`).join("");
+}
+
+function toggleInvestorEdit(i) {
+  const form = document.getElementById(`inv-form-${i}`);
+  const summary = document.getElementById(`inv-summary-${i}`);
+  const btn = document.getElementById(`inv-edit-btn-${i}`);
+  const open = form.style.display === "none";
+  form.style.display = open ? "block" : "none";
+  summary.style.display = open ? "none" : "grid";
+  btn.textContent = open ? "Cancel" : "Edit";
+}
+
+function saveInvestor(i) {
+  investors[i] = {
+    ...investors[i],
+    firstName:      document.getElementById(`inv-fn-${i}`).value.trim(),
+    middleName:     document.getElementById(`inv-mn-${i}`).value.trim(),
+    lastName:       document.getElementById(`inv-ln-${i}`).value.trim(),
+    email:          document.getElementById(`inv-em-${i}`).value.trim(),
+    phone:          document.getElementById(`inv-ph-${i}`).value.trim(),
+    nationality:    document.getElementById(`inv-nat-${i}`).value.trim(),
+    lang:           document.getElementById(`inv-lang-${i}`).value,
+    mailingAddress: document.getElementById(`inv-addr-${i}`).value.trim(),
+  };
+  save("mff_investors", investors);
+  const saved = document.getElementById(`inv-saved-${i}`);
+  saved.style.display = "inline";
+  setTimeout(() => { saved.style.display = "none"; renderInvestors(); }, 1500);
+}
+
+function addInvestor() {
+  investors.push({ id:"inv_"+Date.now(), firstName:"", middleName:"", lastName:"", email:"", phone:"", nationality:"", lang:"en", mailingAddress:"" });
+  save("mff_investors", investors);
+  renderInvestors();
+  toggleInvestorEdit(investors.length - 1);
+}
+
+function deleteInvestor(i) {
+  if (!confirm(`Delete ${investors[i].firstName} ${investors[i].lastName}?`)) return;
+  investors.splice(i, 1);
+  save("mff_investors", investors);
+  renderInvestors();
 }
 
 async function syncToCloud() {
@@ -1634,6 +1739,7 @@ async function syncToCloud() {
     cashBalance,
     transactions,
     twrSeries: COMPARISON_CHART_DATA.portfolio,
+    investors,
   };
 
   btn.disabled = true;
