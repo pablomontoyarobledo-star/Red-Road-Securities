@@ -28,8 +28,8 @@ function computeOwnership(deposits) {
   let fernandoUnits = 0, darioUnits = 0;
   for (const d of deposits) {
     const nav = parseFloat(d.nav) || 1;
-    const fAmt = parseFloat(d.fernandoAmount) || 0;
-    const dAmt = parseFloat(d.darioAmount) || 0;
+    const fAmt = parseFloat(d.fernando) || 0;
+    const dAmt = parseFloat(d.dario) || 0;
     fernandoUnits += fAmt / nav;
     darioUnits += dAmt / nav;
   }
@@ -70,7 +70,7 @@ function statementHtml({ investor, data, period }) {
   const myDeposits = deposits
     .map(d => ({
       date: d.date,
-      amount: isFernando ? parseFloat(d.fernandoAmount) : parseFloat(d.darioAmount),
+      amount: isFernando ? parseFloat(d.fernando) : parseFloat(d.dario),
     }))
     .filter(d => d.amount > 0)
     .sort((a, b) => a.date.localeCompare(b.date));
