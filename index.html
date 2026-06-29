@@ -272,8 +272,12 @@
       <p id="login-subtitle">Investor portal</p>
     </div>
     <div class="field">
+      <label id="login-email-label" for="email">Email</label>
+      <input type="email" id="email" placeholder="Enter your email" autocomplete="username" />
+    </div>
+    <div class="field">
       <label id="login-pw-label" for="pw">Access password</label>
-      <input type="password" id="pw" placeholder="Enter your password" />
+      <input type="password" id="pw" placeholder="Enter your password" autocomplete="current-password" />
     </div>
     <button class="login-btn" onclick="tryLogin()" id="login-btn-text">Sign in</button>
     <p class="login-error" id="login-error">Incorrect password. Please try again.</p>
@@ -308,6 +312,27 @@
 
   <!-- PAGE: Overview -->
   <div id="page-overview" class="page active">
+    <div class="section">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3 id="overview-chart-title">Returns since inception</h3>
+          <span style="font-size:11px;color:var(--text3);" id="overview-chart-updated"></span>
+        </div>
+        <div style="position:relative;width:100%;height:220px;">
+          <canvas id="overviewChart" role="img" aria-label="Portfolio vs S&P 500 returns since inception"></canvas>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:0.75rem;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
+            <div style="width:12px;height:3px;background:var(--blue);border-radius:2px;"></div>
+            <span id="legend-portfolio">Portfolio (TWR)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
+            <div style="width:12px;height:3px;background:var(--text3);border-radius:2px;"></div>
+            <span id="legend-spy">S&amp;P 500 (SPXTR)</span>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="section">
       <div class="section-header">
         <p class="section-label" style="margin-bottom:0;" id="lbl-overview">Portfolio overview</p>
@@ -681,6 +706,8 @@ const TR = {
   en: {
     // Login
     loginSubtitle: "Investor portal",
+    loginEmailLabel: "Email",
+    loginEmailPlaceholder: "Enter your email",
     loginPwLabel: "Access password",
     loginPwPlaceholder: "Enter your password",
     loginBtn: "Sign in",
@@ -748,6 +775,9 @@ const TR = {
     best_month_date: "April 2026", worst_month_date: "March 2026",
     nav_unit_label: "Unit NAV — price per unit",
     nav_unit_sub: "units outstanding · inception $1.00",
+    overviewChartTitle: "Returns since inception",
+    legendPortfolio: "Portfolio (TWR)",
+    legendSpy: "S&P 500 (SPXTR)",
     // Chart
     chartTitle: "Portfolio value — historical (IB data)",
     chartUpdatedPrefix: "IB data · ",
@@ -793,6 +823,8 @@ const TR = {
   },
   es: {
     loginSubtitle: "Portal del inversor",
+    loginEmailLabel: "Correo electrónico",
+    loginEmailPlaceholder: "Ingrese su correo",
     loginPwLabel: "Contraseña de acceso",
     loginPwPlaceholder: "Ingrese su contraseña",
     loginBtn: "Ingresar",
@@ -853,6 +885,9 @@ const TR = {
     best_month_date: "Abril 2026", worst_month_date: "Marzo 2026",
     nav_unit_label: "NAV por unidad — precio por unidad",
     nav_unit_sub: "unidades en circulación · inicio $1,00",
+    overviewChartTitle: "Retornos desde el inicio",
+    legendPortfolio: "Portafolio (TWR)",
+    legendSpy: "S&P 500 (SPXTR)",
     chartTitle: "Valor del portafolio — histórico (datos IB)",
     chartUpdatedPrefix: "Datos IB · ",
     lbl_positions: "Posiciones actuales",
@@ -906,6 +941,7 @@ function setLang(lang) {
   // Static elements by ID → key
   const map = {
     "login-subtitle": "loginSubtitle",
+    "login-email-label": "loginEmailLabel",
     "login-pw-label": "loginPwLabel",
     "login-btn-text": "loginBtn",
     "login-error": "loginError",
@@ -999,11 +1035,17 @@ function setLang(lang) {
     "bench-col-month": "bench_col_month", "bench-col-portfolio": "bench_col_portfolio",
     "lbl-best-month": "lbl_best_month", "lbl-worst-month": "lbl_worst_month",
     "best-month-date": "best_month_date", "worst-month-date": "worst_month_date",
+    "overview-chart-title": "overviewChartTitle",
+    "legend-portfolio": "legendPortfolio",
+    "legend-spy": "legendSpy",
   };
   for (const [id, key] of Object.entries(map)) {
     const el = document.getElementById(id);
     if (el) el.textContent = t(key);
   }
+  // Email placeholder
+  const emailEl = document.getElementById("email");
+  if (emailEl) emailEl.placeholder = t("loginEmailPlaceholder");
   // Password placeholder
   const pwEl = document.getElementById("pw");
   if (pwEl) pwEl.placeholder = t("loginPwPlaceholder");
@@ -1014,6 +1056,7 @@ function setLang(lang) {
     renderTx();
     renderDeposits();
     renderBenchmarks();
+    renderOverviewChart();
     _updateChartLabel();
     _applyPriceStatus();
     _updateFXLabels();
@@ -1055,9 +1098,9 @@ function clearDepFilters() {
 
 // ── DATA ──
 const USERS = {
-  "dario2024":   { name:"Dario Montoya",   admin:false },
-  "fernando2024":{ name:"Fernando Montoya",admin:false },
-  "pablo_admin": { name:"Pablo Montoya — Manager", admin:true  }
+  "pablomontoyarobledo@gmail.com":  { password:"pablo_admin",  name:"Pablo Montoya — Manager", admin:true  },
+  "dario.montoya@mdosas.com":       { password:"dario2024",    name:"Dario Montoya",            admin:false },
+  "fernando.montoya@mdosas.com":    { password:"fernando2024", name:"Fernando Montoya",         admin:false },
 };
 
 const DEFAULT_POSITIONS = [
@@ -1183,6 +1226,7 @@ let livePrice    = {};
 let txFilter     = "all";
 let currentUser  = null;
 let perfChart    = null;
+let overviewChart = null;
 let _priceStatusState = null;
 let _priceStatusTime  = null;
 
@@ -1190,14 +1234,15 @@ const fmt    = n => n.toLocaleString("en-US",{style:"currency",currency:"USD",ma
 const fmtPct = n => (n>=0?"+":"")+n.toFixed(2)+"%";
 
 function tryLogin() {
+  const email = document.getElementById("email").value.trim().toLowerCase();
   const pw = document.getElementById("pw").value.trim();
-  const user = USERS[pw];
-  if (user) {
-    currentUser = user;
+  const entry = USERS[email];
+  if (entry && entry.password === pw) {
+    currentUser = entry;
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
-    document.getElementById("investor-badge").textContent = user.name;
-    if (user.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; populateAdminFields(); }
+    document.getElementById("investor-badge").textContent = entry.name;
+    if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; populateAdminFields(); }
     fetchPrices();
     fetchFXRate();
     renderTx();
@@ -1206,11 +1251,13 @@ function tryLogin() {
     renderMetrics();
     renderOwnership();
     renderBenchmarks();
+    renderOverviewChart();
     _applyPageTabLabels();
   } else {
     document.getElementById("login-error").style.display = "block";
   }
 }
+document.getElementById("email").addEventListener("keydown", e => { if(e.key==="Enter") tryLogin(); });
 document.getElementById("pw").addEventListener("keydown", e => { if(e.key==="Enter") tryLogin(); });
 
 function showAdminScreen() {
@@ -1231,9 +1278,11 @@ function logout() {
   document.getElementById("app").style.display = "none";
   document.getElementById("admin-screen").style.display = "none";
   document.getElementById("admin-nav-btn").style.display = "none";
+  document.getElementById("email").value = "";
   document.getElementById("pw").value = "";
   document.getElementById("login-error").style.display = "none";
   if (perfChart) { perfChart.destroy(); perfChart = null; }
+  if (overviewChart) { overviewChart.destroy(); overviewChart = null; }
 }
 
 async function fetchSinglePrice(ticker) {
@@ -1731,6 +1780,7 @@ function showPage(name, btn) {
   btn.classList.add("active");
   window.scrollTo(0, 0);
   if (name === "performance" && perfChart) { perfChart.resize(); }
+  if (name === "overview" && overviewChart) { overviewChart.resize(); }
 }
 
 function _applyPageTabLabels() {
@@ -1738,6 +1788,81 @@ function _applyPageTabLabels() {
     const el = document.getElementById("ptab-" + n);
     if (el) el.textContent = t("tab_" + n);
   });
+}
+
+// ── OVERVIEW CHART ──
+const COMPARISON_CHART_DATA = {
+  labels: ["Dec '25","Jan '26","Feb '26","Mar '26","Apr '26","May '26","Jun '26"],
+  labels_es: ["Dic '25","Ene '26","Feb '26","Mar '26","Abr '26","May '26","Jun '26"],
+  portfolio: [100, 100.73, 100.70, 96.64, 104.23, 108.50, 105.47],
+  spy:       [100, 101.45, 100.68, 95.67, 105.70, 111.26, 110.09],
+};
+
+function renderOverviewChart() {
+  const isDark = matchMedia("(prefers-color-scheme:dark)").matches;
+  const tc = isDark ? "#6a6966" : "#888780";
+  const bgc = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
+  const labels = currentLang === "es" ? COMPARISON_CHART_DATA.labels_es : COMPARISON_CHART_DATA.labels;
+  if (overviewChart) overviewChart.destroy();
+  overviewChart = new Chart(document.getElementById("overviewChart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Portfolio",
+          data: COMPARISON_CHART_DATA.portfolio,
+          borderColor: "#378ADD",
+          backgroundColor: "rgba(55,138,221,0.08)",
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: "#378ADD",
+          fill: false,
+          tension: 0.3,
+        },
+        {
+          label: "S&P 500",
+          data: COMPARISON_CHART_DATA.spy,
+          borderColor: isDark ? "#6a6966" : "#aaa",
+          backgroundColor: "transparent",
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+          pointRadius: 2,
+          pointBackgroundColor: isDark ? "#6a6966" : "#aaa",
+          fill: false,
+          tension: 0.3,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${(ctx.parsed.y - 100).toFixed(2)}%`
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: bgc }, ticks: { color: tc, font: { size: 11 } } },
+        y: {
+          grid: { color: bgc },
+          ticks: {
+            color: tc,
+            font: { size: 11 },
+            callback: v => (v - 100).toFixed(1) + "%"
+          }
+        }
+      }
+    }
+  });
+  const updEl = document.getElementById("overview-chart-updated");
+  if (updEl) {
+    const locale = currentLang === "es" ? "es-ES" : "en-US";
+    updEl.textContent = (currentLang === "es" ? "IB datos · " : "IB data · ") + new Date().toLocaleDateString(locale, {month:"short",year:"numeric"});
+  }
 }
 
 // ── BENCHMARK DATA ──
