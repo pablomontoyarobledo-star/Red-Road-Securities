@@ -38,7 +38,7 @@ function computeOwnership(deposits) {
 }
 
 function statementHtml({ investor, data, period }) {
-  const { positions = [], deposits = [], perfData = {}, cashBalance = 0 } = data;
+  const { positions = [], deposits = [], perfData = {}, cashBalance = 0, twrSeries = [] } = data;
 
   // Compute totals
   const totalDeposited = deposits.reduce((s, d) => s + (parseFloat(d.amount) || 0), 0);
@@ -60,7 +60,6 @@ function statementHtml({ investor, data, period }) {
   const myReturn = myDeposited > 0 ? (myGL / myDeposited) * 100 : 0;
 
   // TWR: use indexed return series (base 100), not absolute dollar values
-  const twrSeries = (data.twrSeries || []);
   const twr = twrSeries.length >= 2
     ? ((twrSeries[twrSeries.length - 1] / twrSeries[0] - 1) * 100)
     : 0;
