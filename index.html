@@ -613,6 +613,9 @@
         <button class="tab-btn" onclick="exportData()" id="atab-export" style="margin-left:auto;background:var(--bg2);border-color:var(--border2);">
           <i class="ti ti-clipboard-copy" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="export-btn-label">Export data</span>
         </button>
+        <button class="tab-btn" onclick="syncFromIB()" id="atab-ib" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);" title="Pull live positions and cash from Interactive Brokers">
+          <i class="ti ti-refresh" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="ib-btn-label">Sync from IB</span>
+        </button>
         <button class="tab-btn" onclick="syncToCloud()" id="atab-sync" style="background:var(--blue-bg);border-color:var(--blue);color:var(--blue);" title="Save current data to cloud for automated statements">
           <i class="ti ti-cloud-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="sync-btn-label">Sync to cloud</span>
         </button>
@@ -1724,6 +1727,56 @@ function deleteInvestor(i) {
   investors.splice(i, 1);
   save("mff_investors", investors);
   renderInvestors();
+}
+
+async function syncFromIB() {
+  const btn = document.getElementById("atab-ib");
+  const label = document.getElementById("ib-btn-label");
+  btn.disabled = true;
+  label.textContent = "Fetching…";
+
+  try {
+    const res = await fetch("/api/ib-data");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Unknown error");
+
+    // Update positions
+    if (data.positions && data.positions.length) {
+      positions = data.positions;
+      save("mff_positions", positions);
+    }
+
+    // Update cash
+    if (typeof data.cashBalance === "number") {
+      cashBalance = data.cashBalance;
+      save("mff_cash", cashBalance);
+    }
+
+    // Re-render everything
+    renderMetrics();
+    renderPositions();
+    renderOwnership();
+    renderChart();
+    fetchPrices();
+
+    const ts = new Date(data.lastUpdated).toLocaleTimeString();
+    label.textContent = `✓ IB synced ${ts}`;
+    btn.style.background  = "var(--green-bg)";
+    btn.style.borderColor = "var(--green)";
+    btn.style.color       = "var(--green)";
+    setTimeout(() => {
+      label.textContent = "Sync from IB";
+      btn.style.background  = "var(--purple-bg)";
+      btn.style.borderColor = "var(--purple-text)";
+      btn.style.color       = "var(--purple-text)";
+      btn.disabled = false;
+    }, 5000);
+
+  } catch (err) {
+    alert("IB sync failed: " + err.message);
+    label.textContent = "Sync from IB";
+    btn.disabled = false;
+  }
 }
 
 async function syncToCloud() {
