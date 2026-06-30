@@ -74,13 +74,19 @@ export default async function handler(req, res) {
       ibClose:   parseFloat(p.markPrice)      || 0,
     }));
 
-  // Cash balance — find the base-currency (USD) total row
+  // Cash balance — try multiple IB XML paths
   let cashRows = stmt?.CashReport?.CashReportCurrency ?? [];
-  if (!Array.isArray(cashRows)) cashRows = [cashRows];
-  // IB includes summary rows; pick the one with accountId set and currency=BASE
+  if (!Array.isArray(cashRows)) cashRows = cashRows ? [cashRows] : [];
   const cashRow = cashRows.find(c => c && c.currency === "BASE" && c.accountId) ||
-                  cashRows.find(c => c && c.currency === "USD"  && c.accountId);
-  const cashBalance = parseFloat(cashRow?.endingCash || cashRow?.endingSettledCash || 0);
+                  cashRows.find(c => c && c.currency === "USD"  && c.accountId) ||
+                  cashRows.find(c => c && c.accountId);
+
+  // Also try EquitySummaryInBase as fallback
+  let equityRows = stmt?.EquitySummaryInBase?.EquitySummaryByReportDate ?? [];
+  if (!Array.isArray(equityRows)) equityRows = equityRows ? [equityRows] : [];
+  const equityRow = equityRows[equityRows.length - 1];
+
+  const cashBalance = parseFloat(cashRow?.endingCash || cashRow?.endingSettledCash || equityRow?.cash || 0);
 
   // Recent trades (last 30 days, stocks only)
   let rawTrades = stmt?.Trades?.Trade ?? [];
@@ -102,6 +108,8 @@ export default async function handler(req, res) {
     trades,
     lastUpdated: new Date().toISOString(),
     accountId: stmt.accountId || "U23388477",
-    _debug_cash: cashRows.slice(0, 5),
+    _debug_cash: cashRows.slice(0, 3),
+    _debug_equity: equityRows.slice(0, 2),
+    _debug_stmt_keys: Object.keys(stmt || {}),
   });
 }
