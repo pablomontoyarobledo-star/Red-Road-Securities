@@ -588,10 +588,11 @@
       <div class="logo-sm"><i class="ti ti-settings" style="font-size:17px;color:#fff;"></i></div>
       <div>
         <div style="font-size:15px;font-weight:500;" id="admin-header-label">Admin — data editor</div>
-        <div style="font-size:12px;color:var(--text2);">Red Road Securities</div>
+        <div style="font-size:12px;color:var(--text2);">Red Road Securities &nbsp;<span id="cloud-synced-at" style="display:none;"></span></div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
+      <span id="cloud-sync-status" style="font-size:11px;color:var(--text2);display:none;align-items:center;gap:4px;"></span>
       <button class="back-btn" onclick="showDashboard()"><i class="ti ti-arrow-left" style="font-size:13px;"></i> <span id="back-btn-label">Back to dashboard</span></button>
       <button class="logout-btn" onclick="logout()"><i class="ti ti-logout" style="font-size:13px;vertical-align:-2px;margin-right:4px;"></i><span id="admin-logout-label">Sign out</span></button>
     </div>
@@ -1116,10 +1117,15 @@ function clearDepFilters() {
 
 // ── DATA ──
 const USERS = {
-  "pablomontoyarobledo@gmail.com":  { password:"pablo_admin",  name:"Pablo Montoya — Manager", admin:true  },
-  "dario.montoya@mdosas.com":       { password:"dario2024",    name:"Dario Montoya",            admin:false },
-  "fernando.montoya@mdosas.com":    { password:"fernando2024", name:"Fernando Montoya",         admin:false },
+  "pablomontoyarobledo@gmail.com":  { pwHash:"d75ceebe6cb6ed248441edc81bc7c28baf38ad2f079a5b58f358369dc0e7546e", name:"Pablo Montoya — Manager", admin:true  },
+  "dario.montoya@mdosas.com":       { pwHash:"1b1d798d5d0c7c98f9c442a77deb61a122ba489059b405e601d2556951981281", name:"Dario Montoya",            admin:false },
+  "fernando.montoya@mdosas.com":    { pwHash:"8fd97a694b066d5fb4f251eca8bbdf3f5210321230cfab366a028bff435bff68", name:"Fernando Montoya",         admin:false },
 };
+
+async function sha256hex(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+}
 
 const DEFAULT_POSITIONS = [
   { ticker:"VTI", name:"Vanguard Total Stock Market ETF", shares:1499.8884, costBasis:351.540712, ibClose:362.22 },
@@ -1257,11 +1263,12 @@ let _priceStatusTime  = null;
 const fmt    = n => n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2});
 const fmtPct = n => (n>=0?"+":"")+n.toFixed(2)+"%";
 
-function tryLogin() {
+async function tryLogin() {
   const email = document.getElementById("email").value.trim().toLowerCase();
   const pw = document.getElementById("pw").value.trim();
   const entry = USERS[email];
-  if (entry && entry.password === pw) {
+  const hash = await sha256hex(pw);
+  if (entry && entry.pwHash === hash) {
     currentUser = entry;
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
@@ -1277,6 +1284,7 @@ function tryLogin() {
     renderBenchmarks();
     renderOverviewChart();
     _applyPageTabLabels();
+    loadFromCloud();
   } else {
     document.getElementById("login-error").style.display = "block";
   }
@@ -1395,8 +1403,8 @@ function renderOwnership() {
   const fmtUnits = n => Math.round(n).toLocaleString(locale);
   const fmtPctOwn = n => n.toLocaleString(locale, {minimumFractionDigits:2, maximumFractionDigits:2});
 
-  document.getElementById("fernando-value").textContent = fmt(totalValue * (fernandoUnits / totalUnits));
-  document.getElementById("dario-value").textContent    = fmt(totalValue * (darioUnits    / totalUnits));
+  document.getElementById("fernando-value").textContent = totalUnits > 0 ? fmt(totalValue * (fernandoUnits / totalUnits)) : fmt(0);
+  document.getElementById("dario-value").textContent    = totalUnits > 0 ? fmt(totalValue * (darioUnits    / totalUnits)) : fmt(0);
 
   const depLabel   = currentLang==="es" ? "Depositado" : "Deposited";
   const ownLabel   = currentLang==="es" ? "participación · " : "ownership · ";
@@ -1724,6 +1732,7 @@ function saveInvestor(i) {
 function addInvestor() {
   investors.push({ id:"inv_"+Date.now(), firstName:"", middleName:"", lastName:"", email:"", phone:"", nationality:"", lang:"en", mailingAddress:"" });
   save("mff_investors", investors);
+  triggerAutoSync();
   renderInvestors();
   toggleInvestorEdit(investors.length - 1);
 }
@@ -1732,6 +1741,7 @@ function deleteInvestor(i) {
   if (!confirm(`Delete ${investors[i].firstName} ${investors[i].lastName}?`)) return;
   investors.splice(i, 1);
   save("mff_investors", investors);
+  triggerAutoSync();
   renderInvestors();
 }
 
@@ -1764,6 +1774,7 @@ async function syncFromIB() {
     renderOwnership();
     renderChart();
     fetchPrices();
+    triggerAutoSync();
 
     const ts = new Date(data.lastUpdated).toLocaleTimeString();
     label.textContent = `✓ IB synced ${ts}`;
@@ -1789,16 +1800,32 @@ function buildSyncPayload() {
   return { positions, deposits, perfData, cashBalance, transactions, twrSeries: COMPARISON_CHART_DATA.portfolio, investors };
 }
 
+function _setCloudStatus(icon, text, color) {
+  const el = document.getElementById("cloud-sync-status");
+  if (!el) return;
+  el.innerHTML = `<i class="ti ${icon}" style="font-size:13px;color:${color};"></i>${text}`;
+  el.style.display = "inline-flex";
+}
+
 async function triggerAutoSync() {
   const secret = localStorage.getItem("mff_sync_secret");
   if (!secret) return; // no secret stored yet — user must do a manual sync first
+  _setCloudStatus("ti-cloud-upload", "Saving…", "var(--text2)");
   try {
-    await fetch("/api/sync-data", {
+    const res = await fetch("/api/sync-data", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-sync-secret": secret },
       body: JSON.stringify(buildSyncPayload()),
     });
-  } catch { /* silent — non-fatal */ }
+    if (res.ok) {
+      _setCloudStatus("ti-cloud-check", "Saved", "var(--green)");
+      setTimeout(() => { const el = document.getElementById("cloud-sync-status"); if(el) el.style.display="none"; }, 3000);
+    } else {
+      _setCloudStatus("ti-cloud-x", "Sync failed", "var(--red)");
+    }
+  } catch {
+    _setCloudStatus("ti-cloud-x", "Sync failed", "var(--red)");
+  }
 }
 
 async function loadFromCloud() {
@@ -1813,7 +1840,16 @@ async function loadFromCloud() {
     if (data.cashBalance != null) { cashBalance = data.cashBalance; save("mff_cash", cashBalance); }
     if (data.investors && data.investors.length) { investors = data.investors; save("mff_investors", investors); }
     if (data.twrSeries && data.twrSeries.length) { COMPARISON_CHART_DATA.portfolio = data.twrSeries; }
-    renderPositions(); renderMetrics(); renderOwnership(); renderTx(); renderDeposits(); renderChart();
+    renderPositions(); renderMetrics(); renderOwnership(); renderTx(); renderDeposits(); renderChart(); renderOverviewChart();
+    if (document.getElementById("admin-screen").style.display !== "none") {
+      populateAdminFields();
+      if (document.getElementById("admin-investors") && document.getElementById("admin-investors").style.display !== "none") renderInvestors();
+    }
+    if (data.syncedAt) {
+      const ts = new Date(data.syncedAt).toLocaleString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
+      const el = document.getElementById("cloud-synced-at");
+      if (el) { el.textContent = `· cloud ${ts}`; el.style.display = "inline"; }
+    }
   } catch { /* silent — offline or blob unavailable */ }
 }
 
@@ -1856,8 +1892,10 @@ async function syncToCloud() {
 async function sendStatementsNow() {
   const btn = document.getElementById("atab-send");
   const label = document.getElementById("send-btn-label");
-  const secret = prompt("Enter your sync secret to send statements now:");
+  const storedSecret = localStorage.getItem("mff_sync_secret");
+  const secret = prompt("Enter your sync secret to send statements now:", storedSecret || "");
   if (!secret) return;
+  if (secret !== storedSecret) localStorage.setItem("mff_sync_secret", secret);
   if (!confirm("This will email statements to Fernando and Dario right now. Continue?")) return;
 
   btn.disabled = true;
@@ -1887,6 +1925,8 @@ function exportData() {
     transactions,
     perf: perfData,
     cash: cashBalance,
+    twrSeries: COMPARISON_CHART_DATA.portfolio,
+    investors,
   }, null, 2);
 
   const modal = document.createElement("div");
@@ -1949,12 +1989,14 @@ function resetAllData() {
     ? "¿Restablecer todos los datos a los valores predeterminados? Se perderán los cambios guardados en este dispositivo."
     : "Reset all data to defaults? Any changes saved on this device will be lost.";
   if (!confirm(msg)) return;
-  ["mff_positions","mff_transactions","mff_perf","mff_deposits","mff_cash"].forEach(k => localStorage.removeItem(k));
+  ["mff_positions","mff_transactions","mff_perf","mff_deposits","mff_cash","mff_investors"].forEach(k => localStorage.removeItem(k));
   localStorage.setItem("mff_version", DATA_VERSION);
+  positions    = DEFAULT_POSITIONS;
   transactions = DEFAULT_TRANSACTIONS;
   perfData     = DEFAULT_PERF;
   deposits     = DEFAULT_DEPOSITS;
   cashBalance  = 2506.374634;
+  investors    = DEFAULT_INVESTORS;
   livePrice    = {};
   renderMetrics();
   renderOwnership();
@@ -2299,6 +2341,7 @@ function commitIBImport() {
   transactions = ibParsed.transactions;
   save("mff_transactions", transactions);
   renderTx(); renderPositions(); renderMetrics(); renderOwnership(); fetchPrices();
+  triggerAutoSync();
   const el = document.getElementById("ib-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",3000);
   ibParsed = null;
   document.getElementById("ib-import-preview").style.display = "none";
