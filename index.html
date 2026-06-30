@@ -1294,6 +1294,7 @@ function showDashboard() {
   document.getElementById("admin-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
   window.scrollTo(0, 0);
+  loadFromCloud();
 }
 
 function logout() {
@@ -1596,6 +1597,7 @@ function saveCashBalance() {
   cashBalance = val;
   save("mff_cash", cashBalance);
   renderPositions(); renderMetrics(); renderOwnership();
+  triggerAutoSync();
   const el = document.getElementById("cash-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",2500);
 }
 function savePosition() {
@@ -1609,6 +1611,7 @@ function savePosition() {
   else { positions.push({ticker,name:nameMap[ticker]||ticker,shares,costBasis:cost,ibClose:ticker==="CASH"?1.00:cost}); }
   save("mff_positions",positions);
   renderPositions();renderMetrics();renderOwnership();
+  triggerAutoSync();
   const el=document.getElementById("pos-success");el.style.display="inline";setTimeout(()=>el.style.display="none",2500);
 }
 function saveTx() {
@@ -1622,6 +1625,7 @@ function saveTx() {
   if(!date||isNaN(price)) return alert(t("alert_tx_required"));
   transactions.unshift({date,ticker,type,shares,price,notes});
   save("mff_transactions",transactions);renderTx();
+  triggerAutoSync();
   const el=document.getElementById("tx-success");el.style.display="inline";setTimeout(()=>el.style.display="none",2500);
 }
 function savePerf() {
@@ -1629,6 +1633,7 @@ function savePerf() {
     const parsed=JSON.parse(document.getElementById("a-perf-json").value);
     if(!parsed.labels||!parsed.values) throw new Error();
     perfData=parsed;save("mff_perf",perfData);renderChart();
+    triggerAutoSync();
     const el=document.getElementById("perf-success");el.style.display="inline";setTimeout(()=>el.style.display="none",2500);
   } catch { alert(t("alert_perf_invalid")); }
 }
@@ -1710,6 +1715,7 @@ function saveInvestor(i) {
     mailingAddress: document.getElementById(`inv-addr-${i}`).value.trim(),
   };
   save("mff_investors", investors);
+  triggerAutoSync();
   const saved = document.getElementById(`inv-saved-${i}`);
   saved.style.display = "inline";
   setTimeout(() => { saved.style.display = "none"; renderInvestors(); }, 1500);
@@ -1779,21 +1785,44 @@ async function syncFromIB() {
   }
 }
 
+function buildSyncPayload() {
+  return { positions, deposits, perfData, cashBalance, transactions, twrSeries: COMPARISON_CHART_DATA.portfolio, investors };
+}
+
+async function triggerAutoSync() {
+  const secret = localStorage.getItem("mff_sync_secret");
+  if (!secret) return; // no secret stored yet — user must do a manual sync first
+  try {
+    await fetch("/api/sync-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-sync-secret": secret },
+      body: JSON.stringify(buildSyncPayload()),
+    });
+  } catch { /* silent — non-fatal */ }
+}
+
+async function loadFromCloud() {
+  try {
+    const res = await fetch(`https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/fund-data.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.positions    && data.positions.length)    { positions    = data.positions;    save("mff_positions",    positions); }
+    if (data.transactions && data.transactions.length) { transactions = data.transactions; save("mff_transactions", transactions); }
+    if (data.perfData)     { perfData    = data.perfData;    save("mff_perf",    perfData); }
+    if (data.deposits)     { deposits    = data.deposits;    save("mff_deposits", deposits); }
+    if (data.cashBalance != null) { cashBalance = data.cashBalance; save("mff_cash", cashBalance); }
+    if (data.investors && data.investors.length) { investors = data.investors; save("mff_investors", investors); }
+    if (data.twrSeries && data.twrSeries.length) { COMPARISON_CHART_DATA.portfolio = data.twrSeries; }
+    renderPositions(); renderMetrics(); renderOwnership(); renderTx(); renderDeposits(); renderChart();
+  } catch { /* silent — offline or blob unavailable */ }
+}
+
 async function syncToCloud() {
   const btn = document.getElementById("atab-sync");
   const label = document.getElementById("sync-btn-label");
-  const secret = prompt("Enter your sync secret:");
+  const storedSecret = localStorage.getItem("mff_sync_secret");
+  const secret = prompt("Enter your sync secret:", storedSecret || "");
   if (!secret) return;
-
-  const payload = {
-    positions,
-    deposits,
-    perfData,
-    cashBalance,
-    transactions,
-    twrSeries: COMPARISON_CHART_DATA.portfolio,
-    investors,
-  };
 
   btn.disabled = true;
   label.textContent = "Syncing…";
@@ -1802,9 +1831,10 @@ async function syncToCloud() {
     const res = await fetch("/api/sync-data", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-sync-secret": secret },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(buildSyncPayload()),
     });
     if (!res.ok) throw new Error(await res.text());
+    localStorage.setItem("mff_sync_secret", secret);
     label.textContent = "✓ Synced!";
     btn.style.background = "var(--green-bg)";
     btn.style.borderColor = "var(--green)";
@@ -1998,6 +2028,7 @@ function saveDeposit() {
   deposits.push({ date, amount, source, nav, fernando, dario });
   deposits.sort((a,b) => a.date.localeCompare(b.date));
   save("mff_deposits", deposits);
+  triggerAutoSync();
   renderDeposits();
   renderMetrics();
   renderOwnership();
