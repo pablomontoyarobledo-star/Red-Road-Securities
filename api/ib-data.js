@@ -102,5 +102,6 @@ export default async function handler(req, res) {
     trades,
     lastUpdated: new Date().toISOString(),
     accountId: stmt.accountId || "U23388477",
+    _debug_cash: cashRows.slice(0, 5),
   });
 }
