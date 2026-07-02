@@ -167,7 +167,7 @@ function sectionHeader(title) {
 }
 function sectionClose() { return `</table></td></tr>`; }
 
-function statementHtml({ investor, fundData, navSeries, trades, period, periodYear, periodMonth, allInvestors, t }) {
+function statementHtml({ investor, fundData, navSeries, trades, period, periodYear, periodMonth, allInvestors, t, asOfStr }) {
   const lang       = investor.lang || "en";
   const { deposits = [], positions = [] } = fundData;
   const key        = depositKey(investor);
@@ -241,7 +241,8 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
 
   const numDeposits = deposits.filter(d => (parseFloat(d[key]) || 0) > 0).length;
   const fullName    = [investor.firstName, investor.middleName, investor.lastName].filter(Boolean).join(" ");
-  const today       = new Date().toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { year:"numeric", month:"long", day:"numeric" });
+  const displayDate = new Date((asOfStr || new Date().toISOString().slice(0,10)) + "T12:00:00Z")
+    .toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { year:"numeric", month:"long", day:"numeric", timeZone:"UTC" });
   const retColor    = (n) => n == null ? "#4a4742" : n >= 0 ? "#2a7a4b" : "#c0392b";
 
   return `<!DOCTYPE html>
@@ -263,7 +264,7 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   <tr><td style="padding:20px 36px 0;">
     <div style="font-size:11px;color:#999;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">${t.preparedFor}</div>
     <div style="font-size:17px;font-weight:600;color:#1a1a1a;">${fullName}</div>
-    <div style="font-size:12px;color:#888;margin-top:2px;">${t.asOf} ${today}</div>
+    <div style="font-size:12px;color:#888;margin-top:2px;">${t.asOf} ${displayDate}</div>
   </td></tr>
 
   <!-- Capital Account -->
@@ -366,6 +367,10 @@ export default async function handler(req, res) {
     return res.status(200).json({ skipped: true, reason: "Not the last day of the month" });
   }
 
+  // Optional as-of date from manual trigger (YYYY-MM-DD)
+  const body      = isManual ? (typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {}) : {};
+  const asOfDate  = body.asOfDate || null; // e.g. "2026-06-30"
+
   const blobUrl = process.env.FUND_DATA_BLOB_URL;
   if (!blobUrl) return res.status(500).json({ error: "FUND_DATA_BLOB_URL not set" });
   const blobBase = blobUrl.replace("fund-data.json", "");
@@ -389,13 +394,17 @@ export default async function handler(req, res) {
   const navSeries = navHistory.series || [];
   const trades    = tradesStore.trades || [];
 
-  // Period = month of the latest NAV point (not today's date, which may be the 1st of next month)
+  // Find the nav point on or before the requested as-of date (or latest available)
   const now = new Date();
-  const latestPoint = navSeries[navSeries.length - 1];
-  const periodDate  = latestPoint ? new Date(latestPoint.date + "T12:00:00Z") : now;
+  const asOfStr    = asOfDate || now.toISOString().slice(0, 10);
+  const asOfPoint  = [...navSeries].reverse().find(e => e.date <= asOfStr) || navSeries[navSeries.length - 1];
+  const periodDate = asOfPoint ? new Date(asOfPoint.date + "T12:00:00Z") : now;
   const periodYear  = periodDate.getUTCFullYear();
   const periodMonth = periodDate.getUTCMonth(); // 0-indexed
   const period      = `${T.en.months[periodMonth]} ${periodYear}`; // English fallback for subject line
+
+  // Filter nav series to only points on or before the as-of date
+  const navSeriesAsOf = navSeries.filter(e => e.date <= asOfStr);
 
   const allInvestors = invStore?.investors?.length ? invStore.investors
     : fundData?.investors?.length ? fundData.investors
@@ -411,9 +420,9 @@ export default async function handler(req, res) {
     const periodLocal = `${t.months[periodMonth]} ${periodYear}`;
 
     const html = statementHtml({
-      investor, fundData, navSeries, trades,
+      investor, fundData, navSeries: navSeriesAsOf, trades,
       period: periodLocal, periodYear, periodMonth,
-      allInvestors, t,
+      allInvestors, t, asOfStr,
     });
 
     const emailRes = await fetch("https://api.resend.com/emails", {

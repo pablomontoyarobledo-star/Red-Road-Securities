@@ -668,9 +668,12 @@
           <button class="tab-btn" onclick="syncToCloud()" id="atab-sync" style="background:var(--blue-bg);border-color:var(--blue);color:var(--blue);">
             <i class="ti ti-cloud-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="sync-btn-label">Sync to cloud</span>
           </button>
-          <button class="tab-btn" onclick="sendStatementsNow()" id="atab-send" style="background:var(--green-bg);border-color:var(--green);color:var(--green);">
-            <i class="ti ti-send" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="send-btn-label">Send statements</span>
-          </button>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="date" id="statement-as-of" style="padding:5px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);color:var(--text);outline:none;" title="As of date for the statement" />
+            <button class="tab-btn" onclick="sendStatementsNow()" id="atab-send" style="background:var(--green-bg);border-color:var(--green);color:var(--green);">
+              <i class="ti ti-send" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="send-btn-label">Send statements</span>
+            </button>
+          </div>
           <button class="tab-btn" onclick="exportData()" id="atab-export" style="background:var(--bg2);border-color:var(--border2);color:var(--text2);">
             <i class="ti ti-clipboard-copy" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="export-btn-label">Export data</span>
           </button>
@@ -1931,15 +1934,23 @@ async function importNavCsv(input) {
 }
 
 async function sendStatementsNow() {
-  const btn = document.getElementById("atab-send");
-  const label = document.getElementById("send-btn-label");
-  if (!confirm("Send monthly statements to all investors now?")) return;
+  const btn    = document.getElementById("atab-send");
+  const label  = document.getElementById("send-btn-label");
+  const asOf   = document.getElementById("statement-as-of")?.value || "";
+  const msg    = asOf
+    ? `Send statements as of ${asOf} to all investors?`
+    : "Send statements (as of today) to all investors?";
+  if (!confirm(msg)) return;
 
   btn.disabled = true;
   label.textContent = "Sending…";
 
   try {
-    const res = await fetch("/api/send-statements", { method: "POST" });
+    const res = await fetch("/api/send-statements", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ asOfDate: asOf || null }),
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(JSON.stringify(data));
     label.textContent = "✓ Sent!";
