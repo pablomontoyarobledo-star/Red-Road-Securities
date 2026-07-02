@@ -169,7 +169,9 @@ function sectionClose() { return `</table></td></tr>`; }
 
 function statementHtml({ investor, fundData, navSeries, trades, period, periodYear, periodMonth, allInvestors, t, asOfStr }) {
   const lang       = investor.lang || "en";
-  const { deposits = [], positions = [] } = fundData;
+  const { positions = [] } = fundData;
+  // Only count deposits that existed on or before the as-of date
+  const deposits   = (fundData.deposits || []).filter(d => !asOfStr || d.date <= asOfStr);
   const key        = depositKey(investor);
 
   // ── Compute values ──
