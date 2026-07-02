@@ -603,125 +603,80 @@
       <i class="ti ti-settings" style="font-size:15px;color:var(--amber-text);"></i>
       <span id="admin-subheader-label">Data editor</span>
     </div>
-    <div class="admin-body">
-      <div class="tabs" id="admin-tabs" style="margin-bottom:1.25rem;">
-        <button class="tab-btn active" onclick="switchAdminTab('import', this)" id="atab-import">Import IB file</button>
-        <button class="tab-btn" onclick="switchAdminTab('position', this)" id="atab-position">Update position</button>
-        <button class="tab-btn" onclick="switchAdminTab('transaction', this)" id="atab-transaction">Log transaction</button>
-        <button class="tab-btn" onclick="switchAdminTab('deposit', this)" id="atab-deposit">Log deposit</button>
-        <button class="tab-btn" onclick="switchAdminTab('performance', this)" id="atab-performance">Performance data</button>
-        <button class="tab-btn" onclick="switchAdminTab('investors', this)" id="atab-investors">Investors</button>
-        <button class="tab-btn" onclick="exportData()" id="atab-export" style="margin-left:auto;background:var(--bg2);border-color:var(--border2);">
-          <i class="ti ti-clipboard-copy" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="export-btn-label">Export data</span>
-        </button>
-        <button class="tab-btn" onclick="syncFromIB()" id="atab-ib" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);" title="Pull live positions and cash from Interactive Brokers">
-          <i class="ti ti-refresh" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="ib-btn-label">Sync from IB</span>
-        </button>
-        <button class="tab-btn" onclick="seedNavHistory()" id="atab-seed-nav" style="background:var(--amber-bg);border-color:var(--amber-text);color:var(--amber-text);" title="Seed NAV history from historical TWR data (run once)">
-          <i class="ti ti-database-import" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i>Seed NAV history
-        </button>
-        <input type="file" id="nav-csv-input" accept=".csv" style="display:none" onchange="importNavCsv(this)">
-        <button class="tab-btn" onclick="document.getElementById('nav-csv-input').click()" id="atab-import-nav" style="background:var(--teal-bg,#d1faf5);border-color:var(--teal,#0d9488);color:var(--teal,#0d9488);" title="Import IB NAV Daily CSV to build complete daily history">
-          <i class="ti ti-file-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i>Import NAV CSV
-        </button>
-        <button class="tab-btn" onclick="syncToCloud()" id="atab-sync" style="background:var(--blue-bg);border-color:var(--blue);color:var(--blue);" title="Save current data to cloud for automated statements">
-          <i class="ti ti-cloud-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="sync-btn-label">Sync to cloud</span>
-        </button>
-        <button class="tab-btn" onclick="sendStatementsNow()" id="atab-send" style="background:var(--green-bg);border-color:var(--green);color:var(--green);" title="Send investor statements right now">
-          <i class="ti ti-send" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="send-btn-label">Send statements</span>
-        </button>
-        <button class="tab-btn" onclick="resetAllData()" id="atab-reset" style="background:var(--red-bg);border-color:var(--red);color:var(--red);" title="Reset all localStorage to defaults">
-          <i class="ti ti-refresh-alert" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="reset-btn-label">Reset data</span>
-        </button>
+    <div class="admin-body" style="display:flex;flex-direction:column;gap:1.75rem;">
+
+      <!-- ── Section 1: IB Connection ── -->
+      <div>
+        <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">IB Connection</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="tab-btn" onclick="syncFromIB()" id="atab-ib" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);">
+            <i class="ti ti-refresh" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="ib-btn-label">Sync from IB</span>
+          </button>
+          <input type="file" id="nav-csv-input" accept=".csv" style="display:none" onchange="importNavCsv(this)">
+          <button class="tab-btn" onclick="document.getElementById('nav-csv-input').click()" id="atab-import-nav" style="background:var(--bg2);border-color:var(--border2);color:var(--text2);">
+            <i class="ti ti-file-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i>Import NAV CSV
+          </button>
+          <span id="ib-sync-note" style="font-size:11px;color:var(--text3);">Auto-syncs daily at 9 pm UTC · Mon – Fri</span>
+        </div>
       </div>
 
-      <!-- IB Import -->
-      <div id="admin-import" class="admin-form">
-        <p id="ib-intro-text" style="font-size:13px;color:var(--text2);">Upload your Interactive Brokers Activity Statement CSV to automatically update positions, transactions, and fallback prices.</p>
-        <div id="ib-drop-zone" style="border:1.5px dashed var(--border2);border-radius:var(--radius);padding:2rem;text-align:center;cursor:pointer;transition:background 0.15s;" onclick="document.getElementById('ib-file-input').click()" ondragover="event.preventDefault();this.style.background='var(--blue-bg)'" ondragleave="this.style.background=''" ondrop="handleIBDrop(event)">
-          <i class="ti ti-file-upload" style="font-size:28px;color:var(--text3);display:block;margin-bottom:0.5rem;"></i>
-          <p id="ib-drop-main" style="font-size:13px;color:var(--text2);margin-bottom:4px;">Drop your IB CSV here or click to browse</p>
-          <p id="ib-drop-sub" style="font-size:11px;color:var(--text3);">Activity Statement export from Interactive Brokers</p>
+      <!-- ── Section 2: Fund Management ── -->
+      <div>
+        <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Fund Management</p>
+        <div class="tabs" id="admin-tabs" style="margin-bottom:1rem;">
+          <button class="tab-btn active" onclick="switchAdminTab('deposit', this)" id="atab-deposit">Log deposit</button>
+          <button class="tab-btn" onclick="switchAdminTab('investors', this)" id="atab-investors">Investors</button>
         </div>
-        <input type="file" id="ib-file-input" accept=".csv" style="display:none;" onchange="handleIBFile(this.files[0])" />
-        <div id="ib-import-status" style="display:none;font-size:13px;border-radius:var(--radius);padding:0.75rem 1rem;margin-top:0.25rem;"></div>
-        <div id="ib-import-preview" style="display:none;">
-          <p id="ib-preview-label" style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Preview — data to be imported</p>
-          <div id="ib-preview-content" style="font-size:12px;color:var(--text2);background:var(--bg2);border-radius:var(--radius);padding:0.75rem 1rem;line-height:1.8;"></div>
-          <button class="save-btn" style="margin-top:0.75rem;" onclick="commitIBImport()" id="ib-apply-btn">Apply import</button>
-          <span class="admin-success" id="ib-success" style="margin-left:0.75rem;">&#10003; Data updated</span>
-        </div>
-      </div>
-      <div id="admin-position" class="admin-form" style="display:none;">
-        <div class="form-row">
-          <div class="form-group"><label id="lbl-pos-ticker">Ticker</label><select id="a-pos-ticker"><option value="VTI">VTI</option><option value="BND">BND</option><option value="CASH">CASH</option></select></div>
-          <div class="form-group"><label id="lbl-pos-shares">Shares held</label><input type="number" id="a-pos-shares" placeholder="e.g. 1009" /></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label id="lbl-pos-cost">Avg cost basis ($/sh)</label><input type="number" step="0.01" id="a-pos-cost" placeholder="e.g. 343.77" /></div>
-        </div>
-        <button class="save-btn" onclick="savePosition()" id="save-pos-btn">Save position</button>
-        <span class="admin-success" id="pos-success">✓ Position updated</span>
-        <div style="margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border);">
-          <div class="form-group" style="max-width:220px;">
-            <label id="lbl-cash-balance">Cash balance (IB)</label>
-            <input type="number" step="0.01" id="a-cash-balance" placeholder="e.g. 917.58" />
+
+        <!-- Log deposit -->
+        <div id="admin-deposit" class="admin-form">
+          <div class="form-row">
+            <div class="form-group"><label id="lbl-dep-date">Date</label><input type="date" id="a-dep-date" /></div>
+            <div class="form-group"><label id="lbl-dep-amount">Amount ($)</label><input type="number" step="0.01" id="a-dep-amount" placeholder="e.g. 100000" oninput="autoSplitDeposit()" /></div>
           </div>
-          <button class="save-btn" onclick="saveCashBalance()" style="margin-top:0.5rem;" id="save-cash-btn">Update cash</button>
-          <span class="admin-success" id="cash-success">✓ Cash updated</span>
-        </div>
-      </div>
-      <div id="admin-transaction" class="admin-form" style="display:none;">
-        <div class="form-row-3">
-          <div class="form-group"><label id="lbl-tx-date">Date</label><input type="date" id="a-tx-date" /></div>
-          <div class="form-group"><label id="lbl-tx-ticker">Ticker</label><select id="a-tx-ticker"><option>VTI</option><option>BND</option></select></div>
-          <div class="form-group"><label id="lbl-tx-type">Type</label><select id="a-tx-type"><option value="buy">Buy</option><option value="sell">Sell</option><option value="dividend">Dividend</option></select></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label id="lbl-tx-shares">Shares (blank for dividends)</label><input type="number" id="a-tx-shares" /></div>
-          <div class="form-group"><label id="lbl-tx-price">Price per share ($)</label><input type="number" step="0.0001" id="a-tx-price" /></div>
-        </div>
-        <div class="form-group"><label id="lbl-tx-notes">Notes</label><input type="text" id="a-tx-notes" /></div>
-        <button class="save-btn" onclick="saveTx()" id="save-tx-btn">Log transaction</button>
-        <span class="admin-success" id="tx-success">✓ Transaction logged</span>
-      </div>
-      <div id="admin-deposit" class="admin-form" style="display:none;">
-        <div class="form-row">
-          <div class="form-group"><label id="lbl-dep-date">Date</label><input type="date" id="a-dep-date" /></div>
-          <div class="form-group"><label id="lbl-dep-amount">Amount ($)</label><input type="number" step="0.01" id="a-dep-amount" placeholder="e.g. 100000" oninput="autoSplitDeposit()" /></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label id="lbl-dep-source">Source</label>
-            <select id="a-dep-source" onchange="autoSplitDeposit()">
-              <option value="Fernando Montoya">Fernando Montoya</option>
-              <option value="Dario Montoya">Dario Montoya</option>
-            </select>
+          <div class="form-row">
+            <div class="form-group">
+              <label id="lbl-dep-source">Source</label>
+              <select id="a-dep-source" onchange="autoSplitDeposit()">
+                <option value="Fernando Montoya">Fernando Montoya</option>
+                <option value="Dario Montoya">Dario Montoya</option>
+              </select>
+            </div>
+            <div class="form-group"><label id="lbl-dep-nav">NAV at deposit ($)</label><input type="number" step="0.01" id="a-dep-nav" placeholder="e.g. 1.0500" /></div>
           </div>
-          <div class="form-group"><label id="lbl-dep-nav">NAV at deposit ($)</label><input type="number" step="0.01" id="a-dep-nav" placeholder="e.g. 1050.00" /></div>
+          <div class="form-row">
+            <div class="form-group"><label id="lbl-dep-fernando">Fernando Montoya ($)</label><input type="number" step="0.01" id="a-dep-fernando" placeholder="auto-split" /></div>
+            <div class="form-group"><label id="lbl-dep-dario">Dario Montoya ($)</label><input type="number" step="0.01" id="a-dep-dario" placeholder="auto-split" /></div>
+          </div>
+          <button class="save-btn" onclick="saveDeposit()" id="save-dep-btn">Log deposit</button>
+          <span class="admin-success" id="dep-log-success">✓ Deposit logged</span>
         </div>
-        <div class="form-row">
-          <div class="form-group"><label id="lbl-dep-fernando">Fernando Montoya ($)</label><input type="number" step="0.01" id="a-dep-fernando" placeholder="auto-split for Moneche" /></div>
-          <div class="form-group"><label id="lbl-dep-dario">Dario Montoya ($)</label><input type="number" step="0.01" id="a-dep-dario" placeholder="auto-split for Moneche" /></div>
+
+        <!-- Investors -->
+        <div id="admin-investors" class="admin-form" style="display:none;">
+          <div id="investor-list"></div>
+          <button class="save-btn" onclick="addInvestor()" style="margin-top:1rem;background:var(--bg2);color:var(--text);border-color:var(--border2);">
+            <i class="ti ti-user-plus" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Add investor
+          </button>
         </div>
-        <p style="font-size:11px;color:var(--text3);margin-top:-4px;" id="dep-split-hint">Each deposit is tagged to the individual investor.</p>
-        <button class="save-btn" onclick="saveDeposit()" id="save-dep-btn">Log deposit</button>
-        <span class="admin-success" id="dep-log-success">✓ Deposit logged</span>
-      </div>
-      <div id="admin-performance" class="admin-form" style="display:none;">
-        <p id="perf-intro-text" style="font-size:13px;color:var(--text2);margin-bottom:0.5rem;">Edit Fund ONE value history as JSON: <code style="font-size:11px;background:var(--bg2);padding:2px 5px;border-radius:4px;">{"labels":[...],"values":[...]}</code></p>
-        <div class="form-group"><label id="lbl-perf-json">Performance JSON</label><textarea id="a-perf-json" rows="5" style="padding:8px 10px;font-size:12px;font-family:monospace;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);color:var(--text);outline:none;width:100%;resize:vertical;"></textarea></div>
-        <button class="save-btn" onclick="savePerf()" id="save-perf-btn">Save & refresh chart</button>
-        <span class="admin-success" id="perf-success">✓ Chart updated</span>
       </div>
 
-      <!-- Investors -->
-      <div id="admin-investors" class="admin-form" style="display:none;">
-        <div id="investor-list"></div>
-        <button class="save-btn" onclick="addInvestor()" style="margin-top:1rem;background:var(--bg2);color:var(--text);border-color:var(--border2);">
-          <i class="ti ti-user-plus" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Add investor
-        </button>
+      <!-- ── Section 3: System ── -->
+      <div>
+        <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">System</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="tab-btn" onclick="syncToCloud()" id="atab-sync" style="background:var(--blue-bg);border-color:var(--blue);color:var(--blue);">
+            <i class="ti ti-cloud-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="sync-btn-label">Sync to cloud</span>
+          </button>
+          <button class="tab-btn" onclick="sendStatementsNow()" id="atab-send" style="background:var(--green-bg);border-color:var(--green);color:var(--green);">
+            <i class="ti ti-send" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="send-btn-label">Send statements</span>
+          </button>
+          <button class="tab-btn" onclick="exportData()" id="atab-export" style="background:var(--bg2);border-color:var(--border2);color:var(--text2);">
+            <i class="ti ti-clipboard-copy" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="export-btn-label">Export data</span>
+          </button>
+        </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -1653,7 +1608,7 @@ function savePerf() {
   } catch { alert(t("alert_perf_invalid")); }
 }
 function switchAdminTab(panel,btn) {
-  ["import","position","transaction","deposit","performance","investors"].forEach(p=>document.getElementById("admin-"+p).style.display="none");
+  ["deposit","investors"].forEach(p=>document.getElementById("admin-"+p).style.display="none");
   document.getElementById("admin-"+panel).style.display="flex";
   document.querySelectorAll("#admin-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
