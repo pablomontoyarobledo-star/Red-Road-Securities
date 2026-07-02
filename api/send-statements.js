@@ -179,11 +179,13 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   const twrInc     = latestNav.twr != null ? latestNav.twr - 100 : 0;
 
   // Monthly return: last nav of period month vs last nav of prior month
-  const curPt  = lastNavOfMonth(navSeries, periodYear, periodMonth);
-  const prevPt = lastNavOfMonth(navSeries, periodMonth === 0 ? periodYear - 1 : periodYear, periodMonth === 0 ? 11 : periodMonth - 1);
+  const curPt   = latestPoint || lastNavOfMonth(navSeries, periodYear, periodMonth);
+  const prevYear = periodMonth === 0 ? periodYear - 1 : periodYear;
+  const prevMon  = periodMonth === 0 ? 11 : periodMonth - 1;
+  const prevPt   = lastNavOfMonth(navSeries, prevYear, prevMon);
   const monthReturn = curPt && prevPt ? ((curPt.nav / prevPt.nav) - 1) * 100 : null;
 
-  // YTD return: first nav of current year vs latest
+  // YTD return: last nav of Dec prior year vs latest
   const ytdStart  = lastNavOfMonth(navSeries, periodYear - 1, 11) || firstNavOfYear(navSeries, periodYear);
   const ytdReturn = ytdStart && curPt ? ((curPt.nav / ytdStart.nav) - 1) * 100 : null;
 
@@ -289,7 +291,7 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
     ${row(t.twrMonth,       monthReturn  != null ? fmtPct(monthReturn)  : "—", false, retColor(monthReturn))}
     ${row(t.twrYtd,         ytdReturn    != null ? fmtPct(ytdReturn)    : "—", false, retColor(ytdReturn))}
     ${row(t.twrInception,   fmtPct(twrInc), false, retColor(twrInc))}
-    ${row(t.inceptionDate,  "December 18, 2025")}
+    ${row(t.inceptionDate,  new Date("2025-12-18T12:00:00Z").toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { year:"numeric", month:"long", day:"numeric", timeZone:"UTC" }))}
   ${sectionClose()}
 
   <!-- Your Ownership -->
@@ -387,12 +389,13 @@ export default async function handler(req, res) {
   const navSeries = navHistory.series || [];
   const trades    = tradesStore.trades || [];
 
-  // Period = current month (statement sent on last day of month)
-  const now         = new Date();
-  const periodYear  = now.getFullYear();
-  const periodMonth = now.getMonth(); // 0-indexed
-  const tLang       = T.en; // use for period string (English month name for subject fallback)
-  const period      = `${tLang.months[periodMonth]} ${periodYear}`;
+  // Period = month of the latest NAV point (not today's date, which may be the 1st of next month)
+  const now = new Date();
+  const latestPoint = navSeries[navSeries.length - 1];
+  const periodDate  = latestPoint ? new Date(latestPoint.date + "T12:00:00Z") : now;
+  const periodYear  = periodDate.getUTCFullYear();
+  const periodMonth = periodDate.getUTCMonth(); // 0-indexed
+  const period      = `${T.en.months[periodMonth]} ${periodYear}`; // English fallback for subject line
 
   const allInvestors = invStore?.investors?.length ? invStore.investors
     : fundData?.investors?.length ? fundData.investors
