@@ -1284,44 +1284,38 @@ function logout() {
 }
 
 async function fetchSinglePrice(ticker) {
-  const endpoints = [
-    async () => {
-      const inner = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
-      const url = `https://api.allorigins.win/get?url=${encodeURIComponent(inner)}`;
-      const r = await fetch(url); const d = await r.json();
-      return JSON.parse(d.contents).chart.result[0].meta.regularMarketPrice;
-    },
-    async () => {
-      const inner = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
-      const url = `https://api.allorigins.win/get?url=${encodeURIComponent(inner)}`;
-      const r = await fetch(url); const d = await r.json();
-      return JSON.parse(d.contents).chart.result[0].meta.regularMarketPrice;
-    },
-    async () => {
-      const r = await fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
-      return (await r.json()).chart.result[0].meta.regularMarketPrice;
-    },
-    async () => {
-      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
-      return (await r.json()).chart.result[0].meta.regularMarketPrice;
-    }
-  ];
-  for (const fn of endpoints) {
-    try { const p = await fn(); if (p && p > 0) return p; } catch(e) { continue; }
-  }
+  const yPrice = async (host) => {
+    const r = await fetch(`https://${host}.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+    const p = (await r.json()).chart.result[0].meta.regularMarketPrice;
+    if (!p || p <= 0) throw new Error("no price");
+    return p;
+  };
+  // Race query1 and query2 direct — whichever responds first wins
+  try {
+    return await Promise.any([yPrice("query1"), yPrice("query2")]);
+  } catch {}
+  // Fallback: allorigins proxy (slower but bypasses CORS blocks)
+  try {
+    const inner = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(inner)}`);
+    const p = JSON.parse((await r.json()).contents).chart.result[0].meta.regularMarketPrice;
+    if (p && p > 0) return p;
+  } catch {}
   return null;
 }
 
 async function fetchPrices() {
   _priceStatusState = "loading";
   _applyPriceStatus();
+  livePrice["CASH"] = 1.00;
+  // Fetch all tickers in parallel
+  const tickers = positions.filter(p => p.ticker !== "CASH");
+  const results = await Promise.all(tickers.map(p => fetchSinglePrice(p.ticker)));
   let anyFailed = false;
-  for (const p of positions) {
-    if (p.ticker === "CASH") { livePrice["CASH"] = 1.00; continue; }
-    const price = await fetchSinglePrice(p.ticker);
-    if (price) { livePrice[p.ticker] = price; }
+  tickers.forEach((p, i) => {
+    if (results[i]) { livePrice[p.ticker] = results[i]; }
     else { livePrice[p.ticker] = p.ibClose || p.costBasis; anyFailed = true; }
-  }
+  });
   _priceStatusTime = new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
   _priceStatusState = anyFailed ? "failed" : "ok";
   _applyPriceStatus();
