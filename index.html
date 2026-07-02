@@ -736,7 +736,7 @@ const TR = {
     // Overview
     lbl_overview: "Fund ONE overview",
     priceLoading: "Fetching live prices…",
-    priceFailed: "Live prices unavailable — showing IB close prices (Jun 5, 2026)",
+    priceFailed: "Live prices unavailable — showing latest recorded value",
     priceOk: "Live prices as of",
     fxLabel: "USD / COP exchange rate",
     fxLoading: "Fetching rate…",
@@ -850,7 +850,7 @@ const TR = {
     alert_dep_required: "La fecha, el monto y el NAV son obligatorios.",
     lbl_overview: "Resumen Fund ONE",
     priceLoading: "Obteniendo precios en vivo…",
-    priceFailed: "Precios en vivo no disponibles — mostrando precios de cierre IB (5 jun. 2026)",
+    priceFailed: "Precios en vivo no disponibles — mostrando último valor registrado",
     priceOk: "Precios en vivo al",
     fxLabel: "Tasa de cambio USD / COP",
     fxLoading: "Obteniendo tasa…",
@@ -1217,6 +1217,7 @@ let deposits     = load("mff_deposits",     DEFAULT_DEPOSITS);
 let cashBalance  = load("mff_cash",         2506.374634);
 let investors    = load("mff_investors",    DEFAULT_INVESTORS);
 let livePrice    = {};
+let navSnapshotValue = 0;   // latest IB-computed total from nav-history; used as fallback when live prices fail
 let txFilter     = "all";
 let currentUser  = null;
 let perfChart    = null;
@@ -1330,7 +1331,10 @@ async function fetchPrices() {
 }
 
 function getTotalValue() {
-  return positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||p.costBasis), 0) + cashBalance;
+  const computed = positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||p.costBasis), 0) + cashBalance;
+  // When live prices failed and we have a recent IB snapshot, use it — avoids showing stale costBasis totals
+  if (_priceStatusState === "failed" && navSnapshotValue > 0) return navSnapshotValue;
+  return computed;
 }
 
 function renderMetrics() {
@@ -2184,6 +2188,10 @@ async function loadNavHistory() {
     if (!r.ok) return;
     const navHist = await r.json();
     if (!navHist.series || !navHist.series.length) return;
+
+    // Capture latest IB-computed portfolio value as fallback for when live prices fail
+    const lastPt = navHist.series[navHist.series.length - 1];
+    if (lastPt?.totalValue > 0) navSnapshotValue = lastPt.totalValue;
 
     const inceptionNav = navHist.inception?.nav || 1.0;
 
