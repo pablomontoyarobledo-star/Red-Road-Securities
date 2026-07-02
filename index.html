@@ -620,6 +620,10 @@
         <button class="tab-btn" onclick="seedNavHistory()" id="atab-seed-nav" style="background:var(--amber-bg);border-color:var(--amber-text);color:var(--amber-text);" title="Seed NAV history from historical TWR data (run once)">
           <i class="ti ti-database-import" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i>Seed NAV history
         </button>
+        <input type="file" id="nav-csv-input" accept=".csv" style="display:none" onchange="importNavCsv(this)">
+        <button class="tab-btn" onclick="document.getElementById('nav-csv-input').click()" id="atab-import-nav" style="background:var(--teal-bg,#d1faf5);border-color:var(--teal,#0d9488);color:var(--teal,#0d9488);" title="Import IB NAV Daily CSV to build complete daily history">
+          <i class="ti ti-file-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i>Import NAV CSV
+        </button>
         <button class="tab-btn" onclick="syncToCloud()" id="atab-sync" style="background:var(--blue-bg);border-color:var(--blue);color:var(--blue);" title="Save current data to cloud for automated statements">
           <i class="ti ti-cloud-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="sync-btn-label">Sync to cloud</span>
         </button>
@@ -1913,6 +1917,36 @@ async function seedNavHistory() {
   } catch (err) {
     alert("Seed failed: " + err.message);
     if (btn) { btn.disabled = false; btn.textContent = "Seed NAV history"; }
+  }
+}
+
+async function importNavCsv(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = ""; // allow re-selecting same file
+  const secret = localStorage.getItem("mff_sync_secret") || prompt("Enter your sync secret:");
+  if (!secret) return;
+  const btn = document.getElementById("atab-import-nav");
+  if (btn) { btn.disabled = true; btn.textContent = "Importing…"; }
+  try {
+    const csvText = await file.text();
+    const res = await fetch("/api/import-nav-csv", {
+      method: "POST",
+      headers: { "x-sync-secret": secret, "Content-Type": "application/json" },
+      body: JSON.stringify({ csv: csvText }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(JSON.stringify(data));
+    await loadNavHistory();
+    const summary = (data.monthEndSummary || [])
+      .map(e => e.missing ? `${e.date}: missing` : `${e.date}: TWR ${e.twr}`)
+      .join("\n");
+    alert(`✓ Imported ${data.dailyPoints} daily points\n\nMonth-end TWR:\n${summary}`);
+    if (btn) { btn.textContent = `✓ ${data.dailyPoints} pts`; btn.style.background = "var(--green-bg)"; btn.style.color = "var(--green)"; btn.style.borderColor = "var(--green)"; }
+    setTimeout(() => { if(btn){btn.disabled=false;btn.textContent="Import NAV CSV";btn.style.background="";btn.style.color="";btn.style.borderColor="";} }, 4000);
+  } catch (err) {
+    alert("Import failed: " + err.message);
+    if (btn) { btn.disabled = false; btn.textContent = "Import NAV CSV"; }
   }
 }
 

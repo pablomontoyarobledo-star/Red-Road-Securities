@@ -1,26 +1,32 @@
-// One-time endpoint: seeds nav-history.json from Pablo's confirmed historical TWR series.
+// One-time endpoint: seeds nav-history.json from IB-computed historical TWR series.
 // Called once via POST /api/seed-nav (admin secret required).
+// Values derived from IB NAV Daily CSV — uses actual IB settlement dates, not wire-sent dates.
 // After seeding, every IB pull appends automatically — this never needs to run again
 // unless you want to re-seed (it overwrites).
+// NOTE: Prefer /api/import-nav-csv for a full daily series. This seeds month-end points only.
 
 import { put } from "@vercel/blob";
 
 const INCEPTION_DATE = "2025-12-18";
-const INCEPTION_NAV  = 1.0;
+// Inception NAV: $1,000 IB total / 1,000 units on Dec 18, 2025
+const INCEPTION_NAV  = 1.0;   // $1.00 per unit
 
-// Pablo's confirmed month-end TWR series (indexed to 100 at inception Dec 18 2025)
+// Month-end dates are last IB trading days per IB NAV Daily export
+// TWR base = Dec 31, 2025 (NAV = $990.21 / 1,000 units = $0.99021/unit = 100)
 const SEED_SERIES = [
-  { date: "2025-12-31" },
-  { date: "2026-01-31" },
-  { date: "2026-02-28" },
-  { date: "2026-03-31" },
-  { date: "2026-04-30" },
-  { date: "2026-05-31" },
-  { date: "2026-06-30" },
+  { date: "2025-12-31", ibTotal: 990.21     },
+  { date: "2026-01-30", ibTotal: 100241.73  },
+  { date: "2026-02-27", ibTotal: 199792.02  },
+  { date: "2026-03-31", ibTotal: 289795.23  },
+  { date: "2026-04-30", ibTotal: 312557.02  },
+  { date: "2026-05-29", ibTotal: 530838.62  },
+  { date: "2026-06-30", ibTotal: 792144.58  },
 ];
 
-// TWR index values for each month-end (base 100 = inception NAV $1.00)
-const SEED_TWR = [100.00, 100.73, 100.70, 96.64, 104.23, 108.50, 105.47];
+// IB-derived TWR (base 100 = Dec 31 NAV, computed using actual cash settlement dates)
+// Dec 29/30/Jan 2 deposits settled Jan 5/6/7; Jan 28 → Feb 3; Mar 12 → Mar 18;
+// Apr 27 → May 1; May 11 → May 15; Jun 8 → Jun 8
+const SEED_TWR = [100.00, 100.73, 100.50, 96.64, 104.22, 108.32, 107.82];
 
 function computeTotalUnitsAtDate(deposits, dateStr) {
   return deposits
