@@ -431,9 +431,9 @@ export default async function handler(req, res) {
       method: "POST",
       headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from:    "Fund ONE <onboarding@resend.dev>",
-        to:      ["pablomontoyarobledo@gmail.com"], // TODO: switch to investor.email after Resend domain verified
-        subject: `${t.subject(periodLocal)} [TEST — ${investor.firstName}]`,
+        from:    "Fund ONE <FUNDONE@redroadsecurities.com>",
+        to:      [investor.email || "pablomontoyarobledo@gmail.com"],
+        subject: t.subject(periodLocal),
         html,
       }),
     });
