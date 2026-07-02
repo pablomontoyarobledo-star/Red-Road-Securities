@@ -742,6 +742,7 @@ const TR = {
     fxLoading: "Fetching rate…",
     fxFailed: "Rate unavailable",
     fxUpdated: "Updated",
+    fxCached: "Last recorded",
     // Page tabs
     tab_overview: "Overview", tab_performance: "Performance", tab_positions: "Positions",
     tab_ownership: "Ownership", tab_transactions: "Transactions",
@@ -856,6 +857,7 @@ const TR = {
     fxLoading: "Obteniendo tasa…",
     fxFailed: "Tasa no disponible",
     fxUpdated: "Actualizado",
+    fxCached: "Último registrado",
     tab_overview: "Resumen", tab_performance: "Rendimiento", tab_positions: "Posiciones",
     tab_ownership: "Participación", tab_transactions: "Transacciones",
     lbl_period_returns: "Retornos por período",
@@ -2305,38 +2307,53 @@ function renderBenchmarks() {
 }
 
 // ── USD/COP EXCHANGE RATE ──
+let fxSnapshot = load("mff_fx_snapshot", null);  // { rate, savedAt } — shown instantly while live rate loads
+
+function applyFXRate(rate, live) {
+  const fmtCOP = n => Math.round(n).toLocaleString("es-CO");
+  document.getElementById("fx-rate").textContent = fmtCOP(rate);
+  document.getElementById("fx-1k").textContent   = fmtCOP(rate * 1000);
+  document.getElementById("fx-10k").textContent  = fmtCOP(rate * 10000);
+  if (live) {
+    const now = new Date().toLocaleTimeString(currentLang === "es" ? "es-CO" : "en-US", {hour:"2-digit", minute:"2-digit"});
+    document.getElementById("fx-status").innerHTML = `<i class="ti ti-circle-check" style="color:var(--green);"></i> <span>${t("fxUpdated")} ${now}</span>`;
+  } else {
+    const saved = fxSnapshot?.savedAt ? new Date(fxSnapshot.savedAt).toLocaleDateString(currentLang === "es" ? "es-CO" : "en-US", {month:"short", day:"numeric"}) : "";
+    document.getElementById("fx-status").innerHTML = `<i class="ti ti-clock" style="color:var(--text3);"></i> <span style="color:var(--text3);">${saved ? `${t("fxCached")} ${saved}` : t("fxLoading")}</span>`;
+  }
+}
+
 async function fetchFXRate() {
-  const statusEl = document.getElementById("fx-status");
-  const statusText = document.getElementById("fx-status-text");
-  statusEl.innerHTML = `<i class="ti ti-refresh spin"></i> <span id="fx-status-text">${t("fxLoading")}</span>`;
+  // Show cached rate immediately while fetching
+  if (fxSnapshot?.rate > 0) applyFXRate(fxSnapshot.rate, false);
+
+  // Race both providers
+  const tryFrankfurter = async () => {
+    const r = await fetch("https://api.frankfurter.app/latest?from=USD&to=COP");
+    const rate = (await r.json()).rates?.COP;
+    if (!rate) throw new Error("no rate");
+    return rate;
+  };
+  const tryOpenER = async () => {
+    const r = await fetch("https://open.er-api.com/v6/latest/USD");
+    const rate = (await r.json()).rates?.COP;
+    if (!rate) throw new Error("no rate");
+    return rate;
+  };
 
   let rate = null;
-  try {
-    const r = await fetch("https://api.frankfurter.app/latest?from=USD&to=COP");
-    const d = await r.json();
-    rate = d.rates && d.rates.COP;
-  } catch(e) {}
+  try { rate = await Promise.any([tryFrankfurter(), tryOpenER()]); } catch {}
 
   if (!rate) {
-    try {
-      const r = await fetch("https://open.er-api.com/v6/latest/USD");
-      const d = await r.json();
-      rate = d.rates && d.rates.COP;
-    } catch(e) {}
-  }
-
-  if (!rate) {
-    document.getElementById("fx-status").innerHTML = `<i class="ti ti-alert-circle" style="color:var(--amber-text);"></i> <span>${t("fxFailed")}</span>`;
+    if (!fxSnapshot?.rate) {
+      document.getElementById("fx-status").innerHTML = `<i class="ti ti-alert-circle" style="color:var(--amber-text);"></i> <span>${t("fxFailed")}</span>`;
+    }
     return;
   }
 
-  const fmtCOP = n => Math.round(n).toLocaleString("es-CO");
-  document.getElementById("fx-rate").textContent = fmtCOP(rate);
-  document.getElementById("fx-1k").textContent  = fmtCOP(rate * 1000);
-  document.getElementById("fx-10k").textContent = fmtCOP(rate * 10000);
-
-  const now = new Date().toLocaleTimeString(currentLang === "es" ? "es-CO" : "en-US", {hour:"2-digit", minute:"2-digit"});
-  document.getElementById("fx-status").innerHTML = `<i class="ti ti-circle-check" style="color:var(--green);"></i> <span>${t("fxUpdated")} ${now}</span>`;
+  fxSnapshot = { rate, savedAt: new Date().toISOString() };
+  save("mff_fx_snapshot", fxSnapshot);
+  applyFXRate(rate, true);
 }
 
 function _updateFXLabels() {
