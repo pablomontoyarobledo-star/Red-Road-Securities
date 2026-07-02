@@ -1217,7 +1217,7 @@ let deposits     = load("mff_deposits",     DEFAULT_DEPOSITS);
 let cashBalance  = load("mff_cash",         2506.374634);
 let investors    = load("mff_investors",    DEFAULT_INVESTORS);
 let livePrice    = {};
-let navSnapshotValue = 0;   // latest IB-computed total from nav-history; used as fallback when live prices fail
+let navSnapshotValue = load("mff_nav_snapshot", 0);  // latest IB-computed total; persisted so it's ready on login
 let txFilter     = "all";
 let currentUser  = null;
 let perfChart    = null;
@@ -1332,8 +1332,9 @@ async function fetchPrices() {
 
 function getTotalValue() {
   const computed = positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||p.costBasis), 0) + cashBalance;
-  // When live prices failed and we have a recent IB snapshot, use it — avoids showing stale costBasis totals
-  if (_priceStatusState === "failed" && navSnapshotValue > 0) return navSnapshotValue;
+  // Show live total only when prices fully succeeded; otherwise use IB snapshot to avoid stale costBasis
+  if (_priceStatusState === "ok") return computed;
+  if (navSnapshotValue > 0) return navSnapshotValue;
   return computed;
 }
 
@@ -2189,9 +2190,9 @@ async function loadNavHistory() {
     const navHist = await r.json();
     if (!navHist.series || !navHist.series.length) return;
 
-    // Capture latest IB-computed portfolio value as fallback for when live prices fail
+    // Capture latest IB-computed portfolio value; persist to localStorage so it's ready on next login
     const lastPt = navHist.series[navHist.series.length - 1];
-    if (lastPt?.totalValue > 0) navSnapshotValue = lastPt.totalValue;
+    if (lastPt?.totalValue > 0) { navSnapshotValue = lastPt.totalValue; save("mff_nav_snapshot", navSnapshotValue); }
 
     const inceptionNav = navHist.inception?.nav || 1.0;
 
