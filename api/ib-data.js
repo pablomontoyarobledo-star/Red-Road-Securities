@@ -1,5 +1,45 @@
 import { XMLParser } from "fast-xml-parser";
-import { put, head } from "@vercel/blob";
+import { put } from "@vercel/blob";
+
+const INCEPTION_NAV  = 1.0;
+const INCEPTION_DATE = "2025-12-18";
+
+function computeTotalUnitsAtDate(deposits, dateStr) {
+  return deposits
+    .filter(d => d.date <= dateStr)
+    .reduce((sum, d) => {
+      const nav = d.nav > 0 ? d.nav : INCEPTION_NAV;
+      return sum + ((d.fernando || 0) + (d.dario || 0)) / nav;
+    }, 0);
+}
+
+async function appendNavPoint({ positions, cashBalance, dateStr, blobBase, deposits }) {
+  const navHistUrl = `${blobBase}nav-history.json`;
+  let navHistory = { inception: { date: INCEPTION_DATE, nav: INCEPTION_NAV }, series: [] };
+  try {
+    const r = await fetch(`${navHistUrl}?t=${Date.now()}`, { cache: "no-store" });
+    if (r.ok) navHistory = await r.json();
+  } catch { /* first run — start fresh */ }
+
+  const totalValue = positions.reduce((s, p) => s + p.shares * (p.ibClose || p.costBasis), 0) + (cashBalance || 0);
+  const totalUnits = computeTotalUnitsAtDate(deposits, dateStr);
+  const nav        = totalUnits > 0 ? totalValue / totalUnits : INCEPTION_NAV;
+  const twr        = (nav / (navHistory.inception?.nav || INCEPTION_NAV)) * 100;
+
+  const existing = navHistory.series.find(e => e.date === dateStr);
+  if (existing) {
+    Object.assign(existing, { nav, totalValue, totalUnits, twr, source: "ib-live" });
+  } else {
+    navHistory.series.push({ date: dateStr, nav, totalValue, totalUnits, twr, source: "ib-live" });
+    navHistory.series.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  await put("nav-history.json", JSON.stringify(navHistory), {
+    access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
+  });
+
+  return { nav, totalValue, totalUnits, twr };
+}
 
 const BASE = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService";
 const CACHE_KEY = "ib-cache.json";
@@ -109,17 +149,22 @@ function parseStatement(stmtXml) {
 export default async function handler(req, res) {
   const token   = process.env.IB_FLEX_TOKEN;
   const queryId = process.env.IB_FLEX_QUERY_ID;
-  const forceRefresh = req.query?.refresh === "1";
+
+  // Force refresh if: query param, or called from Vercel Cron (Authorization header)
+  const cronSecret = process.env.CRON_SECRET;
+  const isCron = cronSecret && req.headers["authorization"] === `Bearer ${cronSecret}`;
+  const forceRefresh = req.query?.refresh === "1" || isCron;
 
   if (!token || !queryId) {
     return res.status(500).json({ error: "IB_FLEX_TOKEN or IB_FLEX_QUERY_ID not set" });
   }
 
+  const blobBase = process.env.FUND_DATA_BLOB_URL?.replace("fund-data.json", "") || "";
+
   // Try cache first (skip if force refresh requested)
   if (!forceRefresh) {
     try {
-      const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-      const cacheUrl = `${process.env.FUND_DATA_BLOB_URL?.replace("fund-data.json", "")}${CACHE_KEY}`;
+      const cacheUrl = `${blobBase}${CACHE_KEY}`;
       const cacheRes = await fetch(`${cacheUrl}?t=${Date.now()}`, { cache: "no-store" });
       if (cacheRes.ok) {
         const cached = await cacheRes.json();
@@ -165,12 +210,33 @@ export default async function handler(req, res) {
 
   // Write to permanent historical archive — one file per pull, never overwritten
   try {
-    const stamp = now.toISOString().replace(/[:.]/g, "-"); // e.g. 2026-07-01T14-30-00-000Z
+    const stamp = now.toISOString().replace(/[:.]/g, "-");
     await put(`ib-history/${stamp}.json`,
       JSON.stringify(result),
       { access: "public", contentType: "application/json", addRandomSuffix: false }
     );
   } catch { /* non-fatal */ }
+
+  // Compute and append NAV point to nav-history.json
+  try {
+    // Load deposits from fund-data.json so we can compute totalUnits
+    let deposits = [];
+    try {
+      const fdRes = await fetch(`${blobBase}fund-data.json?t=${Date.now()}`, { cache: "no-store" });
+      if (fdRes.ok) { const fd = await fdRes.json(); deposits = fd.deposits || []; }
+    } catch { /* use empty deposits — NAV will be approximate */ }
+
+    // Use today's date as the NAV data point (market close)
+    const dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+
+    await appendNavPoint({
+      positions:   parsed.positions,
+      cashBalance: parsed.cashBalance,
+      dateStr,
+      blobBase,
+      deposits,
+    });
+  } catch { /* non-fatal — nav-history update failed */ }
 
   return res.status(200).json(result);
 }

@@ -617,6 +617,9 @@
         <button class="tab-btn" onclick="syncFromIB()" id="atab-ib" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);" title="Pull live positions and cash from Interactive Brokers">
           <i class="ti ti-refresh" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="ib-btn-label">Sync from IB</span>
         </button>
+        <button class="tab-btn" onclick="seedNavHistory()" id="atab-seed-nav" style="background:var(--amber-bg);border-color:var(--amber-text);color:var(--amber-text);" title="Seed NAV history from historical TWR data (run once)">
+          <i class="ti ti-database-import" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i>Seed NAV history
+        </button>
         <button class="tab-btn" onclick="syncToCloud()" id="atab-sync" style="background:var(--blue-bg);border-color:var(--blue);color:var(--blue);" title="Save current data to cloud for automated statements">
           <i class="ti ti-cloud-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="sync-btn-label">Sync to cloud</span>
         </button>
@@ -1850,6 +1853,9 @@ async function loadFromCloud() {
       const el = document.getElementById("cloud-synced-at");
       if (el) { el.textContent = `· cloud ${ts}`; el.style.display = "inline"; }
     }
+
+    // Always refresh NAV history (independently of fund-data)
+    await loadNavHistory();
   } catch { /* silent — offline or blob unavailable */ }
 }
 
@@ -1886,6 +1892,27 @@ async function syncToCloud() {
     alert("Sync failed: " + err.message);
     label.textContent = "Sync to cloud";
     btn.disabled = false;
+  }
+}
+
+async function seedNavHistory() {
+  const secret = localStorage.getItem("mff_sync_secret") || prompt("Enter your sync secret:");
+  if (!secret) return;
+  const btn = document.getElementById("atab-seed-nav");
+  if (btn) { btn.disabled = true; btn.textContent = "Seeding…"; }
+  try {
+    const res = await fetch("/api/seed-nav", {
+      method: "POST",
+      headers: { "x-sync-secret": secret },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(JSON.stringify(data));
+    await loadNavHistory();
+    if (btn) { btn.textContent = `✓ Seeded ${data.points} points`; btn.style.background = "var(--green-bg)"; btn.style.color = "var(--green)"; btn.style.borderColor = "var(--green)"; }
+    setTimeout(() => { if(btn){btn.disabled=false;btn.textContent="Seed NAV history";btn.style.background="";btn.style.color="";btn.style.borderColor="";} }, 4000);
+  } catch (err) {
+    alert("Seed failed: " + err.message);
+    if (btn) { btn.disabled = false; btn.textContent = "Seed NAV history"; }
   }
 }
 
@@ -2098,12 +2125,49 @@ function _applyPageTabLabels() {
 }
 
 // ── OVERVIEW CHART ──
-const COMPARISON_CHART_DATA = {
-  labels: ["Dec '25","Jan '26","Feb '26","Mar '26","Apr '26","May '26","Jun '26"],
+// Populated dynamically from nav-history.json — these are fallback defaults only
+let COMPARISON_CHART_DATA = {
+  labels:    ["Dec '25","Jan '26","Feb '26","Mar '26","Apr '26","May '26","Jun '26"],
   labels_es: ["Dic '25","Ene '26","Feb '26","Mar '26","Abr '26","May '26","Jun '26"],
   portfolio: [100, 100.73, 100.70, 96.64, 104.23, 108.50, 105.47],
   spy:       [100, 101.45, 100.68, 95.67, 105.70, 111.26, 110.09],
 };
+
+const BLOB_BASE = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
+
+function navDateLabel(dateStr, lang) {
+  const d = new Date(dateStr + "T12:00:00Z");
+  const month = d.toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { month: "short", timeZone: "UTC" });
+  const year  = d.getUTCFullYear().toString().slice(2);
+  return `${month} '${year}`;
+}
+
+async function loadNavHistory() {
+  try {
+    const r = await fetch(`${BLOB_BASE}nav-history.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) return;
+    const navHist = await r.json();
+    if (!navHist.series || !navHist.series.length) return;
+
+    const inceptionNav = navHist.inception?.nav || 1.0;
+
+    // Update comparison chart data from nav-history
+    COMPARISON_CHART_DATA.labels    = navHist.series.map(e => navDateLabel(e.date, "en"));
+    COMPARISON_CHART_DATA.labels_es = navHist.series.map(e => navDateLabel(e.date, "es"));
+    COMPARISON_CHART_DATA.portfolio = navHist.series.map(e => (e.nav / inceptionNav) * 100);
+
+    // Update perf chart (AUM over time)
+    perfData = {
+      labels: COMPARISON_CHART_DATA.labels,
+      values: navHist.series.map(e => Math.round(e.totalValue * 100) / 100),
+    };
+    save("mff_perf", perfData);
+
+    renderChart();
+    renderOverviewChart();
+    renderMetrics();
+  } catch { /* non-fatal — use fallback hardcoded values */ }
+}
 
 function renderOverviewChart() {
   const isDark = matchMedia("(prefers-color-scheme:dark)").matches;
