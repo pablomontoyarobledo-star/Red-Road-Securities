@@ -94,15 +94,17 @@ export default async function handler(req, res) {
   const blobBase = blobUrl.replace("fund-data.json", "");
 
   // Fetch NAV XML from IB
-  let ibDaily;
+  let ibDaily, rawXml;
   try {
-    const xml = await fetchNavXml(token, navQueryId);
-    ibDaily   = parseNavXml(xml);
+    rawXml  = await fetchNavXml(token, navQueryId);
+    ibDaily = parseNavXml(rawXml);
   } catch (err) {
     return res.status(502).json({ error: err.message });
   }
 
-  if (!ibDaily.length) return res.status(502).json({ error: "No NAV rows returned from IB" });
+  if (!ibDaily.length) {
+    return res.status(502).json({ error: "No NAV rows returned from IB", xmlSnippet: rawXml?.slice(0, 3000) });
+  }
 
   // Load deposits for unit calculation
   let deposits = [];
