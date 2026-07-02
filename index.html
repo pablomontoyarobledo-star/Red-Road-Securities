@@ -610,13 +610,12 @@
         <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">IB Connection</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <button class="tab-btn" onclick="syncFromIB()" id="atab-ib" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);">
-            <i class="ti ti-refresh" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="ib-btn-label">Sync from IB</span>
+            <i class="ti ti-refresh" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="ib-btn-label">Sync positions</span>
           </button>
-          <input type="file" id="nav-csv-input" accept=".csv" style="display:none" onchange="importNavCsv(this)">
-          <button class="tab-btn" onclick="document.getElementById('nav-csv-input').click()" id="atab-import-nav" style="background:var(--bg2);border-color:var(--border2);color:var(--text2);">
-            <i class="ti ti-file-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i>Import NAV CSV
+          <button class="tab-btn" onclick="syncNavHistory()" id="atab-nav-history" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);">
+            <i class="ti ti-chart-line" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="nav-history-btn-label">Sync NAV history</span>
           </button>
-          <span id="ib-sync-note" style="font-size:11px;color:var(--text3);">Auto-syncs daily at 9 pm UTC · Mon – Fri</span>
+          <span id="ib-sync-note" style="font-size:11px;color:var(--text3);">Auto-syncs daily at 10 pm UTC · Mon – Fri</span>
         </div>
       </div>
 
@@ -1881,6 +1880,25 @@ async function syncToCloud() {
     alert("Sync failed: " + err.message);
     label.textContent = "Sync to cloud";
     btn.disabled = false;
+  }
+}
+
+async function syncNavHistory() {
+  const btn   = document.getElementById("atab-nav-history");
+  const label = document.getElementById("nav-history-btn-label");
+  btn.disabled = true;
+  label.textContent = "Pulling…";
+  try {
+    const res  = await fetch("/api/ib-nav-history");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Unknown error");
+    await loadNavHistory();
+    label.textContent = `✓ ${data.ibPoints} days loaded`;
+    btn.style.background = "var(--green-bg)"; btn.style.color = "var(--green)"; btn.style.borderColor = "var(--green)";
+    setTimeout(() => { btn.disabled = false; label.textContent = "Sync NAV history"; btn.style.background = ""; btn.style.color = ""; btn.style.borderColor = ""; }, 4000);
+  } catch (err) {
+    alert("NAV history sync failed: " + err.message);
+    btn.disabled = false; label.textContent = "Sync NAV history";
   }
 }
 

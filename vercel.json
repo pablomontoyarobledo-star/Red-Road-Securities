@@ -1,6 +1,7 @@
 {
   "crons": [
-    { "path": "/api/send-statements", "schedule": "0 13 28-31 * *" },
-    { "path": "/api/ib-data",         "schedule": "0 21 * * 1-5"   }
+    { "path": "/api/ib-nav-history",  "schedule": "0 22 * * 1-5"   },
+    { "path": "/api/ib-data",         "schedule": "0 22 * * 1-5"   },
+    { "path": "/api/send-statements", "schedule": "0 13 28-31 * *" }
   ]
 }
