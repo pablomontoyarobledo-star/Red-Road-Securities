@@ -179,7 +179,7 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   const twrInc     = latestNav.twr != null ? latestNav.twr - 100 : 0;
 
   // Monthly return: last nav of period month vs last nav of prior month
-  const curPt   = latestPoint || lastNavOfMonth(navSeries, periodYear, periodMonth);
+  const curPt   = navSeries[navSeries.length - 1] || lastNavOfMonth(navSeries, periodYear, periodMonth);
   const prevYear = periodMonth === 0 ? periodYear - 1 : periodYear;
   const prevMon  = periodMonth === 0 ? 11 : periodMonth - 1;
   const prevPt   = lastNavOfMonth(navSeries, prevYear, prevMon);
