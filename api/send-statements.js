@@ -231,12 +231,13 @@ export default async function handler(req, res) {
 
   const blobBase = blobUrl.replace("fund-data.json", "");
 
-  // Load fund data (deposits, investors) and nav-history in parallel
-  let data, navHistory;
+  // Load fund data, investors, and nav-history in parallel
+  let data, navHistory, invStore;
   try {
-    [data, navHistory] = await Promise.all([
+    [data, navHistory, invStore] = await Promise.all([
       fetch(`${blobUrl}?t=${Date.now()}`, { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
       fetch(`${blobBase}nav-history.json?t=${Date.now()}`, { cache: "no-store" }).then(r => r.ok ? r.json() : { series: [] }),
+      fetch(`${blobBase}investors.json?t=${Date.now()}`, { cache: "no-store" }).then(r => r.ok ? r.json() : { investors: [] }),
     ]);
   } catch (err) {
     return res.status(500).json({ error: `Failed to load data: ${err.message}` });
@@ -262,9 +263,10 @@ export default async function handler(req, res) {
   const periodDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const period = periodDate.toLocaleString("en-US", { month: "long", year: "numeric" });
 
-  const allInvestors = data.investors && data.investors.length
-    ? data.investors
-    : [
+  // investors.json is the source of truth; fall back to fund-data, then hardcoded defaults
+  const allInvestors = (invStore?.investors?.length ? invStore.investors : null)
+    ?? (data.investors?.length ? data.investors : null)
+    ?? [
         { firstName: "Fernando", middleName: "", lastName: "Montoya", email: "fernando.montoya@mdosas.com", lang: "es" },
         { firstName: "Dario",    middleName: "", lastName: "Montoya", email: "dario.montoya@mdosas.com",    lang: "es" },
       ];

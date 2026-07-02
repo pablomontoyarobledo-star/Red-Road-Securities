@@ -1672,7 +1672,21 @@ function toggleInvestorEdit(i) {
   btn.textContent = open ? "Cancel" : "Edit";
 }
 
-function saveInvestor(i) {
+async function persistInvestors() {
+  save("mff_investors", investors);
+  try {
+    const res = await fetch("/api/sync-investors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ investors }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+  } catch (err) {
+    console.warn("Investor sync failed:", err.message);
+  }
+}
+
+async function saveInvestor(i) {
   investors[i] = {
     ...investors[i],
     firstName:      document.getElementById(`inv-fn-${i}`).value.trim(),
@@ -1684,26 +1698,23 @@ function saveInvestor(i) {
     lang:           document.getElementById(`inv-lang-${i}`).value,
     mailingAddress: document.getElementById(`inv-addr-${i}`).value.trim(),
   };
-  save("mff_investors", investors);
-  triggerAutoSync();
+  await persistInvestors();
   const saved = document.getElementById(`inv-saved-${i}`);
   saved.style.display = "inline";
   setTimeout(() => { saved.style.display = "none"; renderInvestors(); }, 1500);
 }
 
-function addInvestor() {
+async function addInvestor() {
   investors.push({ id:"inv_"+Date.now(), firstName:"", middleName:"", lastName:"", email:"", phone:"", nationality:"", lang:"en", mailingAddress:"" });
-  save("mff_investors", investors);
-  triggerAutoSync();
+  await persistInvestors();
   renderInvestors();
   toggleInvestorEdit(investors.length - 1);
 }
 
-function deleteInvestor(i) {
+async function deleteInvestor(i) {
   if (!confirm(`Delete ${investors[i].firstName} ${investors[i].lastName}?`)) return;
   investors.splice(i, 1);
-  save("mff_investors", investors);
-  triggerAutoSync();
+  await persistInvestors();
   renderInvestors();
 }
 
@@ -1792,28 +1803,44 @@ async function triggerAutoSync() {
 
 async function loadFromCloud() {
   try {
-    const res = await fetch(`https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/fund-data.json?t=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (data.positions    && data.positions.length)    { positions    = data.positions;    save("mff_positions",    positions); }
-    if (data.transactions && data.transactions.length) { transactions = data.transactions; save("mff_transactions", transactions); }
-    if (data.perfData)     { perfData    = data.perfData;    save("mff_perf",    perfData); }
-    if (data.deposits)     { deposits    = data.deposits;    save("mff_deposits", deposits); }
-    if (data.cashBalance != null) { cashBalance = data.cashBalance; save("mff_cash", cashBalance); }
-    if (data.investors && data.investors.length) { investors = data.investors; save("mff_investors", investors); }
-    if (data.twrSeries && data.twrSeries.length) { COMPARISON_CHART_DATA.portfolio = data.twrSeries; }
+    const base = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
+    const t    = Date.now();
+
+    // Load fund-data and investors in parallel
+    const [fundRes, invRes] = await Promise.all([
+      fetch(`${base}fund-data.json?t=${t}`,  { cache: "no-store" }),
+      fetch(`${base}investors.json?t=${t}`,  { cache: "no-store" }),
+    ]);
+
+    if (fundRes.ok) {
+      const data = await fundRes.json();
+      if (data.positions    && data.positions.length)    { positions    = data.positions;    save("mff_positions",    positions); }
+      if (data.transactions && data.transactions.length) { transactions = data.transactions; save("mff_transactions", transactions); }
+      if (data.perfData)     { perfData    = data.perfData;    save("mff_perf",    perfData); }
+      if (data.deposits)     { deposits    = data.deposits;    save("mff_deposits", deposits); }
+      if (data.cashBalance != null) { cashBalance = data.cashBalance; save("mff_cash", cashBalance); }
+      if (data.syncedAt) {
+        const ts = new Date(data.syncedAt).toLocaleString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
+        const el = document.getElementById("cloud-synced-at");
+        if (el) { el.textContent = `· cloud ${ts}`; el.style.display = "inline"; }
+      }
+    }
+
+    // Investors from dedicated store (source of truth)
+    if (invRes.ok) {
+      const invData = await invRes.json();
+      if (invData.investors && invData.investors.length) {
+        investors = invData.investors;
+        save("mff_investors", investors);
+      }
+    }
+
     renderPositions(); renderMetrics(); renderOwnership(); renderTx(); renderDeposits(); renderChart(); renderOverviewChart();
     if (document.getElementById("admin-screen").style.display !== "none") {
       populateAdminFields();
       if (document.getElementById("admin-investors") && document.getElementById("admin-investors").style.display !== "none") renderInvestors();
     }
-    if (data.syncedAt) {
-      const ts = new Date(data.syncedAt).toLocaleString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
-      const el = document.getElementById("cloud-synced-at");
-      if (el) { el.textContent = `· cloud ${ts}`; el.style.display = "inline"; }
-    }
 
-    // Always refresh NAV history (independently of fund-data)
     await loadNavHistory();
   } catch { /* silent — offline or blob unavailable */ }
 }
