@@ -1923,16 +1923,14 @@ async function seedNavHistory() {
 async function importNavCsv(input) {
   const file = input.files[0];
   if (!file) return;
-  input.value = ""; // allow re-selecting same file
-  const secret = localStorage.getItem("mff_sync_secret") || prompt("Enter your sync secret:");
-  if (!secret) return;
+  input.value = "";
   const btn = document.getElementById("atab-import-nav");
   if (btn) { btn.disabled = true; btn.textContent = "Importing…"; }
   try {
     const csvText = await file.text();
     const res = await fetch("/api/import-nav-csv", {
       method: "POST",
-      headers: { "x-sync-secret": secret, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ csv: csvText }),
     });
     const data = await res.json();

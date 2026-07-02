@@ -79,11 +79,6 @@ function matchDepositsToSettlement(ibDaily, depositGroups, tolerance = 0.10) {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const auth = req.headers["x-sync-secret"];
-  if (auth !== process.env.SYNC_SECRET) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
   const blobUrl = process.env.FUND_DATA_BLOB_URL;
   if (!blobUrl) return res.status(500).json({ error: "FUND_DATA_BLOB_URL not set" });
 
