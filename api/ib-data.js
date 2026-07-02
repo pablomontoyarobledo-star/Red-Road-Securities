@@ -146,20 +146,29 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: err.message, rawSnippet: stmtXml?.slice(0, 800) });
   }
 
+  const now = new Date();
   const result = {
     positions:   parsed.positions,
     cashBalance: parsed.cashBalance,
     trades:      parsed.trades,
-    lastUpdated: new Date().toISOString(),
+    lastUpdated: now.toISOString(),
     cashDebug:   parsed.cashDebug,
   };
 
-  // Write to cache
+  // Write to rolling cache (6-hour TTL)
   try {
-    const blobBase = process.env.FUND_DATA_BLOB_URL?.replace("fund-data.json", "") || "";
-    await put(`${blobBase.replace("https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/", "")}${CACHE_KEY}`,
+    await put(CACHE_KEY,
       JSON.stringify(result),
       { access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false }
+    );
+  } catch { /* non-fatal */ }
+
+  // Write to permanent historical archive — one file per pull, never overwritten
+  try {
+    const stamp = now.toISOString().replace(/[:.]/g, "-"); // e.g. 2026-07-01T14-30-00-000Z
+    await put(`ib-history/${stamp}.json`,
+      JSON.stringify(result),
+      { access: "public", contentType: "application/json", addRandomSuffix: false }
     );
   } catch { /* non-fatal */ }
 
