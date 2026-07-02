@@ -84,23 +84,22 @@ const T = {
 function statementHtml({ investor, data, period, allInvestors }) {
   const lang = investor.lang || "en";
   const t = T[lang] || T.en;
-  const { positions = [], deposits = [], cashBalance = 0, twrSeries = [] } = data;
+  const { deposits = [] } = data;
 
-  const posValue = positions.reduce((s, p) => s + (parseFloat(p.shares) * parseFloat(p.ibClose || p.costBasis)), 0);
-  const totalValue = posValue + cashBalance;
+  // Use authoritative values from nav-history (IB-derived)
+  const totalValue = data.totalValue || 0;
+  const navPerUnit = data.navPerUnit || 1;
+  const twr        = data.twr        || 0;
 
-  const key = depositKey(investor);
-  const myUnits = computeInvestorUnits(deposits, key);
+  const key        = depositKey(investor);
+  const myUnits    = computeInvestorUnits(deposits, key);
   const totalUnits = computeTotalUnits(deposits, allInvestors);
-  const navPerUnit = totalUnits > 0 ? totalValue / totalUnits : 1;
 
   const myDeposited = deposits.reduce((s, d) => s + (parseFloat(d[key]) || 0), 0);
-  const myValue = myUnits * navPerUnit;
-  const myGL = myValue - myDeposited;
-  const myReturn = myDeposited > 0 ? (myGL / myDeposited) * 100 : 0;
-  const myPct = totalUnits > 0 ? (myUnits / totalUnits) * 100 : 0;
-
-  const twr = twrSeries.length >= 2 ? ((twrSeries[twrSeries.length - 1] / twrSeries[0] - 1) * 100) : 0;
+  const myValue     = myUnits * navPerUnit;
+  const myGL        = myValue - myDeposited;
+  const myReturn    = myDeposited > 0 ? (myGL / myDeposited) * 100 : 0;
+  const myPct       = totalUnits > 0  ? (myUnits / totalUnits) * 100 : 0;
 
   const fullName = [investor.firstName, investor.middleName, investor.lastName].filter(Boolean).join(" ");
 
@@ -223,13 +222,6 @@ function statementHtml({ investor, data, period, allInvestors }) {
 export default async function handler(req, res) {
   const isManual = req.method === "POST";
 
-  if (isManual) {
-    const auth = req.headers["x-sync-secret"];
-    if (auth !== process.env.SYNC_SECRET) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-  }
-
   if (!isManual && !isLastDayOfMonth()) {
     return res.status(200).json({ skipped: true, reason: "Not the last day of the month" });
   }
@@ -237,23 +229,39 @@ export default async function handler(req, res) {
   const blobUrl = process.env.FUND_DATA_BLOB_URL;
   if (!blobUrl) return res.status(500).json({ error: "FUND_DATA_BLOB_URL not set" });
 
-  let data;
+  const blobBase = blobUrl.replace("fund-data.json", "");
+
+  // Load fund data (deposits, investors) and nav-history in parallel
+  let data, navHistory;
   try {
-    const blobRes = await fetch(`${blobUrl}?t=${Date.now()}`, { cache: "no-store" });
-    if (!blobRes.ok) throw new Error(`Blob fetch failed: ${blobRes.status}`);
-    data = await blobRes.json();
+    [data, navHistory] = await Promise.all([
+      fetch(`${blobUrl}?t=${Date.now()}`, { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch(`${blobBase}nav-history.json?t=${Date.now()}`, { cache: "no-store" }).then(r => r.ok ? r.json() : { series: [] }),
+    ]);
   } catch (err) {
-    return res.status(500).json({ error: `Failed to load fund data: ${err.message}` });
+    return res.status(500).json({ error: `Failed to load data: ${err.message}` });
   }
 
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) return res.status(500).json({ error: "RESEND_API_KEY not set" });
 
+  // Latest NAV point from nav-history (authoritative IB values)
+  const navSeries  = navHistory.series || [];
+  const latestNav  = navSeries[navSeries.length - 1] || {};
+  const totalValue = latestNav.totalValue || 0;
+  const navPerUnit = latestNav.nav       || 1;
+  const twr        = latestNav.twr != null ? latestNav.twr - 100 : 0; // twr stored as index (100 = flat)
+
+  // Merge live values into data so statementHtml can read them
+  data.totalValue = totalValue;
+  data.navPerUnit = navPerUnit;
+  data.twr        = twr;
+  data.navSeries  = navSeries;
+
   const now = new Date();
   const periodDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const period = periodDate.toLocaleString("en-US", { month: "long", year: "numeric" });
 
-  // Use investor DB from blob, fall back to defaults
   const allInvestors = data.investors && data.investors.length
     ? data.investors
     : [
@@ -264,7 +272,7 @@ export default async function handler(req, res) {
   const results = [];
 
   for (const investor of allInvestors) {
-    const t = T[investor.lang] || T.en;
+    const t    = T[investor.lang] || T.en;
     const html = statementHtml({ investor, data, period, allInvestors });
 
     const emailRes = await fetch("https://api.resend.com/emails", {
@@ -272,14 +280,14 @@ export default async function handler(req, res) {
       headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: "Fund ONE <onboarding@resend.dev>",
-        to: ["pablomontoyarobledo@gmail.com"], // switch to investor.email once domain verified
+        to: ["pablomontoyarobledo@gmail.com"], // TODO: switch to investor.email after Resend domain verified
         subject: `${t.subject(period)} [TEST — ${investor.firstName}]`,
         html,
       }),
     });
 
     const result = await emailRes.json();
-    results.push({ investor: `${investor.firstName} ${investor.lastName}`, lang: investor.lang, status: emailRes.status, result });
+    results.push({ investor: `${investor.firstName} ${investor.lastName}`, status: emailRes.status, result });
   }
 
   return res.status(200).json({ sent: results });

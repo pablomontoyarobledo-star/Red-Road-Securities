@@ -1906,20 +1906,13 @@ async function importNavCsv(input) {
 async function sendStatementsNow() {
   const btn = document.getElementById("atab-send");
   const label = document.getElementById("send-btn-label");
-  const storedSecret = localStorage.getItem("mff_sync_secret");
-  const secret = prompt("Enter your sync secret to send statements now:", storedSecret || "");
-  if (!secret) return;
-  if (secret !== storedSecret) localStorage.setItem("mff_sync_secret", secret);
-  if (!confirm("This will email statements to Fernando and Dario right now. Continue?")) return;
+  if (!confirm("Send monthly statements to all investors now?")) return;
 
   btn.disabled = true;
   label.textContent = "Sending…";
 
   try {
-    const res = await fetch("/api/send-statements", {
-      method: "POST",
-      headers: { "x-sync-secret": secret },
-    });
+    const res = await fetch("/api/send-statements", { method: "POST" });
     const data = await res.json();
     if (!res.ok) throw new Error(JSON.stringify(data));
     label.textContent = "✓ Sent!";
