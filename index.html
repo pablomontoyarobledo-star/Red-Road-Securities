@@ -1285,22 +1285,26 @@ function logout() {
   if (overviewChart) { overviewChart.destroy(); overviewChart = null; }
 }
 
+function fetchWithTimeout(url, ms) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 async function fetchSinglePrice(ticker) {
-  const yPrice = async (host) => {
-    const r = await fetch(`https://${host}.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
-    const p = (await r.json()).chart.result[0].meta.regularMarketPrice;
+  const url1 = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+  const url2 = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+  const parse = async url => {
+    const p = (await (await fetchWithTimeout(url, 4000)).json()).chart.result[0].meta.regularMarketPrice;
     if (!p || p <= 0) throw new Error("no price");
     return p;
   };
-  // Race query1 and query2 direct — whichever responds first wins
+  // Race both Yahoo endpoints with 4s timeout each
+  try { return await Promise.any([parse(url1), parse(url2)]); } catch {}
+  // Fallback: allorigins CORS proxy with 6s timeout
   try {
-    return await Promise.any([yPrice("query1"), yPrice("query2")]);
-  } catch {}
-  // Fallback: allorigins proxy (slower but bypasses CORS blocks)
-  try {
-    const inner = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
-    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(inner)}`);
-    const p = JSON.parse((await r.json()).contents).chart.result[0].meta.regularMarketPrice;
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url1)}`;
+    const p = JSON.parse((await (await fetchWithTimeout(proxy, 6000)).json()).contents).chart.result[0].meta.regularMarketPrice;
     if (p && p > 0) return p;
   } catch {}
   return null;
@@ -1310,13 +1314,12 @@ async function fetchPrices() {
   _priceStatusState = "loading";
   _applyPriceStatus();
   livePrice["CASH"] = 1.00;
-  // Fetch all tickers in parallel
   const tickers = positions.filter(p => p.ticker !== "CASH");
   const results = await Promise.all(tickers.map(p => fetchSinglePrice(p.ticker)));
   let anyFailed = false;
   tickers.forEach((p, i) => {
     if (results[i]) { livePrice[p.ticker] = results[i]; }
-    else { livePrice[p.ticker] = p.ibClose || p.costBasis; anyFailed = true; }
+    else { anyFailed = true; }
   });
   _priceStatusTime = new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
   _priceStatusState = anyFailed ? "failed" : "ok";
@@ -2346,25 +2349,23 @@ function applyFXRate(rate, live) {
 }
 
 async function fetchFXRate() {
-  // Show cached rate immediately while fetching
+  // Show cached rate immediately — don't wait for network
   if (fxSnapshot?.rate > 0) applyFXRate(fxSnapshot.rate, false);
 
-  // Race both providers
-  const tryFrankfurter = async () => {
-    const r = await fetch("https://api.frankfurter.app/latest?from=USD&to=COP");
-    const rate = (await r.json()).rates?.COP;
-    if (!rate) throw new Error("no rate");
-    return rate;
-  };
-  const tryOpenER = async () => {
-    const r = await fetch("https://open.er-api.com/v6/latest/USD");
-    const rate = (await r.json()).rates?.COP;
+  const tryRate = async (url, key) => {
+    const d = await (await fetchWithTimeout(url, 5000)).json();
+    const rate = key.split(".").reduce((o,k) => o?.[k], d);
     if (!rate) throw new Error("no rate");
     return rate;
   };
 
   let rate = null;
-  try { rate = await Promise.any([tryFrankfurter(), tryOpenER()]); } catch {}
+  try {
+    rate = await Promise.any([
+      tryRate("https://api.frankfurter.app/latest?from=USD&to=COP", "rates.COP"),
+      tryRate("https://open.er-api.com/v6/latest/USD",              "rates.COP"),
+    ]);
+  } catch {}
 
   if (!rate) {
     if (!fxSnapshot?.rate) {
