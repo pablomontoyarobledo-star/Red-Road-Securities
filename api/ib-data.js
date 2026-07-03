@@ -196,7 +196,16 @@ function parseStatement(stmtXml) {
       currency:   t.currency || "USD",
     }));
 
-  return { positions, totalValue, trades };
+  // Cash balance from CashReport
+  let cashBalance = null;
+  let cashRows2 = stmt?.CashReport?.CashReportCurrency ?? [];
+  if (!Array.isArray(cashRows2)) cashRows2 = cashRows2 ? [cashRows2] : [];
+  const cashRow2 = cashRows2.find(c => c?.currency === "BASE") ||
+                   cashRows2.find(c => c?.currency === "USD")  ||
+                   cashRows2[0];
+  if (cashRow2) cashBalance = parseFloat(cashRow2.endingCash || cashRow2.endingSettledCash || 0);
+
+  return { positions, totalValue, cashBalance, trades };
 }
 
 // ---------------------------------------------------------------------------
@@ -245,11 +254,31 @@ export default async function handler(req, res) {
   }
 
   const now    = new Date();
+
+  // Append today's NAV point first so we can include nav/twr in the archive
+  let navPoint = null;
+  try {
+    let deposits = [];
+    try {
+      const fdRes = await fetch(`${blobBase}fund-data.json?t=${Date.now()}`, { cache: "no-store" });
+      if (fdRes.ok) { const fd = await fdRes.json(); deposits = fd.deposits || []; }
+    } catch {}
+    const dateStr = now.toISOString().slice(0, 10);
+    navPoint = await appendNavPoint({ totalValue: parsed.totalValue, dateStr, blobBase, deposits });
+  } catch {}
+
+  // Cash balance — from CashReport if available, else from fund-data
+  let cashBalance = parsed.cashBalance ?? null;
+
   const result = {
     positions:   parsed.positions,
     totalValue:  parsed.totalValue,
+    cashBalance,
+    nav:         navPoint?.nav         ?? null,
+    twr:         navPoint?.twr         ?? null,
     trades:      parsed.trades,
     lastUpdated: now.toISOString(),
+    source:      "cron",
   };
 
   // Rolling cache
@@ -265,18 +294,6 @@ export default async function handler(req, res) {
     await put(`ib-history/${stamp}.json`, JSON.stringify(result), {
       access: "public", contentType: "application/json", addRandomSuffix: false,
     });
-  } catch {}
-
-  // Append today's NAV point to nav-history.json (with daily P&L)
-  try {
-    let deposits = [];
-    try {
-      const fdRes = await fetch(`${blobBase}fund-data.json?t=${Date.now()}`, { cache: "no-store" });
-      if (fdRes.ok) { const fd = await fdRes.json(); deposits = fd.deposits || []; }
-    } catch {}
-
-    const dateStr = now.toISOString().slice(0, 10);
-    await appendNavPoint({ totalValue: parsed.totalValue, dateStr, blobBase, deposits });
   } catch {}
 
   // Append new trades to trades-history.json
