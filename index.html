@@ -684,7 +684,20 @@
         <div id="pending-deposits-list"></div>
       </div>
 
-      <!-- ── Section 5: IB Pull History ── -->
+      <!-- ── Section 5: Manual IB XML Import ── -->
+      <div style="margin-bottom:2rem;">
+        <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Manual IB Import</p>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:0.75rem;">Paste a Flex Query XML report from IB's website. Positions, trades and cash transactions will be merged into the database without overwriting deposit allocations.</p>
+        <textarea id="ib-xml-input" rows="6" placeholder="Paste full Flex Query XML here…" style="width:100%;padding:8px;font-size:11px;font-family:monospace;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);resize:vertical;box-sizing:border-box;"></textarea>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+          <button class="tab-btn" onclick="importIBXml()" id="import-xml-btn" style="background:var(--green-bg);border-color:var(--green-text);color:var(--green-text);">
+            <i class="ti ti-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Import XML
+          </button>
+          <span id="import-xml-status" style="font-size:12px;color:var(--text2);"></span>
+        </div>
+      </div>
+
+      <!-- ── Section 6: IB Pull History ── -->
       <div>
         <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">IB Pull History</p>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
@@ -1158,78 +1171,14 @@ const DEFAULT_POSITIONS = [
   { ticker:"BND", name:"Vanguard Total Bond Market ETF",  shares:3196,      costBasis:73.194076,  ibClose:73.67  },
 ];
 
-const DEFAULT_TRANSACTIONS = [
-  {"date":"2026-06-08","ticker":"VTI","type":"buy","shares":220,       "price":367.49,      "notes":""},
-  {"date":"2026-06-08","ticker":"BND","type":"buy","shares":400,       "price":72.875,      "notes":""},
-  {"date":"2026-06-08","ticker":"VTI","type":"buy","shares":270.8884,  "price":367.529916,  "notes":""},
-  {"date":"2026-06-08","ticker":"BND","type":"buy","shares":690,       "price":72.865,      "notes":""},
-  {"date":"2026-06-03","ticker":"BND","type":"dividend","shares":null, "price":0.247259,    "notes":"Cash dividend"},
-  {"date":"2026-05-19","ticker":"BND","type":"buy","shares":730,       "price":72.5,        "notes":""},
-  {"date":"2026-05-19","ticker":"BND","type":"buy","shares":30,        "price":72.505,      "notes":""},
-  {"date":"2026-05-19","ticker":"BND","type":"buy","shares":6,         "price":72.4893,     "notes":""},
-  {"date":"2026-05-19","ticker":"VTI","type":"buy","shares":110,       "price":360.9,       "notes":""},
-  {"date":"2026-05-19","ticker":"VTI","type":"buy","shares":9,         "price":360.74,      "notes":""},
-  {"date":"2026-05-19","ticker":"VTI","type":"buy","shares":5,         "price":360.7,       "notes":""},
-  {"date":"2026-05-18","ticker":"VTI","type":"buy","shares":1,         "price":363.34,      "notes":""},
-  {"date":"2026-05-05","ticker":"BND","type":"dividend","shares":null, "price":0.241713,    "notes":"Cash dividend"},
-  {"date":"2026-05-01","ticker":"BND","type":"buy","shares":350,       "price":73.438,      "notes":""},
-  {"date":"2026-05-01","ticker":"BND","type":"buy","shares":10,        "price":73.4393,     "notes":""},
-  {"date":"2026-05-01","ticker":"VTI","type":"buy","shares":205,       "price":356.41,      "notes":""},
-  {"date":"2026-04-09","ticker":"BND","type":"buy","shares":4,         "price":73.7493,     "notes":""},
-  {"date":"2026-04-06","ticker":"BND","type":"dividend","shares":null, "price":0.250016,    "notes":"Cash dividend"},
-  {"date":"2026-04-01","ticker":"BND","type":"buy","shares":10,        "price":73.44,       "notes":""},
-  {"date":"2026-04-01","ticker":"BND","type":"sell","shares":1,        "price":73.4307,     "notes":""},
-  {"date":"2026-03-31","ticker":"VTI","type":"dividend","shares":null, "price":0.9982,      "notes":"Cash dividend"},
-  {"date":"2026-03-31","ticker":"BND","type":"sell","shares":77,       "price":73.66,       "notes":""},
-  {"date":"2026-03-31","ticker":"VTI","type":"buy","shares":17,        "price":316.5593,    "notes":""},
-  {"date":"2026-03-31","ticker":"VTI","type":"buy","shares":1,         "price":316.22,      "notes":""},
-  {"date":"2026-03-18","ticker":"BND","type":"buy","shares":360,       "price":73.9,        "notes":""},
-  {"date":"2026-03-18","ticker":"BND","type":"buy","shares":10,        "price":73.8793,     "notes":""},
-  {"date":"2026-03-18","ticker":"BND","type":"buy","shares":2,         "price":73.88,       "notes":""},
-  {"date":"2026-03-18","ticker":"VTI","type":"buy","shares":220,       "price":329.41,      "notes":""},
-  {"date":"2026-03-12","ticker":"BND","type":"buy","shares":2,         "price":73.655,      "notes":""},
-  {"date":"2026-03-04","ticker":"BND","type":"dividend","shares":null, "price":0.227824,    "notes":"Cash dividend"},
-  {"date":"2026-02-24","ticker":"BND","type":"buy","shares":3,         "price":74.9293,     "notes":""},
-  {"date":"2026-02-04","ticker":"BND","type":"dividend","shares":null, "price":0.24547,     "notes":"Cash dividend"},
-  {"date":"2026-02-03","ticker":"BND","type":"buy","shares":338,       "price":73.86,       "notes":""},
-  {"date":"2026-02-03","ticker":"BND","type":"sell","shares":6,        "price":73.86,       "notes":""},
-  {"date":"2026-02-03","ticker":"VTI","type":"buy","shares":220,       "price":343.02,      "notes":""},
-  {"date":"2026-01-07","ticker":"BND","type":"buy","shares":335,       "price":74.3,        "notes":""},
-  {"date":"2026-01-07","ticker":"VTI","type":"buy","shares":43,        "price":341.36,      "notes":""},
-  {"date":"2026-01-07","ticker":"VTI","type":"buy","shares":1.5,       "price":341.2533,    "notes":""},
-  {"date":"2026-01-06","ticker":"VTI","type":"buy","shares":85,        "price":338.9486,    "notes":""},
-  {"date":"2026-01-06","ticker":"VTI","type":"buy","shares":6,         "price":338.9485,    "notes":""},
-  {"date":"2026-01-05","ticker":"VTI","type":"buy","shares":85,        "price":339.25,      "notes":""},
-  {"date":"2026-01-05","ticker":"VTI","type":"sell","shares":2,        "price":339.2809,    "notes":""},
-  {"date":"2025-12-23","ticker":"VTI","type":"buy","shares":2.5,       "price":338.788,     "notes":""},
-];
+const DEFAULT_TRANSACTIONS = []; // loaded from fund-data.json in Vercel Blob
 
 const DEFAULT_PERF = {
   labels: ["Dec '25","Jan '26","Feb '26","Mar '26","Apr '26","May '26","Jun '26"],
   values: [990.21, 100241.73, 199792.02, 289795.23, 312557.02, 530838.62, 781245.27]
 };
 
-const DEFAULT_DEPOSITS = [
-  { date:"2025-12-18", amount:650,    source:"Fernando Montoya", nav:1.000000, fernando:650,    dario:0      },
-  { date:"2025-12-18", amount:350,    source:"Dario Montoya",    nav:1.000000, fernando:0,      dario:350    },
-  { date:"2025-12-29", amount:16250,  source:"Fernando Montoya", nav:0.992810, fernando:16250,  dario:0      },
-  { date:"2025-12-29", amount:8750,   source:"Dario Montoya",    nav:0.992810, fernando:0,      dario:8750   },
-  { date:"2025-12-29", amount:1950,   source:"Fernando Montoya", nav:0.992810, fernando:1950,   dario:0      },
-  { date:"2025-12-29", amount:1050,   source:"Dario Montoya",    nav:0.992810, fernando:0,      dario:1050   },
-  { date:"2025-12-30", amount:20150,  source:"Fernando Montoya", nav:0.991905, fernando:20150,  dario:0      },
-  { date:"2025-12-30", amount:10850,  source:"Dario Montoya",    nav:0.991905, fernando:0,      dario:10850  },
-  { date:"2026-01-02", amount:40000,  source:"Fernando Montoya", nav:0.998880, fernando:40000,  dario:0      },
-  { date:"2026-01-28", amount:65000,  source:"Fernando Montoya", nav:0.997424, fernando:65000,  dario:0      },
-  { date:"2026-01-28", amount:35000,  source:"Dario Montoya",    nav:0.997424, fernando:0,      dario:35000  },
-  { date:"2026-03-12", amount:65000,  source:"Fernando Montoya", nav:0.979526, fernando:65000,  dario:0      },
-  { date:"2026-03-12", amount:35000,  source:"Dario Montoya",    nav:0.979526, fernando:0,      dario:35000  },
-  { date:"2026-04-27", amount:65000,  source:"Fernando Montoya", nav:1.032055, fernando:65000,  dario:0      },
-  { date:"2026-04-27", amount:35000,  source:"Dario Montoya",    nav:1.032055, fernando:0,      dario:35000  },
-  { date:"2026-05-11", amount:65000,  source:"Fernando Montoya", nav:1.051073, fernando:65000,  dario:0      },
-  { date:"2026-05-11", amount:35000,  source:"Dario Montoya",    nav:1.051073, fernando:0,      dario:35000  },
-  { date:"2026-06-08", amount:160000, source:"Fernando Montoya", nav:1.052348, fernando:160000, dario:0      },
-  { date:"2026-06-08", amount:100000, source:"Dario Montoya",    nav:1.052348, fernando:0,      dario:100000 },
-];
+const DEFAULT_DEPOSITS = []; // loaded from fund-data.json in Vercel Blob
 
 const INCEPTION_NAV = 1.00;
 
@@ -2132,6 +2081,33 @@ function checkAllocateUrlParam() {
     }
   };
   tryOpen(10);
+}
+
+async function importIBXml() {
+  const btn    = document.getElementById("import-xml-btn");
+  const status = document.getElementById("import-xml-status");
+  const xml    = document.getElementById("ib-xml-input").value.trim();
+  if (!xml) { status.style.color = "#e74c3c"; status.textContent = "Paste XML first."; return; }
+  btn.disabled = true; btn.textContent = "Importing…";
+  status.style.color = "var(--text2)"; status.textContent = "Parsing and saving…";
+  try {
+    const r = await fetch("/api/import-ib-xml", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ xml }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.statusText);
+    status.style.color = "var(--green-text)";
+    status.textContent = `✓ Imported — ${d.positions} positions, ${d.tradesImported} new trades, fund value $${(d.totalValue||0).toLocaleString("en-US",{maximumFractionDigits:0})}${d.pendingDepositsAdded ? `, ${d.pendingDepositsAdded} deposit(s) queued` : ""}`;
+    document.getElementById("ib-xml-input").value = "";
+    await loadFromCloud();
+  } catch(e) {
+    status.style.color = "#e74c3c";
+    status.textContent = "✗ " + e.message;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Import XML';
 }
 
 async function runIBPull() {
