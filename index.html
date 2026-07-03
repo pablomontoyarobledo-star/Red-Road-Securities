@@ -266,6 +266,10 @@
     var b = document.getElementById('js-error-banner');
     if (b) { b.textContent = 'JS Error: ' + msg + ' (line ' + line + ')'; b.style.display = 'block'; }
   };
+  window.addEventListener('unhandledrejection', function(e) {
+    var b = document.getElementById('js-error-banner');
+    if (b) { b.textContent = 'Async Error: ' + (e.reason?.message || e.reason || 'unknown'); b.style.display = 'block'; }
+  });
 </script>
 
 <!-- Language toggle on login screen -->
@@ -1255,14 +1259,10 @@ async function tryLogin() {
     if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; populateAdminFields(); }
     fetchPrices();
     fetchFXRate();
-    renderTx();
-    renderChart();
-    renderDeposits();
-    renderMetrics();
-    renderOwnership();
-    renderBenchmarks();
-    renderOverviewChart();
-    _applyPageTabLabels();
+    const _s = fn => { try { fn(); } catch(e) { console.error(fn.name, e); } };
+    _s(renderTx); _s(renderChart); _s(renderDeposits);
+    _s(renderMetrics); _s(renderOwnership); _s(renderBenchmarks);
+    _s(renderOverviewChart); _s(_applyPageTabLabels);
     loadFromCloud();
   } else {
     document.getElementById("login-error").style.display = "block";
@@ -1555,6 +1555,7 @@ function deleteTx(idx) {
 }
 
 function renderChart() {
+  if (typeof Chart === "undefined") return;
   perfData = load("mff_perf", DEFAULT_PERF);
   const isDark = matchMedia("(prefers-color-scheme:dark)").matches;
   const lc="#378ADD", gc=isDark?"rgba(55,138,221,0.15)":"rgba(24,95,165,0.08)";
@@ -2248,6 +2249,7 @@ async function loadNavHistory() {
 }
 
 function renderOverviewChart() {
+  if (typeof Chart === "undefined") return;
   const isDark = matchMedia("(prefers-color-scheme:dark)").matches;
   const tc = isDark ? "#6a6966" : "#888780";
   const bgc = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
