@@ -2217,38 +2217,13 @@ function navDateLabel(dateStr, lang) {
 }
 
 async function fetchSPXSeries(dates) {
-  const period1 = Math.floor(new Date("2025-12-15").getTime() / 1000);
-  const period2 = Math.floor(Date.now() / 1000);
-  const direct  = `https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&period1=${period1}&period2=${period2}`;
-  const proxy   = `https://api.allorigins.win/get?url=${encodeURIComponent(direct)}`;
-
-  const parseResult = result => {
-    const priceMap = {};
-    result.timestamp.forEach((ts, i) => {
-      const c = result.indicators.quote[0].close[i];
-      if (c) priceMap[new Date(ts * 1000).toISOString().slice(0, 10)] = c;
-    });
-    let base = priceMap["2025-12-18"];
-    if (!base) { const k = Object.keys(priceMap).sort().find(d => d >= "2025-12-18"); base = priceMap[k]; }
-    if (!base) return null;
-    let last = base;
-    return dates.map(d => { if (priceMap[d]) last = priceMap[d]; return (last / base) * 100; });
-  };
-
-  // Try direct first (fast), fall back to proxy (bypasses CORS)
-  for (const [url, useProxy] of [[direct, false], [proxy, true]]) {
-    try {
-      const r = await fetchWithTimeout(url, 6000);
-      const json = await r.json();
-      const result = useProxy
-        ? JSON.parse(json.contents).chart?.result?.[0]
-        : json.chart?.result?.[0];
-      if (!result) continue;
-      const series = parseResult(result);
-      if (series) return series;
-    } catch {}
-  }
-  return null;
+  try {
+    const url = `/api/spx-history?dates=${dates.join(",")}`;
+    const r = await fetchWithTimeout(url, 8000);
+    const d = await r.json();
+    if (d.series?.length) return d.series.map(v => v + 100 - 100); // already indexed, ensure numeric
+    return null;
+  } catch { return null; }
 }
 
 function _applyNavHistory(navHist) {
