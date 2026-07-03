@@ -2216,6 +2216,29 @@ function navDateLabel(dateStr, lang) {
   return `${month} '${year}`;
 }
 
+async function fetchSPXSeries(dates) {
+  const period1 = Math.floor(new Date("2025-12-15").getTime() / 1000);
+  const period2 = Math.floor(Date.now() / 1000);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&period1=${period1}&period2=${period2}`;
+  try {
+    const r = await fetchWithTimeout(url, 6000);
+    const result = (await r.json()).chart?.result?.[0];
+    if (!result) throw new Error("no result");
+    const priceMap = {};
+    result.timestamp.forEach((ts, i) => {
+      const c = result.indicators.quote[0].close[i];
+      if (c) priceMap[new Date(ts * 1000).toISOString().slice(0, 10)] = c;
+    });
+    // Find base price at or just after inception
+    let base = priceMap["2025-12-18"];
+    if (!base) { const k = Object.keys(priceMap).sort().find(d => d >= "2025-12-18"); base = priceMap[k]; }
+    if (!base) return null;
+    // Align to nav-history dates, forward-fill missing days
+    let last = base;
+    return dates.map(d => { if (priceMap[d]) last = priceMap[d]; return (last / base) * 100; });
+  } catch { return null; }
+}
+
 function _applyNavHistory(navHist) {
   if (!navHist?.series?.length) return;
 
@@ -2225,9 +2248,11 @@ function _applyNavHistory(navHist) {
 
   const inceptionNav = navHist.inception?.nav || 1.0;
 
-  COMPARISON_CHART_DATA.labels    = navHist.series.map(e => navDateLabel(e.date, "en"));
-  COMPARISON_CHART_DATA.labels_es = navHist.series.map(e => navDateLabel(e.date, "es"));
+  const dates = navHist.series.map(e => e.date);
+  COMPARISON_CHART_DATA.labels    = dates.map(d => navDateLabel(d, "en"));
+  COMPARISON_CHART_DATA.labels_es = dates.map(d => navDateLabel(d, "es"));
   COMPARISON_CHART_DATA.portfolio = navHist.series.map(e => (e.nav / inceptionNav) * 100);
+  COMPARISON_CHART_DATA.dates     = dates;
 
   perfData = {
     labels: COMPARISON_CHART_DATA.labels,
@@ -2238,6 +2263,13 @@ function _applyNavHistory(navHist) {
   renderChart();
   renderOverviewChart();
   renderMetrics();
+
+  // Fetch S&P 500 in background and refresh chart when ready
+  fetchSPXSeries(dates).then(spy => {
+    if (!spy) return;
+    COMPARISON_CHART_DATA.spy = spy;
+    renderOverviewChart();
+  });
 }
 
 async function loadNavHistory() {
@@ -2266,8 +2298,7 @@ function renderOverviewChart() {
           borderColor: "#378ADD",
           backgroundColor: "rgba(55,138,221,0.08)",
           borderWidth: 2,
-          pointRadius: 3,
-          pointBackgroundColor: "#378ADD",
+          pointRadius: 0,
           fill: false,
           tension: 0.3,
         },
@@ -2278,8 +2309,7 @@ function renderOverviewChart() {
           backgroundColor: "transparent",
           borderWidth: 1.5,
           borderDash: [4, 3],
-          pointRadius: 2,
-          pointBackgroundColor: isDark ? "#6a6966" : "#aaa",
+          pointRadius: 0,
           fill: false,
           tension: 0.3,
         }
@@ -2291,13 +2321,26 @@ function renderOverviewChart() {
       plugins: {
         legend: { display: false },
         tooltip: {
+          mode: "index",
+          intersect: false,
           callbacks: {
             label: ctx => ` ${ctx.dataset.label}: ${(ctx.parsed.y - 100).toFixed(2)}%`
           }
         }
       },
       scales: {
-        x: { grid: { color: bgc }, ticks: { color: tc, font: { size: 11 } } },
+        x: {
+          grid: { color: bgc },
+          ticks: {
+            color: tc, font: { size: 11 },
+            callback: function(val, idx) {
+              // Show label only on first occurrence of each month
+              const lbl = COMPARISON_CHART_DATA.labels[idx] || "";
+              const prev = idx > 0 ? (COMPARISON_CHART_DATA.labels[idx - 1] || "") : "";
+              return lbl !== prev && lbl.slice(0, 3) !== prev.slice(0, 3) ? lbl : "";
+            }
+          }
+        },
         y: {
           grid: { color: bgc },
           ticks: {
