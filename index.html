@@ -362,10 +362,10 @@
     <div class="section">
       <p class="section-label" id="lbl-period-returns">Period returns</p>
       <div class="period-grid">
-        <div class="period-card"><div class="period-label" id="lbl-mtd">MTD</div><div class="period-value neg" id="period-mtd">-1.84%</div></div>
-        <div class="period-card"><div class="period-label" id="lbl-qtd">QTD</div><div class="period-value pos" id="period-qtd">+10.21%</div></div>
-        <div class="period-card"><div class="period-label" id="lbl-ytd">YTD</div><div class="period-value pos" id="period-ytd">+6.51%</div></div>
-        <div class="period-card" style="background:var(--blue-bg);"><div class="period-label" style="color:var(--blue-text);" id="lbl-inception">Since inception</div><div class="period-value pos" id="period-inception" style="color:var(--blue);">+5.47%</div></div>
+        <div class="period-card"><div class="period-label" id="lbl-mtd">MTD</div><div class="period-value" id="period-mtd">—</div></div>
+        <div class="period-card"><div class="period-label" id="lbl-qtd">QTD</div><div class="period-value" id="period-qtd">—</div></div>
+        <div class="period-card"><div class="period-label" id="lbl-ytd">YTD</div><div class="period-value" id="period-ytd">—</div></div>
+        <div class="period-card" style="background:var(--blue-bg);"><div class="period-label" style="color:var(--blue-text);" id="lbl-inception">Since inception</div><div class="period-value" id="period-inception" style="color:var(--blue);">—</div></div>
       </div>
     </div>
 
@@ -2486,6 +2486,47 @@ async function fetchSPXSeries(dates) {
   } catch { return null; }
 }
 
+function renderPeriodReturns(series, inceptionNav) {
+  if (!series?.length) return;
+  const latest = series[series.length - 1];
+  const navNow = latest.nav;
+  const today  = latest.date; // "YYYY-MM-DD"
+  const year   = today.slice(0, 4);
+  const month  = today.slice(0, 7); // "YYYY-MM"
+  const qStart = `${year}-${["01","01","01","04","04","04","07","07","07","10","10","10"][parseInt(today.slice(5,7))-1]}`;
+
+  // Find last nav strictly before a given prefix (YYYY-MM or YYYY)
+  const navBefore = prefix => {
+    const pts = series.filter(e => e.date < prefix + "-01" || (prefix.length === 7 && e.date < prefix + "-01"));
+    // For MTD: last point before this month; for QTD: last before quarter start; for YTD: last before this year
+    return pts.length ? pts[pts.length - 1].nav : null;
+  };
+
+  const navStartMonth   = navBefore(month);
+  const navStartQuarter = series.filter(e => e.date < qStart).slice(-1)[0]?.nav || null;
+  const navStartYear    = series.filter(e => e.date < `${year}-01-01`).slice(-1)[0]?.nav || null;
+
+  const pct = (start, end) => start ? ((end / start) - 1) * 100 : null;
+  const fmt = v => v === null ? "—" : (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
+  const cls = v => v === null ? "" : v >= 0 ? "pos" : "neg";
+
+  const mtd       = pct(navStartMonth,   navNow);
+  const qtd       = pct(navStartQuarter, navNow);
+  const ytd       = pct(navStartYear,    navNow);
+  const inception = ((navNow / (inceptionNav || 1)) - 1) * 100;
+
+  const set = (id, v) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = fmt(v);
+    el.className = "period-value " + cls(v);
+  };
+  set("period-mtd",       mtd);
+  set("period-qtd",       qtd);
+  set("period-ytd",       ytd);
+  set("period-inception", inception);
+}
+
 function _applyNavHistory(navHist) {
   if (!navHist?.series?.length) return;
 
@@ -2507,6 +2548,7 @@ function _applyNavHistory(navHist) {
   };
   save("mff_perf", perfData);
 
+  renderPeriodReturns(navHist.series, inceptionNav);
   renderChart();
   renderOverviewChart();
   renderMetrics();
