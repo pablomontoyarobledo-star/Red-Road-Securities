@@ -1335,26 +1335,30 @@ function getTotalValue() {
 }
 
 function renderMetrics() {
-  const totalValue     = getTotalValue();
-  const totalDeposited = deposits.reduce((s,d) => s + d.amount, 0);
-  const gl    = totalValue - totalDeposited;
-  const glPct = totalDeposited > 0 ? (gl / totalDeposited) * 100 : 0;
-  const { totalUnits } = calcUnits();
-  const navPerUnit = totalUnits > 0 ? totalValue / totalUnits : 0;
-  const twr = ((navPerUnit - INCEPTION_NAV) / INCEPTION_NAV) * 100;  // TWR = NAV change since inception
-  document.getElementById("metrics-grid").innerHTML = `
-    <div class="metric-card"><div class="metric-label">${t("metric_portValue")}</div><div class="metric-value">${fmt(totalValue)}</div></div>
-    <div class="metric-card"><div class="metric-label">${t("metric_totalGL")}</div><div class="metric-value ${gl>=0?'pos':'neg'}">${fmt(gl)}</div><div class="metric-sub ${gl>=0?'pos':'neg'}">${fmtPct(glPct)} ${t("metric_vsDeposited")}</div></div>
-    <div class="metric-card"><div class="metric-label">${t("metric_deposited")}</div><div class="metric-value">${fmt(totalDeposited)}</div></div>
-    <div class="metric-card"><div class="metric-label">${t("metric_twr")}</div><div class="metric-value ${twr>=0?'pos':'neg'}" style="font-size:20px;">${fmtPct(twr)}</div><div class="metric-sub" style="color:var(--text3);">${t("metric_twrSub")}</div></div>
-  `;
-  document.getElementById("nav-unit-value").textContent = fmt(navPerUnit);
-  const unitsFormatted = totalUnits.toLocaleString("en-US", {maximumFractionDigits:0});
-  const subEl = document.querySelector("#nav-unit-card .metric-sub");
-  const unitsLabel = currentLang==="es"
-    ? `${unitsFormatted} unidades en circulación · inicio $1,00`
-    : `${unitsFormatted} units outstanding · inception $1.00`;
-  if (subEl) subEl.innerHTML = `${unitsLabel} &nbsp;·&nbsp; <span class="${twr>=0?'pos':'neg'}">${fmtPct(twr)} ${currentLang==="es"?"desde el inicio":"since inception"}</span>`;
+  try {
+    const totalValue     = getTotalValue();
+    const totalDeposited = deposits.reduce((s,d) => s + d.amount, 0);
+    const gl    = totalValue - totalDeposited;
+    const glPct = totalDeposited > 0 ? (gl / totalDeposited) * 100 : 0;
+    const { totalUnits } = calcUnits();
+    const navPerUnit = totalUnits > 0 ? totalValue / totalUnits : 0;
+    const twr = ((navPerUnit - INCEPTION_NAV) / INCEPTION_NAV) * 100;
+    const grid = document.getElementById("metrics-grid");
+    if (grid) grid.innerHTML = `
+      <div class="metric-card"><div class="metric-label">${t("metric_portValue")}</div><div class="metric-value">${fmt(totalValue)}</div></div>
+      <div class="metric-card"><div class="metric-label">${t("metric_totalGL")}</div><div class="metric-value ${gl>=0?'pos':'neg'}">${fmt(gl)}</div><div class="metric-sub ${gl>=0?'pos':'neg'}">${fmtPct(glPct)} ${t("metric_vsDeposited")}</div></div>
+      <div class="metric-card"><div class="metric-label">${t("metric_deposited")}</div><div class="metric-value">${fmt(totalDeposited)}</div></div>
+      <div class="metric-card"><div class="metric-label">${t("metric_twr")}</div><div class="metric-value ${twr>=0?'pos':'neg'}" style="font-size:20px;">${fmtPct(twr)}</div><div class="metric-sub" style="color:var(--text3);">${t("metric_twrSub")}</div></div>
+    `;
+    const navEl = document.getElementById("nav-unit-value");
+    if (navEl) navEl.textContent = fmt(navPerUnit);
+    const unitsFormatted = totalUnits.toLocaleString("en-US", {maximumFractionDigits:0});
+    const subEl = document.querySelector("#nav-unit-card .metric-sub");
+    const unitsLabel = currentLang==="es"
+      ? `${unitsFormatted} unidades en circulación · inicio $1,00`
+      : `${unitsFormatted} units outstanding · inception $1.00`;
+    if (subEl) subEl.innerHTML = `${unitsLabel} &nbsp;·&nbsp; <span class="${twr>=0?'pos':'neg'}">${fmtPct(twr)} ${currentLang==="es"?"desde el inicio":"since inception"}</span>`;
+  } catch(e) { console.error("renderMetrics error:", e); }
 }
 
 function renderOwnership() {
@@ -1825,6 +1829,13 @@ async function loadFromCloud() {
       if (data.perfData)     { perfData    = data.perfData;    save("mff_perf",    perfData); }
       if (data.deposits)     { deposits    = data.deposits;    save("mff_deposits", deposits); }
       if (data.cashBalance != null) { cashBalance = data.cashBalance; save("mff_cash", cashBalance); }
+      // Seed snapshot from IB close prices so metrics show immediately on next login
+      if (data.positions?.length) {
+        const ibTotal = data.positions.reduce((s,p) => s + p.shares * (p.ibClose || p.costBasis || 0), 0) + (data.cashBalance || 0);
+        if (ibTotal > 0 && (!navSnapshotValue || Math.abs(ibTotal - navSnapshotValue) / navSnapshotValue < 0.5)) {
+          navSnapshotValue = ibTotal; save("mff_nav_snapshot", navSnapshotValue);
+        }
+      }
       if (data.syncedAt) {
         const ts = new Date(data.syncedAt).toLocaleString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
         const el = document.getElementById("cloud-synced-at");
