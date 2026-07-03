@@ -324,6 +324,7 @@
     <button class="page-tab" onclick="showPage('positions',this)" id="ptab-positions">Positions</button>
     <button class="page-tab" onclick="showPage('ownership',this)" id="ptab-ownership">Ownership</button>
     <button class="page-tab" onclick="showPage('transactions',this)" id="ptab-transactions">Transactions</button>
+    <button class="page-tab" onclick="showPage('nav',this)" id="ptab-nav">NAV</button>
   </nav>
 
   <!-- PAGE: Overview -->
@@ -596,6 +597,28 @@
     </div>
   </div>
 </div>
+
+<!-- NAV page -->
+  <div id="page-nav" class="page">
+    <div class="section">
+      <p class="section-label">Monthly NAV</p>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="border-bottom:1.5px solid var(--border);">
+              <th style="text-align:left;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">Month</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">NAV — start</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">NAV — end</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">Monthly return</th>
+            </tr>
+          </thead>
+          <tbody id="nav-table-body">
+            <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text3);font-size:12px;">Loading NAV history…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
 <!-- Admin page -->
 <div id="admin-screen">
@@ -2486,6 +2509,65 @@ async function fetchSPXSeries(dates) {
   } catch { return null; }
 }
 
+function renderNavTable(series, inceptionNav) {
+  const tbody = document.getElementById("nav-table-body");
+  if (!tbody || !series?.length) return;
+
+  // Group by month
+  const months = {};
+  for (const pt of series) {
+    const key = pt.date.slice(0, 7); // "YYYY-MM"
+    if (!months[key]) months[key] = [];
+    months[key].push(pt);
+  }
+
+  const monthKeys = Object.keys(months).sort();
+  const today = new Date().toISOString().slice(0, 7);
+
+  const rows = monthKeys.map((key, idx) => {
+    const pts = months[key];
+    const navEnd = pts[pts.length - 1].nav;
+
+    // NAV start = last point of previous month, or inception nav for first month
+    let navStart;
+    if (idx === 0) {
+      navStart = inceptionNav || 1.0;
+    } else {
+      const prevKey  = monthKeys[idx - 1];
+      const prevPts  = months[prevKey];
+      navStart = prevPts[prevPts.length - 1].nav;
+    }
+
+    const ret = ((navEnd / navStart) - 1) * 100;
+    const isCurrentMonth = key === today;
+
+    const [year, mon] = key.split("-");
+    const monthName = new Date(parseInt(year), parseInt(mon) - 1, 1)
+      .toLocaleString("en-US", { month: "long", year: "numeric" });
+
+    const fmtNav = v => "$" + v.toFixed(6);
+    const fmtRet = v => (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
+    const retCls = ret >= 0 ? "color:var(--green-text)" : "color:#e74c3c";
+
+    const endCell = isCurrentMonth
+      ? `<td style="text-align:right;padding:10px 12px;color:var(--text2);">${fmtNav(navEnd)} <span style="font-size:10px;color:var(--text3);">current</span></td>`
+      : `<td style="text-align:right;padding:10px 12px;">${fmtNav(navEnd)}</td>`;
+
+    const retCell = isCurrentMonth
+      ? `<td style="text-align:right;padding:10px 12px;${retCls};">${fmtRet(ret)} <span style="font-size:10px;color:var(--text3);">MTD</span></td>`
+      : `<td style="text-align:right;padding:10px 12px;${retCls};">${fmtRet(ret)}</td>`;
+
+    return `<tr style="border-bottom:0.5px solid var(--border);${isCurrentMonth ? "background:var(--bg2);" : ""}">
+      <td style="padding:10px 12px;font-weight:${isCurrentMonth ? "600" : "400"};">${monthName}${isCurrentMonth ? ' <span style="font-size:10px;color:var(--text3);font-weight:400;">in progress</span>' : ""}</td>
+      <td style="text-align:right;padding:10px 12px;color:var(--text2);">${fmtNav(navStart)}</td>
+      ${endCell}
+      ${retCell}
+    </tr>`;
+  });
+
+  tbody.innerHTML = rows.reverse().join(""); // newest first
+}
+
 function renderPeriodReturns(series, inceptionNav) {
   if (!series?.length) return;
   const latest = series[series.length - 1];
@@ -2549,6 +2631,7 @@ function _applyNavHistory(navHist) {
   save("mff_perf", perfData);
 
   renderPeriodReturns(navHist.series, inceptionNav);
+  renderNavTable(navHist.series, inceptionNav);
   renderChart();
   renderOverviewChart();
   renderMetrics();
