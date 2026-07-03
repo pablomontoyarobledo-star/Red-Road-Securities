@@ -1256,7 +1256,7 @@ async function tryLogin() {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
     document.getElementById("investor-badge").textContent = entry.name;
-    if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; populateAdminFields(); }
+    if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } }
     fetchPrices();
     fetchFXRate();
     const _s = fn => { try { fn(); } catch(e) { console.error(fn.name, e); } };
