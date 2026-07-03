@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     const { blobs } = await list({ prefix: "ib-history/", limit: 500 });
 
     // Sort newest first
-    blobs.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+    blobs.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
 
     // Fetch each blob and extract summary fields
     const pulls = await Promise.all(blobs.map(async blob => {
