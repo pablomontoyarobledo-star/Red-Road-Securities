@@ -1723,8 +1723,9 @@ function renderInvestors() {
           </div>
         </div>
         <div class="form-group" style="margin:0 0 0.5rem;"><label style="font-size:11px;">Mailing address</label><input id="inv-addr-${i}" value="${inv.mailingAddress || ""}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
-        <button onclick="saveInvestor(${i})" class="save-btn" style="font-size:12px;padding:6px 14px;">Save</button>
-        <span id="inv-saved-${i}" style="font-size:12px;color:var(--green);margin-left:8px;display:none;">✓ Saved</span>
+        <button id="inv-save-btn-${i}" onclick="saveInvestor(${i})" class="save-btn" style="font-size:12px;padding:6px 14px;">Save</button>
+        <span id="inv-saved-${i}" style="font-size:12px;color:var(--green-text);margin-left:8px;display:none;">✓ Saved</span>
+        <span id="inv-err-${i}" style="font-size:12px;color:#e74c3c;margin-left:8px;display:none;"></span>
       </div>
     </div>`).join("");
 }
@@ -1741,15 +1742,14 @@ function toggleInvestorEdit(i) {
 
 async function persistInvestors() {
   save("mff_investors", investors);
-  try {
-    const res = await fetch("/api/sync-investors", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ investors }),
-    });
-    if (!res.ok) throw new Error(await res.text());
-  } catch (err) {
-    console.warn("Investor sync failed:", err.message);
+  const res = await fetch("/api/sync-investors", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ investors }),
+  });
+  if (!res.ok) {
+    const msg = (await res.json().catch(() => ({}))).error || res.statusText;
+    throw new Error(msg);
   }
 }
 
@@ -1765,10 +1765,20 @@ async function saveInvestor(i) {
     lang:           document.getElementById(`inv-lang-${i}`).value,
     mailingAddress: document.getElementById(`inv-addr-${i}`).value.trim(),
   };
-  await persistInvestors();
+  const btn   = document.getElementById(`inv-save-btn-${i}`);
   const saved = document.getElementById(`inv-saved-${i}`);
-  saved.style.display = "inline";
-  setTimeout(() => { saved.style.display = "none"; renderInvestors(); }, 1500);
+  const err   = document.getElementById(`inv-err-${i}`);
+  btn.disabled = true; btn.textContent = "Saving…";
+  err.style.display = "none";
+  try {
+    await persistInvestors();
+    saved.style.display = "inline";
+    setTimeout(() => { saved.style.display = "none"; renderInvestors(); }, 2000);
+  } catch(e) {
+    err.textContent = "✗ Save failed: " + e.message;
+    err.style.display = "inline";
+  }
+  btn.disabled = false; btn.textContent = "Save";
 }
 
 async function addInvestor() {
