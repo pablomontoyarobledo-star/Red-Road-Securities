@@ -205,7 +205,98 @@ function parseStatement(stmtXml) {
                    cashRows2[0];
   if (cashRow2) cashBalance = parseFloat(cashRow2.endingCash || cashRow2.endingSettledCash || 0);
 
-  return { positions, totalValue, cashBalance, trades };
+  // ------------------------------------------------------------------
+  // Cash deposits — CashTransactions with positive amount
+  // ------------------------------------------------------------------
+  let rawCashTx = stmt?.CashTransactions?.CashTransaction ?? [];
+  if (!Array.isArray(rawCashTx)) rawCashTx = rawCashTx ? [rawCashTx] : [];
+  const deposits = rawCashTx
+    .filter(t => t && parseFloat(t.amount) > 0 &&
+      (String(t.type || "").toLowerCase().includes("deposit") ||
+       String(t.type || "").toLowerCase().includes("withdrawal") ||
+       String(t.levelOfDetail || "").toLowerCase() === "currency"))
+    .map(t => ({
+      id:          `${t.dateTime || t.reportDate}_${parseFloat(t.amount)}`,
+      date:        String(t.reportDate || t.dateTime || "").slice(0, 10),
+      amount:      parseFloat(t.amount),
+      currency:    t.currency || "USD",
+      description: t.description || t.type || "",
+    }));
+
+  return { positions, totalValue, cashBalance, trades, deposits };
+}
+
+// ---------------------------------------------------------------------------
+// Deposit detection — find new deposits not yet allocated or pending
+// ---------------------------------------------------------------------------
+async function detectNewDeposits({ deposits, blobBase, resendKey }) {
+  if (!deposits.length) return;
+
+  // Load already-allocated deposits
+  let allocatedIds = new Set();
+  try {
+    const fd = await (await fetch(`${blobBase}fund-data.json?t=${Date.now()}`, { cache: "no-store" })).json();
+    (fd.deposits || []).forEach(d => allocatedIds.add(`${d.date}_${d.amount}`));
+  } catch {}
+
+  // Load already-pending deposits
+  let pending = { deposits: [] };
+  try {
+    const r = await fetch(`${blobBase}pending-deposits.json?t=${Date.now()}`, { cache: "no-store" });
+    if (r.ok) pending = await r.json();
+  } catch {}
+  const pendingIds = new Set(pending.deposits.map(d => d.id));
+
+  // Find truly new ones
+  const newDeposits = deposits.filter(d => !allocatedIds.has(d.id) && !pendingIds.has(d.id));
+  if (!newDeposits.length) return;
+
+  // Save to pending-deposits.json
+  pending.deposits.push(...newDeposits);
+  await put("pending-deposits.json", JSON.stringify(pending), {
+    access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
+  });
+
+  // Send email for each new deposit
+  if (!resendKey) return;
+  for (const dep of newDeposits) {
+    const base  = "https://red-road-securities.vercel.app";
+    const btnStyle = "display:inline-block;padding:10px 20px;border-radius:6px;font-weight:600;font-size:14px;text-decoration:none;margin:4px;";
+    const investors = [
+      { key: "fernando", label: "Fernando" },
+      { key: "dario",    label: "Dario"    },
+    ];
+    const allocBtns = investors.map(inv =>
+      `<a href="${base}/?allocate=${encodeURIComponent(dep.id)}&investor=${inv.key}" style="${btnStyle}background:#1a6b3c;color:#fff;">Allocate to ${inv.label}</a>`
+    ).join("\n");
+    const newBtn = `<a href="${base}/?allocate=${encodeURIComponent(dep.id)}&investor=new" style="${btnStyle}background:#1a3a6b;color:#fff;">New investor</a>`;
+
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from:    "Fund ONE <onboarding@resend.dev>",
+        to:      ["pablomontoyarobledo@gmail.com"],
+        subject: `New deposit detected — $${dep.amount.toLocaleString("en-US")} on ${dep.date}`,
+        html: `
+          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">
+            <h2 style="color:#1a6b3c;margin-bottom:4px;">New Deposit Detected</h2>
+            <p style="color:#666;margin-top:0;">Fund ONE · Red Road Securities</p>
+            <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+              <tr><td style="padding:8px 0;color:#888;">Date</td><td style="padding:8px 0;font-weight:600;">${dep.date}</td></tr>
+              <tr><td style="padding:8px 0;color:#888;">Amount</td><td style="padding:8px 0;font-weight:600;color:#1a6b3c;">$${dep.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td></tr>
+              <tr><td style="padding:8px 0;color:#888;">Currency</td><td style="padding:8px 0;">${dep.currency}</td></tr>
+              <tr><td style="padding:8px 0;color:#888;">Description</td><td style="padding:8px 0;">${dep.description || "—"}</td></tr>
+            </table>
+            <p style="font-size:14px;margin-bottom:12px;">Allocate this deposit to an investor:</p>
+            ${allocBtns}
+            ${newBtn}
+            <p style="font-size:11px;color:#aaa;margin-top:24px;">This deposit was automatically detected from your IB account. Log in to the admin panel to review pending deposits.</p>
+          </div>
+        `,
+      }),
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -299,6 +390,15 @@ export default async function handler(req, res) {
   // Append new trades to trades-history.json
   try {
     await appendTrades({ trades: parsed.trades, blobBase });
+  } catch {}
+
+  // Detect new deposits and notify
+  try {
+    await detectNewDeposits({
+      deposits:  parsed.deposits || [],
+      blobBase,
+      resendKey: process.env.RESEND_API_KEY,
+    });
   } catch {}
 
   return res.status(200).json(result);

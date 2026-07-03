@@ -676,7 +676,15 @@
         </div>
       </div>
 
-      <!-- ── Section 4: IB Pull History ── -->
+      <!-- ── Section 4: Pending Deposits ── -->
+      <div id="pending-deposits-section" style="display:none;margin-bottom:2rem;">
+        <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">
+          <i class="ti ti-alert-circle" style="color:#e67e22;margin-right:4px;"></i> Pending Deposits
+        </p>
+        <div id="pending-deposits-list"></div>
+      </div>
+
+      <!-- ── Section 5: IB Pull History ── -->
       <div>
         <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">IB Pull History</p>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
@@ -1292,7 +1300,7 @@ async function tryLogin() {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
     document.getElementById("investor-badge").textContent = entry.name;
-    if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } }
+    if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } loadPendingDeposits(); checkAllocateUrlParam(); }
     fetchPrices();
     fetchFXRate();
     const _s = fn => { try { fn(); } catch(e) { console.error(fn.name, e); } };
@@ -1974,6 +1982,146 @@ async function syncNavHistory() {
     alert("NAV history sync failed: " + err.message);
     btn.disabled = false; label.textContent = "Sync NAV history";
   }
+}
+
+// ── Pending Deposits ─────────────────────────────────────────────────────────
+
+async function loadPendingDeposits() {
+  const section = document.getElementById("pending-deposits-section");
+  const list    = document.getElementById("pending-deposits-list");
+  if (!section || !list) return;
+  try {
+    const base = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
+    const r = await fetch(`${base}pending-deposits.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) return;
+    const data = await r.json();
+    const deps = data.deposits || [];
+    if (!deps.length) { section.style.display = "none"; return; }
+    section.style.display = "block";
+    list.innerHTML = deps.map(d => `
+      <div data-deposit-id="${d.id}" style="background:var(--card-bg);border:1px solid #e67e2255;border-radius:8px;padding:12px 16px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div>
+            <span style="font-size:16px;font-weight:700;color:var(--green-text);">$${(d.amount||0).toLocaleString("en-US",{minimumFractionDigits:2})}</span>
+            <span style="font-size:12px;color:var(--text3);margin-left:8px;">${d.date} · ${d.currency}</span>
+            ${d.description ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">${d.description}</div>` : ""}
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="tab-btn" onclick="openAllocateModal('${d.id}','fernando',${d.amount},'${d.date}')" style="background:var(--green-bg);border-color:var(--green-text);color:var(--green-text);font-size:11px;padding:4px 10px;">Fernando</button>
+            <button class="tab-btn" onclick="openAllocateModal('${d.id}','dario',${d.amount},'${d.date}')" style="background:var(--green-bg);border-color:var(--green-text);color:var(--green-text);font-size:11px;padding:4px 10px;">Dario</button>
+            <button class="tab-btn" onclick="openAllocateModal('${d.id}','new',${d.amount},'${d.date}')" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);font-size:11px;padding:4px 10px;">+ New investor</button>
+          </div>
+        </div>
+      </div>
+    `).join("");
+  } catch(e) { console.error("loadPendingDeposits", e); }
+}
+
+function openAllocateModal(depositId, investorKey, amount, date) {
+  const isNew = investorKey === "new";
+  const modal = document.createElement("div");
+  modal.id = "allocate-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:#000a;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;";
+  modal.innerHTML = `
+    <div style="background:var(--bg2,#1a1a2e);border:1px solid var(--border);border-radius:12px;padding:24px;width:100%;max-width:400px;">
+      <h3 style="margin:0 0 16px;font-size:15px;">Allocate Deposit</h3>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">
+        <b>$${amount.toLocaleString("en-US",{minimumFractionDigits:2})}</b> on ${date}
+      </div>
+      ${isNew ? `
+        <div style="display:grid;gap:10px;margin-bottom:16px;">
+          <input id="alloc-fname" placeholder="First name" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3,#111);color:var(--text1);font-size:13px;">
+          <input id="alloc-lname" placeholder="Last name"  style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3,#111);color:var(--text1);font-size:13px;">
+          <input id="alloc-email" placeholder="Email (optional)" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3,#111);color:var(--text1);font-size:13px;">
+        </div>
+      ` : `<p style="font-size:13px;margin-bottom:16px;">Allocate to <b>${investorKey === "fernando" ? "Fernando" : "Dario"}</b>?</p>`}
+      <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">
+        NAV at deposit date: <b id="alloc-nav-display">loading…</b>
+        <input type="hidden" id="alloc-nav-val" value="1">
+      </div>
+      <div id="alloc-error" style="font-size:12px;color:#e74c3c;margin-bottom:8px;display:none;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="tab-btn" onclick="document.getElementById('allocate-modal').remove()" style="font-size:12px;">Cancel</button>
+        <button class="tab-btn" id="alloc-confirm-btn" onclick="confirmAllocate('${depositId}','${investorKey}',${isNew})" style="background:var(--green-bg);border-color:var(--green-text);color:var(--green-text);font-size:12px;">Confirm</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  // Pre-fill NAV from nav-history
+  (async () => {
+    try {
+      const base = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
+      const r = await fetch(`${base}nav-history.json?t=${Date.now()}`, { cache: "no-store" });
+      const nh = await r.json();
+      const pt = (nh.series||[]).slice().reverse().find(e => e.date <= date);
+      const nav = pt?.nav || 1.0;
+      document.getElementById("alloc-nav-display").textContent = nav.toFixed(6);
+      document.getElementById("alloc-nav-val").value = nav;
+    } catch { document.getElementById("alloc-nav-display").textContent = "1.000000 (default)"; }
+  })();
+}
+
+async function confirmAllocate(depositId, investorKey, isNew) {
+  const btn = document.getElementById("alloc-confirm-btn");
+  const err = document.getElementById("alloc-error");
+  btn.disabled = true; btn.textContent = "Saving…";
+  const nav = parseFloat(document.getElementById("alloc-nav-val").value) || 1.0;
+  const body = { depositId, nav };
+  if (isNew) {
+    const fn = document.getElementById("alloc-fname")?.value?.trim();
+    const ln = document.getElementById("alloc-lname")?.value?.trim();
+    if (!fn || !ln) {
+      err.textContent = "First and last name required."; err.style.display = "block";
+      btn.disabled = false; btn.textContent = "Confirm"; return;
+    }
+    body.newInvestor = { firstName: fn, lastName: ln, email: document.getElementById("alloc-email")?.value?.trim() || "" };
+  } else {
+    body.investorKey = investorKey;
+  }
+  try {
+    const r = await fetch("/api/allocate-deposit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Failed");
+    document.getElementById("allocate-modal").remove();
+    await loadPendingDeposits();
+    await loadFromCloud();
+  } catch(e) {
+    err.textContent = e.message; err.style.display = "block";
+    btn.disabled = false; btn.textContent = "Confirm";
+  }
+}
+
+// Handle ?allocate=ID&investor=KEY links from email buttons
+function checkAllocateUrlParam() {
+  const p = new URLSearchParams(location.search);
+  const depositId = p.get("allocate");
+  const investor  = p.get("investor");
+  if (!depositId || !investor) return;
+  // Clean URL without reloading
+  history.replaceState({}, "", location.pathname);
+  // Wait for admin panel to be accessible, then open modal
+  const tryOpen = (attempts) => {
+    if (attempts <= 0) return;
+    const section = document.getElementById("pending-deposits-section");
+    if (section) {
+      // Navigate to admin tab first
+      const adminBtn = document.getElementById("admin-nav-btn");
+      if (adminBtn) adminBtn.click();
+      setTimeout(async () => {
+        await loadPendingDeposits();
+        // Find the deposit amount/date from the pending list DOM
+        const card = document.querySelector(`[data-deposit-id="${CSS.escape(depositId)}"]`);
+        const amtEl = card?.querySelector("span");
+        const amt = parseFloat((amtEl?.textContent||"0").replace(/[^0-9.]/g,"")) || 0;
+        const dateEl = card?.querySelector("span:nth-child(2)");
+        const date = dateEl?.textContent?.trim().split("·")[0]?.trim() || "";
+        openAllocateModal(depositId, investor, amt, date);
+      }, 500);
+    } else {
+      setTimeout(() => tryOpen(attempts - 1), 300);
+    }
+  };
+  tryOpen(10);
 }
 
 async function runIBPull() {
