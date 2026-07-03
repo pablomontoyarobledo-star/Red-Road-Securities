@@ -679,9 +679,15 @@
       <!-- ── Section 4: IB Pull History ── -->
       <div>
         <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">IB Pull History</p>
-        <button class="tab-btn" onclick="loadIBPulls()" id="atab-pulls" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);margin-bottom:1rem;">
-          <i class="ti ti-database" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Load pull history
-        </button>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+          <button class="tab-btn" onclick="runIBPull()" id="atab-run-pull" style="background:var(--green-bg);border-color:var(--green-text);color:var(--green-text);">
+            <i class="ti ti-refresh" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Run IB pull now
+          </button>
+          <button class="tab-btn" onclick="loadIBPulls()" id="atab-pulls" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);">
+            <i class="ti ti-database" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Load pull history
+          </button>
+        </div>
+        <div id="ib-run-status" style="font-size:12px;color:var(--text2);margin-bottom:0.75rem;display:none;"></div>
         <div id="ib-pulls-container" style="display:none;">
           <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -1968,6 +1974,46 @@ async function syncNavHistory() {
     alert("NAV history sync failed: " + err.message);
     btn.disabled = false; label.textContent = "Sync NAV history";
   }
+}
+
+async function runIBPull() {
+  const btn    = document.getElementById("atab-run-pull");
+  const status = document.getElementById("ib-run-status");
+  btn.disabled = true;
+  status.style.display = "block";
+
+  const steps = [
+    { label: "Fetching portfolio data from IB…",  url: "/api/ib-data?refresh=1",    key: "ib-data"    },
+    { label: "Fetching NAV history from IB…",     url: "/api/ib-nav-history",        key: "ib-nav"     },
+  ];
+
+  for (const step of steps) {
+    btn.textContent = step.label;
+    status.textContent = step.label;
+    try {
+      const r = await fetch(step.url);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || r.statusText);
+      if (step.key === "ib-data") {
+        status.textContent = `Portfolio pulled — fund value $${(d.totalValue||0).toLocaleString("en-US",{maximumFractionDigits:0})}`;
+      } else {
+        status.textContent = "NAV history updated.";
+      }
+    } catch (e) {
+      status.style.color = "var(--red-text, #e74c3c)";
+      status.textContent = `${step.label.replace("…","")} failed: ${e.message}`;
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-refresh" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Run IB pull now';
+      return;
+    }
+  }
+
+  status.style.color = "var(--green-text)";
+  status.textContent = "Both queries done. Refreshing pull history…";
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-refresh" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Run IB pull now';
+  await loadFromCloud();
+  await loadIBPulls();
 }
 
 async function loadIBPulls() {
