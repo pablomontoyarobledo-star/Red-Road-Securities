@@ -676,6 +676,36 @@
         </div>
       </div>
 
+      <!-- ── Section 4: IB Pull History ── -->
+      <div>
+        <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">IB Pull History</p>
+        <button class="tab-btn" onclick="loadIBPulls()" id="atab-pulls" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);margin-bottom:1rem;">
+          <i class="ti ti-database" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Load pull history
+        </button>
+        <div id="ib-pulls-container" style="display:none;">
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border2);color:var(--text3);text-align:left;">
+                  <th style="padding:6px 10px;">Date / Time (UTC)</th>
+                  <th style="padding:6px 10px;text-align:right;">Fund Value</th>
+                  <th style="padding:6px 10px;text-align:right;">Cash</th>
+                  <th style="padding:6px 10px;text-align:right;">NAV/unit</th>
+                  <th style="padding:6px 10px;text-align:right;">TWR</th>
+                  <th style="padding:6px 10px;text-align:right;">Positions</th>
+                  <th style="padding:6px 10px;text-align:right;">Trades</th>
+                  <th style="padding:6px 10px;">Source</th>
+                </tr>
+              </thead>
+              <tbody id="ib-pulls-body">
+                <tr><td colspan="8" style="padding:1.5rem;text-align:center;color:var(--text3);">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div id="ib-pulls-status" style="font-size:11px;color:var(--text3);margin-top:6px;"></div>
+      </div>
+
       <!-- ── Section 3: System ── -->
       <div>
         <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">System</p>
@@ -1938,6 +1968,49 @@ async function syncNavHistory() {
     alert("NAV history sync failed: " + err.message);
     btn.disabled = false; label.textContent = "Sync NAV history";
   }
+}
+
+async function loadIBPulls() {
+  const btn       = document.getElementById("atab-pulls");
+  const container = document.getElementById("ib-pulls-container");
+  const tbody     = document.getElementById("ib-pulls-body");
+  const status    = document.getElementById("ib-pulls-status");
+  btn.disabled = true; btn.textContent = "Loading…";
+  container.style.display = "block";
+  tbody.innerHTML = `<tr><td colspan="8" style="padding:1.5rem;text-align:center;color:var(--text3);">Fetching pull history…</td></tr>`;
+  try {
+    const res  = await fetch("/api/ib-pulls");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed");
+    const pulls = data.pulls || [];
+    if (!pulls.length) {
+      tbody.innerHTML = `<tr><td colspan="8" style="padding:1.5rem;text-align:center;color:var(--text3);">No pulls found in blob storage.</td></tr>`;
+    } else {
+      const fmtUSD = n => n != null ? "$" + Number(n).toLocaleString("en-US", {minimumFractionDigits:0,maximumFractionDigits:0}) : "—";
+      const fmtNav = n => n != null ? "$" + Number(n).toFixed(6) : "—";
+      const fmtPct = n => n != null ? (n >= 100 ? "+" : "") + (Number(n) - 100).toFixed(2) + "%" : "—";
+      tbody.innerHTML = pulls.map(p => {
+        const dt = new Date(p.timestamp);
+        const dateStr = dt.toLocaleDateString("en-US", {month:"short",day:"numeric",year:"numeric"});
+        const timeStr = dt.toLocaleTimeString("en-US", {hour:"2-digit",minute:"2-digit",timeZoneName:"short"});
+        const twr = p.twr != null ? (p.twr >= 100 ? "+" : "") + (p.twr - 100).toFixed(2) + "%" : "—";
+        return `<tr style="border-bottom:0.5px solid var(--border);cursor:pointer;" onclick="window.open('${p.url}','_blank')">
+          <td style="padding:7px 10px;color:var(--text2);">${dateStr}<br><span style="font-size:10px;color:var(--text3);">${timeStr}</span></td>
+          <td style="padding:7px 10px;text-align:right;font-weight:500;">${fmtUSD(p.totalValue)}</td>
+          <td style="padding:7px 10px;text-align:right;color:var(--text2);">${fmtUSD(p.cashBalance)}</td>
+          <td style="padding:7px 10px;text-align:right;color:var(--text2);">${fmtNav(p.nav)}</td>
+          <td style="padding:7px 10px;text-align:right;" class="${p.twr >= 100 ? 'pos' : 'neg'}">${twr}</td>
+          <td style="padding:7px 10px;text-align:right;color:var(--text2);">${p.positions ?? "—"}</td>
+          <td style="padding:7px 10px;text-align:right;color:var(--text2);">${p.trades ?? "—"}</td>
+          <td style="padding:7px 10px;color:var(--text3);font-size:11px;">${p.source}</td>
+        </tr>`;
+      }).join("");
+      status.textContent = `${pulls.length} pulls · click any row to view raw JSON`;
+    }
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="8" style="padding:1.5rem;text-align:center;color:var(--red);">${e.message}</td></tr>`;
+  }
+  btn.disabled = false; btn.textContent = "Refresh";
 }
 
 async function seedNavHistory() {
