@@ -1805,18 +1805,21 @@ async function triggerAutoSync() {
 }
 
 async function loadFromCloud() {
-  try {
-    const base = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
-    const t    = Date.now();
+  const base = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
+  const t    = Date.now();
 
-    // Load fund-data and investors in parallel
-    const [fundRes, invRes] = await Promise.all([
-      fetch(`${base}fund-data.json?t=${t}`,  { cache: "no-store" }),
-      fetch(`${base}investors.json?t=${t}`,  { cache: "no-store" }),
-    ]);
+  // Kick off all three fetches simultaneously — don't let any one block the others
+  const [fundProm, invProm, navProm] = [
+    fetch(`${base}fund-data.json?t=${t}`,    { cache: "no-store" }),
+    fetch(`${base}investors.json?t=${t}`,    { cache: "no-store" }),
+    fetch(`${base}nav-history.json?t=${t}`,  { cache: "no-store" }),
+  ];
 
-    if (fundRes.ok) {
-      const data = await fundRes.json();
+  // Apply fund-data as soon as it arrives — positions, deposits, cash
+  fundProm.then(async r => {
+    if (!r.ok) return;
+    try {
+      const data = await r.json();
       if (data.positions    && data.positions.length)    { positions    = data.positions;    save("mff_positions",    positions); }
       if (data.transactions && data.transactions.length) { transactions = data.transactions; save("mff_transactions", transactions); }
       if (data.perfData)     { perfData    = data.perfData;    save("mff_perf",    perfData); }
@@ -1827,25 +1830,32 @@ async function loadFromCloud() {
         const el = document.getElementById("cloud-synced-at");
         if (el) { el.textContent = `· cloud ${ts}`; el.style.display = "inline"; }
       }
-    }
+      renderPositions(); renderMetrics(); renderOwnership(); renderTx(); renderDeposits();
+      if (document.getElementById("admin-screen").style.display !== "none") {
+        populateAdminFields();
+        if (document.getElementById("admin-investors") && document.getElementById("admin-investors").style.display !== "none") renderInvestors();
+      }
+    } catch {}
+  }).catch(() => {});
 
-    // Investors from dedicated store (source of truth)
-    if (invRes.ok) {
-      const invData = await invRes.json();
+  // Apply investors as soon as they arrive
+  invProm.then(async r => {
+    if (!r.ok) return;
+    try {
+      const invData = await r.json();
       if (invData.investors && invData.investors.length) {
         investors = invData.investors;
         save("mff_investors", investors);
+        if (document.getElementById("admin-investors") && document.getElementById("admin-investors").style.display !== "none") renderInvestors();
       }
-    }
+    } catch {}
+  }).catch(() => {});
 
-    renderPositions(); renderMetrics(); renderOwnership(); renderTx(); renderDeposits(); renderChart(); renderOverviewChart();
-    if (document.getElementById("admin-screen").style.display !== "none") {
-      populateAdminFields();
-      if (document.getElementById("admin-investors") && document.getElementById("admin-investors").style.display !== "none") renderInvestors();
-    }
-
-    await loadNavHistory();
-  } catch { /* silent — offline or blob unavailable */ }
+  // Apply nav-history as soon as it arrives — updates charts, snapshot, and metrics
+  navProm.then(async r => {
+    if (!r.ok) return;
+    try { await _applyNavHistory(await r.json()); } catch {}
+  }).catch(() => {});
 }
 
 async function syncToCloud() {
@@ -2179,35 +2189,36 @@ function navDateLabel(dateStr, lang) {
   return `${month} '${year}`;
 }
 
+function _applyNavHistory(navHist) {
+  if (!navHist?.series?.length) return;
+
+  // Capture latest IB-computed portfolio value; persist to localStorage so it's ready on next login
+  const lastPt = navHist.series[navHist.series.length - 1];
+  if (lastPt?.totalValue > 0) { navSnapshotValue = lastPt.totalValue; save("mff_nav_snapshot", navSnapshotValue); }
+
+  const inceptionNav = navHist.inception?.nav || 1.0;
+
+  COMPARISON_CHART_DATA.labels    = navHist.series.map(e => navDateLabel(e.date, "en"));
+  COMPARISON_CHART_DATA.labels_es = navHist.series.map(e => navDateLabel(e.date, "es"));
+  COMPARISON_CHART_DATA.portfolio = navHist.series.map(e => (e.nav / inceptionNav) * 100);
+
+  perfData = {
+    labels: COMPARISON_CHART_DATA.labels,
+    values: navHist.series.map(e => Math.round(e.totalValue * 100) / 100),
+  };
+  save("mff_perf", perfData);
+
+  renderChart();
+  renderOverviewChart();
+  renderMetrics();
+}
+
 async function loadNavHistory() {
   try {
     const r = await fetch(`${BLOB_BASE}nav-history.json?t=${Date.now()}`, { cache: "no-store" });
     if (!r.ok) return;
-    const navHist = await r.json();
-    if (!navHist.series || !navHist.series.length) return;
-
-    // Capture latest IB-computed portfolio value; persist to localStorage so it's ready on next login
-    const lastPt = navHist.series[navHist.series.length - 1];
-    if (lastPt?.totalValue > 0) { navSnapshotValue = lastPt.totalValue; save("mff_nav_snapshot", navSnapshotValue); }
-
-    const inceptionNav = navHist.inception?.nav || 1.0;
-
-    // Update comparison chart data from nav-history
-    COMPARISON_CHART_DATA.labels    = navHist.series.map(e => navDateLabel(e.date, "en"));
-    COMPARISON_CHART_DATA.labels_es = navHist.series.map(e => navDateLabel(e.date, "es"));
-    COMPARISON_CHART_DATA.portfolio = navHist.series.map(e => (e.nav / inceptionNav) * 100);
-
-    // Update perf chart (AUM over time)
-    perfData = {
-      labels: COMPARISON_CHART_DATA.labels,
-      values: navHist.series.map(e => Math.round(e.totalValue * 100) / 100),
-    };
-    save("mff_perf", perfData);
-
-    renderChart();
-    renderOverviewChart();
-    renderMetrics();
-  } catch { /* non-fatal — use fallback hardcoded values */ }
+    _applyNavHistory(await r.json());
+  } catch {}
 }
 
 function renderOverviewChart() {
