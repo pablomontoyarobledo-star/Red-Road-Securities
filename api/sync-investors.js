@@ -29,6 +29,14 @@ export default async function handler(req, res) {
       updatedAt:  new Date().toISOString(),
     };
 
+    // Backup before overwrite
+    try {
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      await put(`backups/investors-${stamp}.json`, JSON.stringify(payload), {
+        access: "public", contentType: "application/json", addRandomSuffix: false,
+      });
+    } catch {}
+
     await put("investors.json", JSON.stringify(payload), {
       access: "public",
       contentType: "application/json",

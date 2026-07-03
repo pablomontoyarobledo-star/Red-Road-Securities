@@ -1,14 +1,22 @@
 import { put } from "@vercel/blob";
 
-const BLOB_BASE = process.env.FUND_DATA_BLOB_URL?.replace("fund-data.json", "") || "";
+// Always use the hardcoded public URL — never rely on env var for reads
+const BLOB_BASE = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
 
-async function readJson(url) {
-  const r = await fetch(`${url}?t=${Date.now()}`, { cache: "no-store" });
+async function readJson(name) {
+  const r = await fetch(`${BLOB_BASE}${name}?t=${Date.now()}`, { cache: "no-store" });
   if (!r.ok) return null;
   return r.json();
 }
 
-async function writeBlob(name, data) {
+async function backupAndWrite(name, data) {
+  // Save timestamped backup before overwriting any critical blob
+  try {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    await put(`backups/${name.replace(".json", "")}-${stamp}.json`, JSON.stringify(data), {
+      access: "public", contentType: "application/json", addRandomSuffix: false,
+    });
+  } catch {}
   await put(name, JSON.stringify(data), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
@@ -26,16 +34,19 @@ export default async function handler(req, res) {
   if (!investorKey && !newInvestor) return res.status(400).json({ error: "investorKey or newInvestor required" });
 
   // Load pending deposits
-  const pending = await readJson(`${BLOB_BASE}pending-deposits.json`) || { deposits: [] };
+  const pending = await readJson("pending-deposits.json") || { deposits: [] };
   const deposit = pending.deposits.find(d => d.id === depositId);
   if (!deposit) return res.status(404).json({ error: "Deposit not found in pending list" });
 
-  // Load fund-data
-  const fundData = await readJson(`${BLOB_BASE}fund-data.json`);
+  // Load fund-data — hard fail if unavailable
+  const fundData = await readJson("fund-data.json");
   if (!fundData) return res.status(502).json({ error: "Could not load fund-data.json" });
 
-  // Load investors
-  const investorsData = await readJson(`${BLOB_BASE}investors.json`) || { investors: [] };
+  // Load investors — hard fail if unavailable, never default to empty array
+  const investorsData = await readJson("investors.json");
+  if (!investorsData || !Array.isArray(investorsData.investors)) {
+    return res.status(502).json({ error: "Could not load investors.json — aborting to prevent data loss" });
+  }
 
   // Handle new investor creation
   let resolvedKey = investorKey;
@@ -43,37 +54,39 @@ export default async function handler(req, res) {
     const key = newInvestor.firstName.toLowerCase() + "_" + newInvestor.lastName.toLowerCase().replace(/\s+/g, "_");
     resolvedKey = key;
     investorsData.investors.push({
-      id:        key,
-      firstName: newInvestor.firstName,
-      lastName:  newInvestor.lastName,
-      email:     newInvestor.email || "",
-      joinDate:  deposit.date,
+      id:          key,
+      firstName:   newInvestor.firstName,
+      lastName:    newInvestor.lastName,
+      email:       newInvestor.email || "",
+      joinDate:    deposit.date,
+      nationality: "",
+      lang:        "en",
+      phone:       "",
+      mailingAddress: "",
     });
-    await writeBlob("investors.json", investorsData);
+    await backupAndWrite("investors.json", investorsData);
   }
 
   // Append deposit to fund-data.deposits
   const depositNav = nav || deposit.navAtDeposit || 1.0;
   const record = {
-    date:       deposit.date,
-    amount:     deposit.amount,
-    investor:   resolvedKey,
-    nav:        depositNav,
-    source:     "ib-detected",
-    ibDesc:     deposit.description || "",
+    date:     deposit.date,
+    amount:   deposit.amount,
+    investor: resolvedKey,
+    nav:      depositNav,
+    source:   "ib-detected",
+    ibDesc:   deposit.description || "",
   };
 
-  // Allocate units per investor key (fernando / dario / new key)
   if (!fundData.deposits) fundData.deposits = [];
   fundData.deposits.push(record);
   fundData.deposits.sort((a, b) => a.date.localeCompare(b.date));
 
-  // Also bump cashBalance by deposit amount (IB already reflects it, but keep in sync)
-  await writeBlob("fund-data.json", fundData);
+  await backupAndWrite("fund-data.json", fundData);
 
   // Remove from pending
   pending.deposits = pending.deposits.filter(d => d.id !== depositId);
-  await writeBlob("pending-deposits.json", pending);
+  await backupAndWrite("pending-deposits.json", pending);
 
   return res.status(200).json({ ok: true, record });
 }
