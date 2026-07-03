@@ -329,11 +329,28 @@ export default async function handler(req, res) {
     } catch {}
   }
 
-  // Live fetch
+  // Live fetch — fall back to cache on IB 1001 (markets open / statement unavailable)
   let stmtXml;
   try {
     stmtXml = await fetchFromIB(token, queryId);
   } catch (err) {
+    const is1001 = err.message.includes("1001");
+    // Always try to serve cache on failure
+    try {
+      const cacheRes = await fetch(`${blobBase}${CACHE_KEY}?t=${Date.now()}`, { cache: "no-store" });
+      if (cacheRes.ok) {
+        const cached = await cacheRes.json();
+        return res.status(200).json({
+          ...cached,
+          fromCache: true,
+          cacheAgeMinutes: Math.round((Date.now() - new Date(cached.lastUpdated).getTime()) / 60000),
+          ibUnavailable: true,
+          ibNote: is1001
+            ? "IB statements are only available after market close (4 PM ET). Showing last cached data."
+            : err.message,
+        });
+      }
+    } catch {}
     return res.status(502).json({ error: err.message });
   }
 
