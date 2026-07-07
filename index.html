@@ -1936,60 +1936,105 @@ function getTotalValue() {
   return computed;
 }
 
+// Expense ratios for ETFs held (annual %, as decimal).
+// These are deducted internally by the fund and never appear as IB line items —
+// but they are a real cost to investors and we display them as estimated drag.
+const EXPENSE_RATIOS = { VTI: 0.0003, BND: 0.0003 };
+const INCEPTION_DATE = "2025-12-18";
+
 function renderIncome() {
-  // Sum income from transactions array.
-  // Uses netAmount when IB has provided the exact cash amount,
-  // falls back to price * currentShares for legacy records without netAmount.
   const posMap = {};
   for (const p of positions) posMap[p.ticker] = p;
 
+  // Build a trade ledger so we know exact share counts at any past date.
+  // tradesByTicker[ticker] = sorted array of {date, shares} (positive=buy, negative=sell)
+  const tradesByTicker = {};
+  for (const tx of transactions) {
+    if (tx.type === "buy" || tx.type === "sell") {
+      const d = tx.date ? String(tx.date).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3") : "";
+      if (!d) continue;
+      if (!tradesByTicker[tx.ticker]) tradesByTicker[tx.ticker] = [];
+      const qty = tx.type === "buy" ? (tx.shares || 0) : -(tx.shares || 0);
+      tradesByTicker[tx.ticker].push({ date: d, qty });
+    }
+  }
+
+  // Returns shares of a ticker held ON a given date by working backwards from current shares.
+  function sharesAt(ticker, onDate) {
+    const pos = posMap[ticker];
+    if (!pos) return 0;
+    let s = pos.shares;
+    // Subtract any trades that happened AFTER onDate (they weren't in the portfolio yet on onDate)
+    for (const t of (tradesByTicker[ticker] || [])) {
+      if (t.date > onDate) s -= t.qty;
+    }
+    return Math.max(s, 0);
+  }
+
   let divTotal  = 0;
   let intTotal  = 0;
-  let feeTotal  = 0;
   let hasApprox = false;
 
   for (const tx of transactions) {
     if (tx.type === "dividend") {
       if (tx.netAmount != null) {
         divTotal += tx.netAmount;
-      } else {
-        // Approximate: per-share rate × current shares (may differ from actual)
-        const pos = posMap[tx.ticker];
-        if (pos && tx.price) { divTotal += tx.price * pos.shares; hasApprox = true; }
+      } else if (tx.price && tx.ticker) {
+        // Use share count at the dividend date (trade-adjusted)
+        const sh = sharesAt(tx.ticker, tx.date);
+        divTotal += tx.price * sh;
+        hasApprox = true;
       }
     } else if (tx.type === "interest") {
       if (tx.netAmount != null) intTotal += tx.netAmount;
-    } else if (tx.type === "fee") {
-      if (tx.netAmount != null) feeTotal += tx.netAmount;
-    }
-  }
-  // Commissions from buy/sell trades
-  for (const tx of transactions) {
-    if ((tx.type === "buy" || tx.type === "sell") && tx.commission) {
-      feeTotal -= Math.abs(tx.commission);
     }
   }
 
-  const divEl  = document.getElementById("income-dividends");
-  const intEl  = document.getElementById("income-interest");
-  const feeEl  = document.getElementById("income-fees");
+  // Expense ratio drag — estimated cost since inception.
+  // VTI and BND both charge 0.03%/year, deducted internally by the ETF.
+  // We calculate it as: currentValue × annualER × daysElapsed/365
+  const inceptionMs  = new Date(INCEPTION_DATE).getTime();
+  const daysElapsed  = (Date.now() - inceptionMs) / 86400000;
+  let erTotal = 0;
+  for (const p of positions) {
+    const er = EXPENSE_RATIOS[p.ticker];
+    if (!er) continue;
+    const posValue = p.shares * (livePrice[p.ticker] || p.ibClose || p.costBasis);
+    erTotal += posValue * er * (daysElapsed / 365);
+  }
+  // Also add any explicit IB commissions/fees from transactions
+  let explicitFees = 0;
+  for (const tx of transactions) {
+    if ((tx.type === "buy" || tx.type === "sell") && tx.commission) explicitFees += Math.abs(tx.commission);
+    if (tx.type === "fee" && tx.netAmount != null) explicitFees += Math.abs(tx.netAmount);
+  }
+  const feeTotal = erTotal + explicitFees;
+
+  const divEl = document.getElementById("income-dividends");
+  const intEl = document.getElementById("income-interest");
+  const feeEl = document.getElementById("income-fees");
+  const feeLbl = document.getElementById("lbl-fees");
   const lbl    = document.getElementById("lbl-income");
 
+  const usd = v => "$" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   if (divEl) {
-    divEl.textContent = divTotal ? "$" + divTotal.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}) : "—";
-    divEl.className = "income-value " + (divTotal >= 0 ? "pos" : "neg");
-    if (hasApprox) divEl.title = "Approximate — based on current share count until next IB pull";
+    divEl.textContent = divTotal > 0 ? usd(divTotal) : "—";
+    divEl.className   = "income-value pos";
+    if (hasApprox) divEl.title = "Estimated — using share count at each dividend date. Exact values load after next IB pull.";
   }
   if (intEl) {
-    intEl.textContent = intTotal ? "$" + intTotal.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}) : "—";
-    intEl.className = "income-value " + (intTotal >= 0 ? "pos" : "neg");
+    intEl.textContent = intTotal > 0 ? usd(intTotal) : "—";
+    intEl.className   = "income-value pos";
+    if (!intTotal) intEl.title = "IB cash interest — will populate after next IB data pull.";
   }
   if (feeEl) {
-    const feeAbs = Math.abs(feeTotal);
-    feeEl.textContent = feeTotal ? "-$" + feeAbs.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}) : "—";
-    feeEl.className = "income-value neg";
+    feeEl.textContent = feeTotal > 0 ? "-" + usd(feeTotal) : "—";
+    feeEl.className   = "income-value neg";
+    feeEl.title       = `Estimated expense ratio drag since inception (VTI 0.03% + BND 0.03% annually)${explicitFees ? " + $" + explicitFees.toFixed(2) + " IB commissions" : ""}`;
   }
-  if (lbl && hasApprox) lbl.textContent = (currentLang === "es" ? "Ingresos y costos — desde el inicio" : "Income & costs — since inception") + " *";
+  if (feeLbl) feeLbl.textContent = currentLang === "es" ? "Exp. ratios estimados" : "Est. expense ratios";
+  if (lbl && hasApprox) lbl.title = "* Dividend totals are estimated until next IB data pull provides exact amounts.";
 }
 
 function renderMetrics() {
