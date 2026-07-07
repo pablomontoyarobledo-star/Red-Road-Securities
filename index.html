@@ -2394,11 +2394,21 @@ function toggleInvestorEdit(i) {
   btn.textContent = open ? "Cancel" : "Edit";
 }
 
+// Shared secret sent on all admin API calls — same secret used by cloud sync
+function adminSecretHeader() {
+  let secret = localStorage.getItem("mff_sync_secret");
+  if (!secret) {
+    secret = prompt("Enter your sync secret:");
+    if (secret) localStorage.setItem("mff_sync_secret", secret);
+  }
+  return secret ? { "x-sync-secret": secret } : {};
+}
+
 async function persistInvestors() {
   save("mff_investors", investors);
   const res = await fetch("/api/sync-investors", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...adminSecretHeader() },
     body: JSON.stringify({ investors }),
   });
   if (!res.ok) {
@@ -2639,7 +2649,7 @@ async function syncNavHistory() {
   btn.disabled = true;
   label.textContent = "Pulling…";
   try {
-    const res  = await fetch("/api/ib-nav-history");
+    const res  = await fetch("/api/ib-nav-history", { headers: adminSecretHeader() });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Unknown error");
     await loadNavHistory();
@@ -2747,7 +2757,7 @@ async function confirmAllocate(depositId, investorKey, isNew) {
     body.investorKey = investorKey;
   }
   try {
-    const r = await fetch("/api/allocate-deposit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const r = await fetch("/api/allocate-deposit", { method: "POST", headers: { "Content-Type": "application/json", ...adminSecretHeader() }, body: JSON.stringify(body) });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Failed");
     document.getElementById("allocate-modal").remove();
@@ -2802,7 +2812,7 @@ async function importIBXml() {
   try {
     const r = await fetch("/api/import-ib-xml", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...adminSecretHeader() },
       body: JSON.stringify({ xml }),
     });
     const d = await r.json();
@@ -2834,7 +2844,7 @@ async function runIBPull() {
     btn.textContent = step.label;
     status.textContent = step.label;
     try {
-      const r = await fetch(step.url);
+      const r = await fetch(step.url, { headers: adminSecretHeader() });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || r.statusText);
       if (step.key === "ib-data") {
@@ -2973,7 +2983,7 @@ async function sendStatementsNow() {
   try {
     const res = await fetch("/api/send-statements", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...adminSecretHeader() },
       body: JSON.stringify({ asOfDate: asOf || null }),
     });
     const data = await res.json();

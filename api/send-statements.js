@@ -362,7 +362,20 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
+// Manual (POST) triggers require x-sync-secret. Cron (GET) requires Bearer
+// CRON_SECRET once that env var is set; until then GETs are still gated by the
+// last-day-of-month check only.
+function isAuthorized(req) {
+  const syncSecret = process.env.SYNC_SECRET;
+  const cronSecret = process.env.CRON_SECRET;
+  if (syncSecret && req.headers["x-sync-secret"] === syncSecret) return true;
+  if (req.method === "POST") return false; // manual triggers always need the secret
+  if (cronSecret) return req.headers["authorization"] === `Bearer ${cronSecret}`;
+  return true; // cron fallback until CRON_SECRET is configured
+}
+
 export default async function handler(req, res) {
+  if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
   const isManual = req.method === "POST";
 
   if (!isManual && !isLastDayOfMonth()) {

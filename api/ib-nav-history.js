@@ -82,7 +82,20 @@ function matchSettlements(ibDaily, depositGroups, tolerance = 0.10) {
   return settlement;
 }
 
+// Cron + admin endpoint. Admin calls carry x-sync-secret; Vercel cron carries
+// Bearer CRON_SECRET automatically once that env var is set. Until CRON_SECRET
+// exists we cannot distinguish cron traffic, so unauthenticated GETs are allowed
+// as a temporary fallback — set CRON_SECRET to close this.
+function isAuthorized(req) {
+  const syncSecret = process.env.SYNC_SECRET;
+  const cronSecret = process.env.CRON_SECRET;
+  if (syncSecret && req.headers["x-sync-secret"] === syncSecret) return true;
+  if (cronSecret) return req.headers["authorization"] === `Bearer ${cronSecret}`;
+  return true; // fallback until CRON_SECRET is configured
+}
+
 export default async function handler(req, res) {
+  if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
   const token     = process.env.IB_FLEX_TOKEN;
   const navQueryId = process.env.IB_NAV_QUERY_ID;
   if (!token || !navQueryId) {

@@ -1,9 +1,58 @@
 // Returns S&P 500 (^GSPC) daily closes indexed to 100 at Dec 18 2025,
 // aligned to the dates array passed as ?dates=YYYY-MM-DD,YYYY-MM-DD,...
+// Also supports ?mode=monthly to return monthly % returns for ^SP500TR, EFA, VT
+
+const INCEPTION = "2025-12-18";
+
+async function fetchMonthlyReturns(ticker) {
+  const period1 = Math.floor(new Date("2025-11-01").getTime() / 1000); // one month before inception for base
+  const period2 = Math.floor(Date.now() / 1000);
+  const encoded = encodeURIComponent(ticker);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?interval=1mo&period1=${period1}&period2=${period2}`;
+  const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+  const json = await r.json();
+  const result = json.chart?.result?.[0];
+  if (!result) throw new Error(`No data for ${ticker}`);
+
+  const closes = result.indicators.quote[0].close;
+  const months = result.timestamp.map((ts, i) => {
+    const date = new Date(ts * 1000);
+    // Yahoo monthly timestamps are start-of-month; label as YYYY-MM
+    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+    return { key, close: closes[i] };
+  }).filter(m => m.close != null && m.key >= "2025-11");
+
+  // Compute monthly returns: each month vs prior month close
+  const returns = {};
+  for (let i = 1; i < months.length; i++) {
+    const ret = (months[i].close / months[i - 1].close - 1) * 100;
+    returns[months[i].key] = parseFloat(ret.toFixed(3));
+  }
+  return returns;
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
 
-  const period1 = Math.floor(new Date("2025-12-15").getTime() / 1000);
+  if (req.query.mode === "monthly") {
+    try {
+      const [spxtr, efa, vt] = await Promise.all([
+        fetchMonthlyReturns("^SP500TR"),
+        fetchMonthlyReturns("EFA"),
+        fetchMonthlyReturns("VT"),
+      ]);
+      // Collect all month keys present in any series, from inception onward
+      const keys = [...new Set([...Object.keys(spxtr), ...Object.keys(efa), ...Object.keys(vt)])]
+        .filter(k => k >= "2025-12")
+        .sort();
+      const months = keys.map(k => ({ key: k, spxtr: spxtr[k] ?? null, efa: efa[k] ?? null, vt: vt[k] ?? null }));
+      return res.status(200).json({ months });
+    } catch (err) {
+      return res.status(502).json({ error: err.message });
+    }
+  }
+
+  const period1 = Math.floor(new Date("2025-12-15").getTime() / 1000); // daily chart
   const period2 = Math.floor(Date.now() / 1000);
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&period1=${period1}&period2=${period2}`;
 
