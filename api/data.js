@@ -52,7 +52,9 @@ function verifyToken(token) {
 
 function hasSyncSecret(req) {
   const s = process.env.SYNC_SECRET;
-  return s && req.headers["x-sync-secret"] === s;
+  if (s && req.headers["x-sync-secret"] === s) return true;
+  const c = process.env.CRON_SECRET;
+  return !!(c && req.headers["authorization"] === `Bearer ${c}`);
 }
 
 // ── Migration: move blobs from legacy public names to suffixed names ─────────
