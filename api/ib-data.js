@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { put } from "@vercel/blob";
+import { burl, bname, bprefix } from "../lib/store.js";
 
 const INCEPTION_NAV  = 1.0;
 const INCEPTION_DATE = "2025-12-18";
@@ -8,7 +9,7 @@ const INCEPTION_DATE = "2025-12-18";
 // NAV point — appends one entry to nav-history.json and computes daily P&L
 // ---------------------------------------------------------------------------
 async function appendNavPoint({ totalValue, dateStr, blobBase, deposits }) {
-  const navHistUrl = `${blobBase}nav-history.json`;
+  const navHistUrl = burl("nav-history.json");
   let navHistory = { inception: { date: INCEPTION_DATE, nav: INCEPTION_NAV }, series: [] };
   try {
     const r = await fetch(`${navHistUrl}?t=${Date.now()}`, { cache: "no-store" });
@@ -43,7 +44,7 @@ async function appendNavPoint({ totalValue, dateStr, blobBase, deposits }) {
     navHistory.series.sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  await put("nav-history.json", JSON.stringify(navHistory), {
+  await put(bname("nav-history.json"), JSON.stringify(navHistory), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
 
@@ -57,7 +58,7 @@ async function appendNavPoint({ totalValue, dateStr, blobBase, deposits }) {
 async function appendTrades({ trades, blobBase }) {
   if (!trades.length) return;
 
-  const url = `${blobBase}trades-history.json`;
+  const url = burl("trades-history.json");
   let history = { trades: [] };
   try {
     const r = await fetch(`${url}?t=${Date.now()}`, { cache: "no-store" });
@@ -78,7 +79,7 @@ async function appendTrades({ trades, blobBase }) {
   history.trades.sort((a, b) => b.date.localeCompare(a.date) || b.tradeId?.localeCompare(a.tradeId));
   history.updatedAt = new Date().toISOString();
 
-  await put("trades-history.json", JSON.stringify(history), {
+  await put(bname("trades-history.json"), JSON.stringify(history), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
 }
@@ -108,7 +109,7 @@ function computeTotalUnitsAtDate(deposits, dateStr) {
 // IB Flex Web Service
 // ---------------------------------------------------------------------------
 const BASE      = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService";
-const CACHE_KEY = "ib-cache.json";
+const CACHE_KEY = bname("ib-cache.json");
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const parser    = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" });
 
@@ -290,7 +291,7 @@ async function appendIncomeTx({ dividends, interest, fees, blobBase }) {
   const incoming = [...dividends, ...interest, ...fees].filter(t => t.date);
   if (!incoming.length) return;
 
-  const fdUrl = `${blobBase}fund-data.json`;
+  const fdUrl = burl("fund-data.json");
   let fd;
   try {
     const r = await fetch(`${fdUrl}?t=${Date.now()}`, { cache: "no-store" });
@@ -333,7 +334,7 @@ async function appendIncomeTx({ dividends, interest, fees, blobBase }) {
   if (added === 0) return;
 
   fd.transactions.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  await put("fund-data.json", JSON.stringify(fd), {
+  await put(bname("fund-data.json"), JSON.stringify(fd), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
 }
@@ -347,7 +348,7 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
   // Load already-allocated deposits
   let allocatedIds = new Set();
   try {
-    const fd = await (await fetch(`${blobBase}fund-data.json?t=${Date.now()}`, { cache: "no-store" })).json();
+    const fd = await (await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" })).json();
     (fd.deposits || []).forEach(d => allocatedIds.add(`${d.date}_${d.amount}`));
   } catch {}
 
@@ -355,7 +356,7 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
   let pending = { deposits: [] };
   let pendingNeedsWrite = false;
   try {
-    const r = await fetch(`${blobBase}pending-deposits.json?t=${Date.now()}`, { cache: "no-store" });
+    const r = await fetch(`${burl("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" });
     if (r.ok) pending = await r.json();
   } catch {}
   pending.deposits = (pending.deposits || []).map(d => {
@@ -370,7 +371,7 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
   if (!newDeposits.length) {
     // Still write back if we normalized any IDs
     if (pendingNeedsWrite) {
-      await put("pending-deposits.json", JSON.stringify(pending), {
+      await put(bname("pending-deposits.json"), JSON.stringify(pending), {
         access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
       });
     }
@@ -379,7 +380,7 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
 
   // Save to pending-deposits.json
   pending.deposits.push(...newDeposits);
-  await put("pending-deposits.json", JSON.stringify(pending), {
+  await put(bname("pending-deposits.json"), JSON.stringify(pending), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
 
@@ -494,7 +495,7 @@ export default async function handler(req, res) {
   try {
     let deposits = [];
     try {
-      const fdRes = await fetch(`${blobBase}fund-data.json?t=${Date.now()}`, { cache: "no-store" });
+      const fdRes = await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" });
       if (fdRes.ok) { const fd = await fdRes.json(); deposits = fd.deposits || []; }
     } catch {}
     const dateStr = now.toISOString().slice(0, 10);
@@ -525,7 +526,7 @@ export default async function handler(req, res) {
   // Permanent archive — one snapshot per pull
   try {
     const stamp = now.toISOString().replace(/[:.]/g, "-");
-    await put(`ib-history/${stamp}.json`, JSON.stringify(result), {
+    await put(`${bprefix("ib-history/")}${stamp}.json`, JSON.stringify(result), {
       access: "public", contentType: "application/json", addRandomSuffix: false,
     });
   } catch {}

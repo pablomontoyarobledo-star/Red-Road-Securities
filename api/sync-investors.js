@@ -1,4 +1,5 @@
 import { put } from "@vercel/blob";
+import { burl, bname, bprefix } from "../lib/store.js";
 
 function isAuthorized(req) {
   const syncSecret = process.env.SYNC_SECRET;
@@ -10,12 +11,13 @@ function isAuthorized(req) {
 
 export default async function handler(req, res) {
   if (req.method === "GET") {
-    // Return investors from blob
+    // Return investors from blob — PII, so secret required (clients use /api/data)
+    if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     const blobUrl = process.env.FUND_DATA_BLOB_URL;
     if (!blobUrl) return res.status(500).json({ error: "FUND_DATA_BLOB_URL not set" });
     const blobBase = blobUrl.replace("fund-data.json", "");
     try {
-      const r = await fetch(`${blobBase}investors.json?t=${Date.now()}`, { cache: "no-store" });
+      const r = await fetch(`${burl("investors.json")}?t=${Date.now()}`, { cache: "no-store" });
       if (!r.ok) return res.status(404).json({ investors: [] });
       return res.status(200).json(await r.json());
     } catch (err) {
@@ -41,12 +43,12 @@ export default async function handler(req, res) {
     // Backup before overwrite
     try {
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      await put(`backups/investors-${stamp}.json`, JSON.stringify(payload), {
+      await put(`${bprefix("backups/")}investors-${stamp}.json`, JSON.stringify(payload), {
         access: "public", contentType: "application/json", addRandomSuffix: false,
       });
     } catch {}
 
-    await put("investors.json", JSON.stringify(payload), {
+    await put(bname("investors.json"), JSON.stringify(payload), {
       access: "public",
       contentType: "application/json",
       allowOverwrite: true,

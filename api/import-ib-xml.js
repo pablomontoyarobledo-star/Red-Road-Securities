@@ -1,7 +1,6 @@
 ﻿import { XMLParser } from "fast-xml-parser";
 import { put } from "@vercel/blob";
-
-const BLOB_BASE = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
+import { burl, bname, bprefix } from "../lib/store.js";
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" });
 
 function parseStatement(stmtXml) {
@@ -142,13 +141,13 @@ export default async function handler(req, res) {
 
   // GET ?seed=1 — migrate historical hardcoded trades into fund-data.json
   if (req.method === "GET" && req.query?.seed === "1") {
-    const r = await fetch(`${BLOB_BASE}fund-data.json?t=${Date.now()}`, { cache: "no-store" });
+    const r = await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" });
     if (!r.ok) return res.status(502).json({ error: "Could not load fund-data.json" });
     const fundData = await r.json();
     const existingKeys = new Set((fundData.transactions || []).map(t => `${t.date}_${t.ticker}_${t.shares}_${t.price}`));
     const toAdd = SEED_TRADES.filter(t => !existingKeys.has(`${t.date}_${t.ticker}_${t.shares}_${t.price}`));
     fundData.transactions = [...(fundData.transactions || []), ...toAdd].sort((a, b) => b.date.localeCompare(a.date));
-    await put("fund-data.json", JSON.stringify(fundData), { access:"public", contentType:"application/json", allowOverwrite:true, addRandomSuffix:false });
+    await put(bname("fund-data.json"), JSON.stringify(fundData), { access:"public", contentType:"application/json", allowOverwrite:true, addRandomSuffix:false });
     return res.status(200).json({ ok: true, added: toAdd.length, total: fundData.transactions.length });
   }
 
@@ -167,7 +166,7 @@ export default async function handler(req, res) {
   // Load existing fund-data to merge (never overwrite deposits/investors)
   let fundData = {};
   try {
-    const r = await fetch(`${BLOB_BASE}fund-data.json?t=${Date.now()}`, { cache: "no-store" });
+    const r = await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" });
     if (r.ok) fundData = await r.json();
   } catch {}
 
@@ -186,19 +185,19 @@ export default async function handler(req, res) {
   // Backup then save
   try {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    await put(`backups/fund-data-${stamp}.json`, JSON.stringify(fundData), {
+    await put(`${bprefix("backups/")}fund-data-${stamp}.json`, JSON.stringify(fundData), {
       access: "public", contentType: "application/json", addRandomSuffix: false,
     });
   } catch {}
 
-  await put("fund-data.json", JSON.stringify(fundData), {
+  await put(bname("fund-data.json"), JSON.stringify(fundData), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
 
   // Also archive as ib-history snapshot
   try {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    await put(`ib-history/${stamp}.json`, JSON.stringify({
+    await put(`${bprefix("ib-history/")}${stamp}.json`, JSON.stringify({
       positions:   parsed.positions,
       totalValue:  parsed.totalValue,
       cashBalance: parsed.cashBalance,
@@ -213,7 +212,7 @@ export default async function handler(req, res) {
   if (parsed.cashDeposits.length) {
     let pending = { deposits: [] };
     try {
-      const r = await fetch(`${BLOB_BASE}pending-deposits.json?t=${Date.now()}`, { cache: "no-store" });
+      const r = await fetch(`${burl("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" });
       if (r.ok) pending = await r.json();
     } catch {}
     const existingIds = new Set([
@@ -223,7 +222,7 @@ export default async function handler(req, res) {
     const newDeps = parsed.cashDeposits.filter(d => !existingIds.has(d.id));
     if (newDeps.length) {
       pending.deposits.push(...newDeps);
-      await put("pending-deposits.json", JSON.stringify(pending), {
+      await put(bname("pending-deposits.json"), JSON.stringify(pending), {
         access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
       });
       pendingDepositsAdded = newDeps.length;

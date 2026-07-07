@@ -1,4 +1,5 @@
 import { put } from "@vercel/blob";
+import { bname } from "../lib/store.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -19,7 +20,7 @@ export default async function handler(req, res) {
 
   const payload = JSON.stringify({ ...body, syncedAt: new Date().toISOString() });
 
-  const blob = await put("fund-data.json", payload, {
+  const blob = await put(bname("fund-data.json"), payload, {
     access: "public",
     contentType: "application/json",
     allowOverwrite: true,

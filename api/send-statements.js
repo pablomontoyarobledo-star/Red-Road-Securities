@@ -1,6 +1,8 @@
 // Monthly investor statement — Vercel Cron fires on days 28-31, checks for last day of month.
 // Schedule: "0 13 28-31 * *" (1 pm UTC). Also callable manually via POST.
 
+import { burl } from "../lib/store.js";
+
 function isLastDayOfMonth() {
   const now      = new Date();
   const tomorrow = new Date(now);
@@ -397,10 +399,10 @@ export default async function handler(req, res) {
   let fundData, navHistory, invStore, tradesStore;
   try {
     [fundData, navHistory, invStore, tradesStore] = await Promise.all([
-      fetch(`${blobUrl}?t=${Date.now()}`,                    { cache: "no-store" }).then(r => r.ok ? r.json() : {}),
-      fetch(`${blobBase}nav-history.json?t=${Date.now()}`,   { cache: "no-store" }).then(r => r.ok ? r.json() : { series: [] }),
-      fetch(`${blobBase}investors.json?t=${Date.now()}`,     { cache: "no-store" }).then(r => r.ok ? r.json() : { investors: [] }),
-      fetch(`${blobBase}trades-history.json?t=${Date.now()}`,{ cache: "no-store" }).then(r => r.ok ? r.json() : { trades: [] }),
+      fetch(`${burl("fund-data.json")}?t=${Date.now()}`,      { cache: "no-store" }).then(r => r.ok ? r.json() : {}),
+      fetch(`${burl("nav-history.json")}?t=${Date.now()}`,    { cache: "no-store" }).then(r => r.ok ? r.json() : { series: [] }),
+      fetch(`${burl("investors.json")}?t=${Date.now()}`,      { cache: "no-store" }).then(r => r.ok ? r.json() : { investors: [] }),
+      fetch(`${burl("trades-history.json")}?t=${Date.now()}`, { cache: "no-store" }).then(r => r.ok ? r.json() : { trades: [] }),
     ]);
   } catch (err) {
     return res.status(500).json({ error: `Failed to load data: ${err.message}` });

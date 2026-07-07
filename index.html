@@ -1698,20 +1698,27 @@ function clearDepFilters() {
 }
 
 // ── DATA ──
-const USERS = {
-  "pablomontoyarobledo@gmail.com":  { salt:"59504906f46fd7465716714946e181c0", pwHash:"313290f0660bf830feaeafbe6bd40f9bef7845697ac621bc1bcd9ec7afb4e6cf", name:"Pablo Montoya — Manager", admin:true  },
-  "dario.montoya@mdosas.com":       { salt:"4b5fd6d20cd93ea26971e222a7af91cd", pwHash:"caf2b22ed9880313e46ce290d0af5a3d28abac729b6dec96253d85346abce7b7", name:"Dario Montoya",            admin:false },
-  "fernando.montoya@mdosas.com":    { salt:"fb75245a1916299296edbd554d73db22", pwHash:"941bf8e89969456714cda3b9bce3de6958f7cbc52b0732cd23ceb1d6e5ba1549", name:"Fernando Montoya",         admin:false },
-};
+// Authentication is server-side (/api/data). The browser holds only a
+// signed session token; credentials and data URLs never appear in this file.
+let _sessionToken = null;
 
-async function pbkdf2hex(password, salt) {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: enc.encode(salt), iterations: 100000, hash: "SHA-256" },
-    keyMaterial, 256
-  );
-  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, "0")).join("");
+function dataFetch(file) {
+  return fetch(`/api/data?file=${encodeURIComponent(file)}&t=${Date.now()}`, {
+    cache: "no-store",
+    headers: _sessionToken ? { "Authorization": `Bearer ${_sessionToken}` } : {},
+  }).then(r => {
+    if (r.status === 401) { logoutToLogin(); throw new Error("Session expired"); }
+    return r;
+  });
+}
+
+function logoutToLogin() {
+  localStorage.removeItem("rrs_session");
+  _sessionToken = null;
+  const login = document.getElementById("login-screen");
+  const app   = document.getElementById("app");
+  if (login) login.style.display = "";
+  if (app)   app.style.display   = "none";
 }
 
 const DEFAULT_POSITIONS = [
@@ -1822,13 +1829,18 @@ function _launchApp(email, entry) {
 async function tryLogin() {
   const email = document.getElementById("email").value.trim().toLowerCase();
   const pw = document.getElementById("pw").value.trim();
-  const entry = USERS[email];
-  if (!entry) { document.getElementById("login-error").style.display = "block"; return; }
-  const hash = await pbkdf2hex(pw, entry.salt);
-  if (hash === entry.pwHash) {
-    localStorage.setItem("rrs_session", JSON.stringify({ email, hash }));
-    _launchApp(email, entry);
-  } else {
+  try {
+    const r = await fetch("/api/data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "login", email, password: pw }),
+    });
+    if (!r.ok) { document.getElementById("login-error").style.display = "block"; return; }
+    const d = await r.json();
+    _sessionToken = d.token;
+    localStorage.setItem("rrs_session", JSON.stringify({ token: d.token, email: d.email, name: d.name, admin: d.admin }));
+    _launchApp(d.email, { name: d.name, admin: d.admin });
+  } catch {
     document.getElementById("login-error").style.display = "block";
   }
 }
@@ -1837,9 +1849,10 @@ window.addEventListener("DOMContentLoaded", async function restoreSession() {
   try {
     const raw = localStorage.getItem("rrs_session");
     if (!raw) return;
-    const { email, hash } = JSON.parse(raw);
-    const entry = USERS[email];
-    if (entry && hash === entry.pwHash) _launchApp(email, entry);
+    const { token, email, name, admin } = JSON.parse(raw);
+    if (!token || !email) { localStorage.removeItem("rrs_session"); return; }
+    _sessionToken = token; // server rejects expired/invalid tokens on first read
+    _launchApp(email, { name, admin });
   } catch(e) { localStorage.removeItem("rrs_session"); }
 });
 
@@ -1860,7 +1873,7 @@ function showDashboard() {
 }
 
 function logout() {
-  currentUser = null; livePrice = {}; _priceStatusState = null;
+  currentUser = null; livePrice = {}; _priceStatusState = null; _sessionToken = null;
   document.getElementById("login-screen").style.display = "flex";
   document.getElementById("app").style.display = "none";
   document.getElementById("admin-screen").style.display = "none";
@@ -2544,14 +2557,11 @@ async function triggerAutoSync() {
 }
 
 async function loadFromCloud() {
-  const base = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
-  const t    = Date.now();
-
   // Kick off all three fetches simultaneously — don't let any one block the others
   const [fundProm, invProm, navProm] = [
-    fetch(`${base}fund-data.json?t=${t}`,    { cache: "no-store" }),
-    fetch(`${base}investors.json?t=${t}`,    { cache: "no-store" }),
-    fetch(`${base}nav-history.json?t=${t}`,  { cache: "no-store" }),
+    dataFetch("fund-data.json"),
+    dataFetch("investors.json"),
+    dataFetch("nav-history.json"),
   ];
 
   // Apply fund-data as soon as it arrives — positions, deposits, cash
@@ -2669,8 +2679,7 @@ async function loadPendingDeposits() {
   const list    = document.getElementById("pending-deposits-list");
   if (!section || !list) return;
   try {
-    const base = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
-    const r = await fetch(`${base}pending-deposits.json?t=${Date.now()}`, { cache: "no-store" });
+    const r = await dataFetch("pending-deposits.json");
     if (!r.ok) return;
     const data = await r.json();
     const deps = data.deposits || [];
@@ -2728,8 +2737,7 @@ function openAllocateModal(depositId, investorKey, amount, date) {
   // Pre-fill NAV from nav-history
   (async () => {
     try {
-      const base = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
-      const r = await fetch(`${base}nav-history.json?t=${Date.now()}`, { cache: "no-store" });
+      const r = await dataFetch("nav-history.json");
       const nh = await r.json();
       const pt = (nh.series||[]).slice().reverse().find(e => e.date <= date);
       const nav = pt?.nav || 1.0;
@@ -2885,7 +2893,7 @@ async function loadIBPulls() {
   container.style.display = "block";
   tbody.innerHTML = `<tr><td colspan="8" style="padding:1.5rem;text-align:center;color:var(--text3);">Fetching pull history…</td></tr>`;
   try {
-    const res  = await fetch("/api/ib-pulls");
+    const res  = await fetch("/api/ib-pulls", { headers: adminSecretHeader() });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed");
     const pulls = data.pulls || [];
@@ -3271,8 +3279,6 @@ let COMPARISON_CHART_DATA = {
   spy:       [100, 101.45, 100.68, 95.67, 105.70, 111.26, 110.09],
 };
 
-const BLOB_BASE = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
-
 function navDateLabel(dateStr, lang) {
   const d = new Date(dateStr + "T12:00:00Z");
   const month = d.toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { month: "short", timeZone: "UTC" });
@@ -3433,7 +3439,7 @@ function _applyNavHistory(_navHistArg) {
 
 async function loadNavHistory() {
   try {
-    const r = await fetch(`${BLOB_BASE}nav-history.json?t=${Date.now()}`, { cache: "no-store" });
+    const r = await dataFetch("nav-history.json");
     if (!r.ok) return;
     _applyNavHistory(await r.json());
   } catch {}

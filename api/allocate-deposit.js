@@ -1,7 +1,5 @@
 ﻿import { put } from "@vercel/blob";
-
-// Always use the hardcoded public URL — never rely on env var for reads
-const BLOB_BASE = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
+import { burl, bname, bprefix } from "../lib/store.js";
 
 // Mutating endpoint — requires the shared sync secret
 function isAuthorized(req) {
@@ -13,7 +11,7 @@ function isAuthorized(req) {
 }
 
 async function readJson(name) {
-  const r = await fetch(`${BLOB_BASE}${name}?t=${Date.now()}`, { cache: "no-store" });
+  const r = await fetch(`${burl(name)}?t=${Date.now()}`, { cache: "no-store" });
   if (!r.ok) return null;
   return r.json();
 }
@@ -22,11 +20,11 @@ async function backupAndWrite(name, data) {
   // Save timestamped backup before overwriting any critical blob
   try {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    await put(`backups/${name.replace(".json", "")}-${stamp}.json`, JSON.stringify(data), {
+    await put(`${bprefix("backups/")}${name.replace(".json", "")}-${stamp}.json`, JSON.stringify(data), {
       access: "public", contentType: "application/json", addRandomSuffix: false,
     });
   } catch {}
-  await put(name, JSON.stringify(data), {
+  await put(bname(name), JSON.stringify(data), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
 }

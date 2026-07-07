@@ -4,6 +4,7 @@
 
 import { XMLParser } from "fast-xml-parser";
 import { put }       from "@vercel/blob";
+import { burl, bname } from "../lib/store.js";
 
 const BASE           = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService";
 const INCEPTION_DATE = "2025-12-18";
@@ -129,7 +130,7 @@ export default async function handler(req, res) {
   // Load existing nav-history to merge with (preserve live IB-data points)
   let existing = { inception: { date: INCEPTION_DATE, nav: INCEPTION_NAV }, series: [] };
   try {
-    const r = await fetch(`${blobBase}nav-history.json?t=${Date.now()}`, { cache: "no-store" });
+    const r = await fetch(`${burl("nav-history.json")}?t=${Date.now()}`, { cache: "no-store" });
     if (r.ok) existing = await r.json();
   } catch {}
 
@@ -183,7 +184,7 @@ export default async function handler(req, res) {
     ibPoints:     newSeries.length,
   };
 
-  await put("nav-history.json", JSON.stringify(navHistory), {
+  await put(bname("nav-history.json"), JSON.stringify(navHistory), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
 

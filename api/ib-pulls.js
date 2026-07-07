@@ -1,11 +1,25 @@
 // Lists all historical IB data pulls from ib-history/*.json in Vercel Blob
 import { list } from "@vercel/blob";
+import { bprefix } from "../lib/store.js";
+
+function isAuthorized(req) {
+  const syncSecret = process.env.SYNC_SECRET;
+  const cronSecret = process.env.CRON_SECRET;
+  if (syncSecret && req.headers["x-sync-secret"] === syncSecret) return true;
+  if (cronSecret && req.headers["authorization"] === `Bearer ${cronSecret}`) return true;
+  return false;
+}
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
+  if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
   try {
-    // List all blobs under ib-history/ prefix
-    const { blobs } = await list({ prefix: "ib-history/", limit: 500 });
+    // List all blobs under ib-history/ prefix (old + suffixed locations)
+    const [oldList, newList] = await Promise.all([
+      list({ prefix: "ib-history/", limit: 500 }),
+      bprefix("ib-history/") !== "ib-history/" ? list({ prefix: bprefix("ib-history/"), limit: 500 }) : Promise.resolve({ blobs: [] }),
+    ]);
+    const blobs = [...oldList.blobs, ...newList.blobs];
 
     // Sort newest first
     blobs.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
