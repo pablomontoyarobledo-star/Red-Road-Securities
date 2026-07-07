@@ -4,88 +4,94 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Red Road Securities</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230D2B1E'/><polyline points='4,22 10,14 16,18 22,9 28,13' fill='none' stroke='%2300CA6D' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeede8;
-    --text: #1a1a18; --text2: #5f5e5a; --text3: #888780;
-    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
-    --blue: #185FA5; --blue-bg: #E6F1FB; --blue-text: #0C447C;
-    --green: #0F6E56; --green-bg: #E1F5EE;
-    --red: #993C1D; --red-bg: #FAECE7;
-    --amber-bg: #FAEEDA; --amber-text: #854F0B;
-    --purple-bg: #EEEDFE; --purple-text: #3C3489;
-    --radius: 8px; --radius-lg: 12px;
+    --bg: #ffffff; --bg2: #F4F7F5; --bg3: #EBF0ED;
+    --text: #0F1F17; --text2: #4A6358; --text3: #8AA396;
+    --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.15);
+    --blue: #00A651; --blue-bg: #E6F7EE; --blue-text: #006B31;
+    --green: #00A651; --green-bg: #E6F7EE;
+    --red: #C0392B; --red-bg: #FDECEB;
+    --amber-bg: #FEF3E2; --amber-text: #B45309;
+    --purple-bg: #EDE9FE; --purple-text: #5B21B6;
+    --chime-dark: #0D2B1E;
+    --chime-accent: #00CA6D;
+    --radius: 12px; --radius-lg: 16px;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.07), 0 0 1px rgba(0,0,0,0.05);
+    --shadow: 0 2px 10px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.05);
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1c1c1a; --bg2: #252523; --bg3: #2e2e2b;
-      --text: #e8e7e2; --text2: #9a9993; --text3: #6a6966;
-      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
-      --blue: #378ADD; --blue-bg: #0c2a45; --blue-text: #85B7EB;
-      --green: #1D9E75; --green-bg: #063325;
-      --red: #D85A30; --red-bg: #3d1c0c;
-      --amber-bg: #3a2608; --amber-text: #FAC775;
-      --purple-bg: #26215C; --purple-text: #AFA9EC;
-    }
-  }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+  body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
 
   /* LANG TOGGLE */
-  .lang-toggle { display: flex; gap: 2px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: 20px; padding: 2px; }
-  .lang-btn { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 16px; border: none; background: none; color: var(--text3); cursor: pointer; transition: all 0.15s; letter-spacing: 0.04em; }
-  .lang-btn.active { background: var(--blue); color: #fff; }
-  .lang-btn:not(.active):hover { color: var(--text); }
+  .lang-toggle { display: flex; gap: 2px; background: rgba(255,255,255,0.15); border: 0.5px solid rgba(255,255,255,0.2); border-radius: 20px; padding: 2px; }
+  .lang-btn { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 16px; border: none; background: none; color: rgba(255,255,255,0.65); cursor: pointer; transition: all 0.15s; letter-spacing: 0.04em; }
+  .lang-btn.active { background: rgba(255,255,255,0.22); color: #fff; }
+  .lang-btn:not(.active):hover { color: #fff; }
   .login-lang-wrap { position: fixed; top: 1rem; right: 1rem; z-index: 10; }
+  .login-lang-wrap .lang-toggle { background: var(--bg2); border-color: var(--border); }
+  .login-lang-wrap .lang-btn { color: var(--text3); }
+  .login-lang-wrap .lang-btn.active { background: var(--chime-dark); color: #fff; }
+  .login-lang-wrap .lang-btn:not(.active):hover { color: var(--text); }
 
   /* LOGIN */
-  #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-  .login-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2.5rem; width: 360px; display: flex; flex-direction: column; gap: 1.25rem; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-  .login-logo { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
-  .logo-mark { width: 52px; height: 52px; border-radius: 14px; background: var(--blue); display: flex; align-items: center; justify-content: center; }
-  .login-logo h1 { font-size: 19px; font-weight: 500; }
+  #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg3); }
+  .login-card { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem; width: 380px; display: flex; flex-direction: column; gap: 1.25rem; box-shadow: 0 8px 32px rgba(0,0,0,0.10); }
+  .login-logo { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; }
+  .logo-mark { width: 56px; height: 56px; border-radius: 16px; background: var(--chime-dark); display: flex; align-items: center; justify-content: center; }
+  .login-logo h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
   .login-logo p { font-size: 13px; color: var(--text2); }
-  .field { display: flex; flex-direction: column; gap: 6px; }
-  .field label { font-size: 12px; color: var(--text2); font-weight: 500; }
-  .field input { width: 100%; padding: 9px 12px; font-size: 14px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); outline: none; }
-  .field input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(24,95,165,0.15); }
-  .login-btn { background: var(--blue); color: #fff; border: none; border-radius: var(--radius); padding: 11px; font-size: 14px; font-weight: 500; cursor: pointer; width: 100%; }
-  .login-btn:hover { opacity: 0.88; }
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field label { font-size: 12px; color: var(--text2); font-weight: 600; }
+  .field input { width: 100%; padding: 11px 14px; font-size: 14px; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--bg2); color: var(--text); outline: none; font-family: inherit; transition: border-color 0.15s; }
+  .field input:focus { border-color: var(--chime-accent); box-shadow: 0 0 0 3px rgba(0,202,109,0.12); }
+  .login-btn { background: var(--chime-accent); color: #fff; border: none; border-radius: var(--radius); padding: 13px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; font-family: inherit; letter-spacing: -0.01em; transition: opacity 0.15s; }
+  .login-btn:hover { opacity: 0.9; }
   .login-error { font-size: 13px; color: var(--red); text-align: center; display: none; }
 
-  /* APP */
-  #app { display: none; max-width: 980px; margin: 0 auto; padding: 0 1.5rem 3rem; }
-  .top-bar { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 0; border-bottom: 0.5px solid var(--border); margin-bottom: 2rem; }
+  /* APP SHELL */
+  #app { display: none; }
+  .top-bar-outer { background: var(--chime-dark); }
+  .top-bar { max-width: 980px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 1.5rem; }
   .top-bar-left { display: flex; align-items: center; gap: 10px; }
-  .logo-sm { width: 34px; height: 34px; border-radius: 9px; background: var(--blue); display: flex; align-items: center; justify-content: center; }
-  .top-bar-left h2 { font-size: 15px; font-weight: 500; }
+  .logo-sm { width: 34px; height: 34px; border-radius: 10px; background: var(--chime-accent); display: flex; align-items: center; justify-content: center; }
+  .top-bar-left h2 { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
   .top-bar-right { display: flex; align-items: center; gap: 10px; }
-  .investor-badge { font-size: 12px; color: var(--text2); background: var(--bg2); border: 0.5px solid var(--border); border-radius: 20px; padding: 4px 13px; }
-  .logout-btn { background: none; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 5px 12px; font-size: 13px; color: var(--text2); cursor: pointer; }
-  .logout-btn:hover { background: var(--bg2); }
-  .admin-nav-btn { background: var(--amber-bg); border: 0.5px solid var(--amber-text); border-radius: var(--radius); padding: 5px 12px; font-size: 13px; font-weight: 500; color: var(--amber-text); cursor: pointer; display: none; }
+  .investor-badge { font-size: 12px; color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.1); border: 0.5px solid rgba(255,255,255,0.18); border-radius: 20px; padding: 4px 13px; font-weight: 500; }
+  .logout-btn { background: rgba(255,255,255,0.1); border: 0.5px solid rgba(255,255,255,0.2); border-radius: var(--radius); padding: 5px 12px; font-size: 13px; color: rgba(255,255,255,0.8); cursor: pointer; font-family: inherit; transition: background 0.15s; }
+  .logout-btn:hover { background: rgba(255,255,255,0.18); }
+  .admin-nav-btn { background: rgba(255,202,109,0.18); border: 0.5px solid rgba(255,202,109,0.4); border-radius: var(--radius); padding: 5px 12px; font-size: 13px; font-weight: 600; color: #FDD07A; cursor: pointer; display: none; font-family: inherit; }
   .admin-nav-btn:hover { opacity: 0.85; }
+  .app-content { max-width: 980px; margin: 0 auto; padding: 0 1.5rem 3rem; }
 
   /* ADMIN PAGE */
-  #admin-screen { display: none; max-width: 980px; margin: 0 auto; padding: 0 1.5rem 3rem; }
-  .admin-page-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 0; border-bottom: 0.5px solid var(--border); margin-bottom: 2rem; }
+  #admin-screen { display: none; }
+  .admin-page-header-outer { background: var(--chime-dark); }
+  .admin-page-header { max-width: 980px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 1.5rem; }
   .admin-page-header-left { display: flex; align-items: center; gap: 10px; }
-  .back-btn { background: none; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 5px 12px; font-size: 13px; color: var(--text2); cursor: pointer; display: flex; align-items: center; gap: 5px; }
-  .back-btn:hover { background: var(--bg2); }
+  .back-btn { background: rgba(255,255,255,0.1); border: 0.5px solid rgba(255,255,255,0.2); border-radius: var(--radius); padding: 5px 12px; font-size: 13px; color: rgba(255,255,255,0.85); cursor: pointer; display: flex; align-items: center; gap: 5px; font-family: inherit; }
+  .back-btn:hover { background: rgba(255,255,255,0.18); }
+  .admin-content { max-width: 980px; margin: 0 auto; padding: 0 1.5rem 3rem; }
 
   /* SECTIONS */
-  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; color: var(--text3); text-transform: uppercase; margin-bottom: 0.85rem; }
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; color: var(--text3); text-transform: uppercase; margin-bottom: 0.85rem; }
   .section { margin-bottom: 2rem; }
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; }
   .tx-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; }
 
   /* METRICS */
   .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-  .metric-card { background: var(--bg2); border-radius: var(--radius); padding: 1rem 1.1rem; }
-  .metric-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; }
-  .metric-value { font-size: 22px; font-weight: 500; }
+  .metric-card { background: var(--bg); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+  .metric-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+  .metric-value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
   .metric-sub { font-size: 12px; margin-top: 3px; }
   .pos { color: var(--green); } .neg { color: var(--red); }
   .price-refresh { font-size: 11px; color: var(--text3); margin-top: 0.4rem; display: flex; align-items: center; gap: 5px; }
@@ -93,28 +99,29 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* CHART */
-  .chart-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
+  .chart-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-sm); }
   .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-  .chart-header h3 { font-size: 13px; font-weight: 500; color: var(--text2); }
+  .chart-header h3 { font-size: 13px; font-weight: 600; color: var(--text2); }
 
   /* TABLES */
-  .table-wrap { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .table-wrap { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
   .table-scroll { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; }
-  th { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 14px; text-align: left; border-bottom: 0.5px solid var(--border); background: var(--bg2); white-space: nowrap; }
-  td { padding: 11px 14px; border-bottom: 0.5px solid var(--border); color: var(--text); white-space: nowrap; }
+  th { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--border); background: var(--bg2); white-space: nowrap; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: var(--bg2); }
-  .ticker { font-weight: 600; color: var(--blue); font-size: 13px; }
+  .ticker { font-weight: 700; color: var(--chime-dark); font-size: 13px; }
   .name-cell { color: var(--text2); font-size: 12px; }
   .alloc-bar-wrap { display: flex; align-items: center; gap: 8px; }
-  .alloc-bar-bg { flex: 1; height: 4px; background: var(--border); border-radius: 2px; min-width: 60px; }
-  .alloc-bar-fill { height: 4px; border-radius: 2px; background: var(--blue); }
+  .alloc-bar-bg { flex: 1; height: 5px; background: var(--border); border-radius: 3px; min-width: 60px; }
+  .alloc-bar-fill { height: 5px; border-radius: 3px; background: var(--chime-accent); }
 
   /* TABS */
   .tabs { display: flex; gap: 4px; }
-  .tab-btn { font-size: 12px; padding: 5px 13px; border-radius: 20px; border: 0.5px solid var(--border); background: none; color: var(--text2); cursor: pointer; }
-  .tab-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .tab-btn { font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: none; color: var(--text2); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .tab-btn.active { background: var(--chime-dark); color: #fff; border-color: var(--chime-dark); }
+  .tab-btn:not(.active):hover { border-color: var(--text3); color: var(--text); }
 
   /* TX TABLE */
   .tx-table { min-width: 680px; }
@@ -122,25 +129,25 @@
   .tx-table th:nth-child(2) { width: 65px; }
   .tx-table th:nth-child(3) { width: 90px; }
   .tx-table td.notes-cell { color: var(--text2); max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
-  .type-badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; }
-  .type-buy { background: var(--green-bg); color: var(--green); }
+  .type-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; display: inline-block; }
+  .type-buy { background: var(--green-bg); color: #006B31; }
   .type-sell { background: var(--red-bg); color: var(--red); }
   .type-div { background: var(--blue-bg); color: var(--blue-text); }
 
   /* OWNERSHIP SECTION */
   .ownership-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
-  .ownership-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
+  .ownership-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.4rem; box-shadow: var(--shadow-sm); }
   .ownership-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
-  .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
-  .avatar-f { background: var(--blue-bg); color: var(--blue-text); }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .avatar-f { background: var(--blue-bg); color: #006B31; }
   .avatar-d { background: var(--purple-bg); color: var(--purple-text); }
-  .ownership-name { font-size: 14px; font-weight: 500; }
-  .ownership-pct { font-size: 11px; color: var(--text2); margin-top: 1px; }
-  .ownership-value { font-size: 24px; font-weight: 500; margin-bottom: 4px; }
+  .ownership-name { font-size: 14px; font-weight: 700; }
+  .ownership-pct { font-size: 11px; color: var(--text2); margin-top: 1px; font-weight: 500; }
+  .ownership-value { font-size: 26px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.02em; }
   .ownership-deposited { font-size: 12px; color: var(--text2); }
   .ownership-bar-wrap { margin-top: 1rem; }
   .ownership-bar-bg { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
-  .ownership-bar-fill-f { height: 6px; background: var(--blue); border-radius: 3px; }
+  .ownership-bar-fill-f { height: 6px; background: var(--chime-accent); border-radius: 3px; }
   .ownership-bar-fill-d { height: 6px; background: #7F77DD; border-radius: 3px; }
 
   /* DEPOSITS TABLE */
@@ -149,76 +156,80 @@
   .deposits-table th:nth-child(2) { width: 90px; }
   .deposits-table th:nth-child(5), .deposits-table th:nth-child(6) { text-align: right; }
   .deposits-table td:nth-child(5), .deposits-table td:nth-child(6) { text-align: right; }
-  .source-moneche { background: var(--bg2); color: var(--text2); font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; }
-  .source-fernando { background: var(--blue-bg); color: var(--blue-text); font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; }
-  .total-row td { font-weight: 600; background: var(--bg2); border-top: 0.5px solid var(--border2); }
+  .source-moneche { background: var(--bg2); color: var(--text2); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; display: inline-block; }
+  .source-fernando { background: var(--blue-bg); color: #006B31; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; display: inline-block; }
+  .total-row td { font-weight: 700; background: var(--bg2); border-top: 1px solid var(--border); }
 
   /* ADMIN */
-  #admin-panel { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 2rem; }
-  .admin-header { display: flex; align-items: center; gap: 8px; padding: 1rem 1.25rem; border-bottom: 0.5px solid var(--border); background: var(--amber-bg); }
-  .admin-header span { font-size: 13px; font-weight: 500; color: var(--amber-text); }
+  #admin-panel { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 2rem; box-shadow: var(--shadow-sm); }
+  .admin-header { display: flex; align-items: center; gap: 8px; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--amber-bg); }
+  .admin-header span { font-size: 13px; font-weight: 600; color: var(--amber-text); }
   .admin-body { padding: 1.25rem; }
   .admin-form { display: flex; flex-direction: column; gap: 1rem; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
   .form-group { display: flex; flex-direction: column; gap: 5px; }
-  .form-group label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
-  .form-group input, .form-group select { padding: 8px 10px; font-size: 13px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); outline: none; }
-  .form-group input:focus, .form-group select:focus { border-color: var(--blue); }
-  .save-btn { background: var(--blue); color: #fff; border: none; border-radius: var(--radius); padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer; align-self: flex-start; }
+  .form-group label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-group input, .form-group select { padding: 9px 12px; font-size: 13px; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--bg2); color: var(--text); outline: none; font-family: inherit; transition: border-color 0.15s; }
+  .form-group input:focus, .form-group select:focus { border-color: var(--chime-accent); box-shadow: 0 0 0 3px rgba(0,202,109,0.10); }
+  .save-btn { background: var(--chime-accent); color: #fff; border: none; border-radius: var(--radius); padding: 9px 20px; font-size: 13px; font-weight: 700; cursor: pointer; align-self: flex-start; font-family: inherit; transition: opacity 0.15s; }
   .save-btn:hover { opacity: 0.88; }
   .admin-success { font-size: 12px; color: var(--green); display: none; margin-top: 4px; }
   .add-hint { font-size: 12px; color: var(--text3); margin-top: 0.75rem; text-align: center; }
 
   /* PAGE NAV */
-  .page-nav { display: flex; gap: 0; border-bottom: 0.5px solid var(--border); margin-bottom: 2rem; overflow-x: auto; scrollbar-width: none; }
+  .page-nav-outer { background: var(--bg); border-bottom: 1px solid var(--border); }
+  .page-nav { max-width: 980px; margin: 0 auto; display: flex; gap: 0; padding: 0 1.5rem; overflow-x: auto; scrollbar-width: none; }
   .page-nav::-webkit-scrollbar { display: none; }
-  .page-tab { font-size: 13px; font-weight: 500; padding: 10px 18px; border: none; background: none; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -0.5px; white-space: nowrap; transition: color 0.15s; flex-shrink: 0; }
-  .page-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .page-tab { font-size: 13px; font-weight: 600; padding: 14px 18px; border: none; background: none; color: var(--text2); cursor: pointer; border-bottom: 2.5px solid transparent; white-space: nowrap; transition: color 0.15s; flex-shrink: 0; font-family: inherit; }
+  .page-tab.active { color: var(--chime-dark); border-bottom-color: var(--chime-accent); }
   .page-tab:hover:not(.active) { color: var(--text); }
   .page { display: none; }
   .page.active { display: block; }
 
   /* PERIOD RETURNS */
   .period-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
-  .period-card { background: var(--bg2); border-radius: var(--radius); padding: 0.85rem 1rem; }
-  .period-label { font-size: 11px; color: var(--text3); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
-  .period-value { font-size: 18px; font-weight: 500; }
+  .period-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.1rem; box-shadow: var(--shadow-sm); }
+  .period-label { font-size: 11px; color: var(--text3); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+  .period-value { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
 
   /* INCOME CARD */
   .income-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .income-item { display: flex; flex-direction: column; gap: 3px; }
-  .income-label { font-size: 11px; color: var(--text3); }
-  .income-value { font-size: 16px; font-weight: 500; }
+  .income-label { font-size: 11px; color: var(--text3); font-weight: 500; }
+  .income-value { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
 
   /* BENCHMARK TABLE */
   .bench-table { min-width: 500px; }
   .bench-table td, .bench-table th { text-align: right; }
   .bench-table td:first-child, .bench-table th:first-child { text-align: left; }
-  .bench-badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; display: inline-block; }
+  .bench-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; display: inline-block; }
   .best-worst-row { display: flex; gap: 10px; margin-top: 12px; }
-  .best-worst-card { flex: 1; background: var(--bg2); border-radius: var(--radius); padding: 0.85rem 1rem; }
+  .best-worst-card { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.1rem; box-shadow: var(--shadow-sm); }
+
+  /* Content area top padding */
+  .app-content { padding-top: 2rem; }
+  .admin-content { padding-top: 2rem; }
 
   @media (max-width: 600px) {
     .period-grid { grid-template-columns: 1fr 1fr; }
     .income-grid { grid-template-columns: 1fr 1fr; }
-  }
-
-  @media (max-width: 600px) {
     .ownership-cards { grid-template-columns: 1fr; }
   }
 
   @media (max-width: 640px) {
     /* App shell */
-    #app { padding: 0 1rem 3rem; }
-    .top-bar { flex-wrap: wrap; gap: 8px; padding: 1rem 0; }
+    .app-content { padding: 1.5rem 1rem 3rem; }
+    .admin-content { padding: 1.5rem 1rem 3rem; }
+    .top-bar { flex-wrap: wrap; gap: 8px; padding: 0.75rem 1rem; }
+    .page-nav { padding: 0 1rem; }
     .top-bar-right { gap: 6px; flex-wrap: wrap; }
     .top-bar-left h2 { font-size: 13px; }
     .investor-badge { font-size: 11px; padding: 3px 10px; }
     .logout-btn { font-size: 12px; padding: 4px 10px; }
 
     /* Login */
-    .login-card { width: 92vw; padding: 2rem 1.5rem; }
+    .login-card { width: 92vw; padding: 2rem 1.25rem; border-radius: 16px; }
 
     /* Metrics */
     .metrics-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -301,31 +312,35 @@
 </div>
 
 <div id="app">
-  <div class="top-bar">
-    <div class="top-bar-left">
-      <div class="logo-sm"><i class="ti ti-chart-line" style="font-size:17px;color:#fff;"></i></div>
-      <h2>Red Road Securities</h2>
-    </div>
-    <div class="top-bar-right">
-      <div class="lang-toggle">
-        <button class="lang-btn active" id="app-lang-en" onclick="setLang('en')">EN</button>
-        <button class="lang-btn" id="app-lang-es" onclick="setLang('es')">ES</button>
+  <div class="top-bar-outer">
+    <div class="top-bar">
+      <div class="top-bar-left" onclick="showPage('overview',document.getElementById('ptab-overview'))" style="cursor:pointer;">
+        <div class="logo-sm"><i class="ti ti-chart-line" style="font-size:17px;color:#fff;"></i></div>
+        <h2>Red Road Securities</h2>
       </div>
-      <span class="investor-badge" id="investor-badge">—</span>
-      <button class="admin-nav-btn" id="admin-nav-btn" onclick="showAdminScreen()"><i class="ti ti-settings" style="font-size:13px;vertical-align:-2px;margin-right:4px;"></i><span id="admin-nav-label">Admin</span></button>
-      <button class="logout-btn" onclick="logout()"><i class="ti ti-logout" style="font-size:13px;vertical-align:-2px;margin-right:4px;"></i><span id="logout-label">Sign out</span></button>
+      <div class="top-bar-right">
+        <span class="investor-badge" id="investor-badge">—</span>
+        <button class="admin-nav-btn" id="admin-nav-btn" onclick="showAdminScreen()"><i class="ti ti-settings" style="font-size:13px;vertical-align:-2px;margin-right:4px;"></i><span id="admin-nav-label">Admin</span></button>
+        <button class="logout-btn" onclick="showSettingsScreen()" title="Settings" style="padding:8px 12px;"><i class="ti ti-settings-2" style="font-size:16px;vertical-align:-2px;"></i></button>
+        <button class="logout-btn" onclick="logout()"><i class="ti ti-logout" style="font-size:13px;vertical-align:-2px;margin-right:4px;"></i><span id="logout-label">Sign out</span></button>
+      </div>
     </div>
   </div>
 
   <!-- Page navigation -->
-  <nav class="page-nav">
-    <button class="page-tab active" onclick="showPage('overview',this)" id="ptab-overview">Overview</button>
-    <button class="page-tab" onclick="showPage('performance',this)" id="ptab-performance">Performance</button>
-    <button class="page-tab" onclick="showPage('positions',this)" id="ptab-positions">Positions</button>
-    <button class="page-tab" onclick="showPage('ownership',this)" id="ptab-ownership">Ownership</button>
-    <button class="page-tab" onclick="showPage('transactions',this)" id="ptab-transactions">Transactions</button>
-    <button class="page-tab" onclick="showPage('nav',this)" id="ptab-nav">NAV</button>
-  </nav>
+  <div class="page-nav-outer">
+    <nav class="page-nav">
+      <button class="page-tab active" onclick="showPage('overview',this)" id="ptab-overview">Overview</button>
+      <button class="page-tab" onclick="showPage('performance',this)" id="ptab-performance">Performance</button>
+      <button class="page-tab" onclick="showPage('positions',this)" id="ptab-positions">Positions</button>
+      <button class="page-tab" onclick="showPage('ownership',this)" id="ptab-ownership">Ownership</button>
+      <button class="page-tab" onclick="showPage('transactions',this)" id="ptab-transactions">Transactions</button>
+      <button class="page-tab" onclick="showPage('nav',this)" id="ptab-nav">NAV</button>
+      <button class="page-tab" onclick="showPage('statements',this);populateStatementMonths();" id="ptab-statements">Statements</button>
+    </nav>
+  </div>
+
+  <div class="app-content">
 
   <!-- PAGE: Overview -->
   <div id="page-overview" class="page active">
@@ -384,15 +399,15 @@
         <div class="income-grid">
           <div class="income-item">
             <div class="income-label" id="lbl-dividends">Dividends</div>
-            <div class="income-value pos">$1,894.06</div>
+            <div class="income-value pos" id="income-dividends">—</div>
           </div>
           <div class="income-item">
             <div class="income-label" id="lbl-interest">Interest</div>
-            <div class="income-value pos">$284.03</div>
+            <div class="income-value pos" id="income-interest">—</div>
           </div>
           <div class="income-item">
             <div class="income-label" id="lbl-fees">Fees &amp; commissions</div>
-            <div class="income-value neg">-$46.45</div>
+            <div class="income-value neg" id="income-fees">—</div>
           </div>
         </div>
       </div>
@@ -435,13 +450,13 @@
       <div class="best-worst-row">
         <div class="best-worst-card">
           <div class="period-label" id="lbl-best-month">Best month</div>
-          <div class="period-value pos" style="margin-top:4px;">+7.85%</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;" id="best-month-date">April 2026</div>
+          <div class="period-value pos" id="best-month-val" style="margin-top:4px;">—</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;" id="best-month-date">—</div>
         </div>
         <div class="best-worst-card">
           <div class="period-label" id="lbl-worst-month">Worst month</div>
-          <div class="period-value neg" style="margin-top:4px;">-4.03%</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;" id="worst-month-date">March 2026</div>
+          <div class="period-value neg" id="worst-month-val" style="margin-top:4px;">—</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;" id="worst-month-date">—</div>
         </div>
       </div>
     </div>
@@ -492,26 +507,7 @@
   <div id="page-ownership" class="page">
     <div class="section">
       <p class="section-label" id="lbl-ownership">Investor ownership</p>
-      <div class="ownership-cards" id="ownership-cards">
-        <div class="ownership-card">
-          <div class="ownership-card-header">
-            <div class="avatar avatar-f">FM</div>
-            <div><div class="ownership-name">Fernando Montoya</div><div class="ownership-pct" id="fernando-pct">—</div></div>
-          </div>
-          <div class="ownership-value pos" id="fernando-value">—</div>
-          <div class="ownership-deposited" id="fernando-deposited">—</div>
-          <div class="ownership-bar-wrap"><div class="ownership-bar-bg"><div class="ownership-bar-fill-f" style="width:0%"></div></div></div>
-        </div>
-        <div class="ownership-card">
-          <div class="ownership-card-header">
-            <div class="avatar avatar-d">DM</div>
-            <div><div class="ownership-name">Dario Montoya</div><div class="ownership-pct" id="dario-pct">—</div></div>
-          </div>
-          <div class="ownership-value pos" id="dario-value">—</div>
-          <div class="ownership-deposited" id="dario-deposited">—</div>
-          <div class="ownership-bar-wrap"><div class="ownership-bar-bg"><div class="ownership-bar-fill-d" style="width:0%"></div></div></div>
-        </div>
-      </div>
+      <div class="ownership-cards" id="ownership-cards"></div>
     </div>
 
     <div class="section">
@@ -538,8 +534,6 @@
                 <th id="dep-col-amount">Amount</th>
                 <th id="dep-col-source">Source</th>
                 <th id="dep-col-nav">NAV at deposit</th>
-                <th id="dep-col-fernando">Fernando Montoya</th>
-                <th id="dep-col-dario">Dario Montoya</th>
               </tr>
             </thead>
             <tbody id="dep-body"></tbody>
@@ -620,22 +614,187 @@
     </div>
   </div>
 
-<!-- Admin page -->
-<div id="admin-screen">
-  <div class="admin-page-header">
-    <div class="admin-page-header-left">
-      <div class="logo-sm"><i class="ti ti-settings" style="font-size:17px;color:#fff;"></i></div>
-      <div>
-        <div style="font-size:15px;font-weight:500;" id="admin-header-label">Admin — data editor</div>
-        <div style="font-size:12px;color:var(--text2);">Red Road Securities &nbsp;<span id="cloud-synced-at" style="display:none;"></span></div>
+  <!-- PAGE: Statements -->
+  <div id="page-statements" class="page">
+
+    <!-- Generator card -->
+    <div class="section">
+      <p class="section-label" id="lbl-statements">Statements</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:720px;">
+
+        <div class="chart-card" style="grid-column:1/-1;">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.5rem;">
+            <div style="width:44px;height:44px;border-radius:13px;background:var(--chime-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="ti ti-file-description" style="color:#fff;font-size:20px;"></i>
+            </div>
+            <div>
+              <div id="stmt-download-heading" style="font-weight:700;font-size:16px;letter-spacing:-0.01em;">Download Statement</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem;">
+            <div class="form-group" id="stmt-investor-group">
+              <label id="stmt-investor-label">Investor</label>
+              <select id="stmt-investor"></select>
+            </div>
+            <div class="form-group">
+              <label id="stmt-period-label">Period</label>
+              <select id="stmt-month"><option value="">Loading…</option></select>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <!-- Monthly Statement -->
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border);">
+              <div style="flex:1;">
+                <div id="stmt-monthly-label" style="font-weight:700;font-size:13px;">Monthly Statement</div>
+                <div id="stmt-monthly-desc" style="font-size:12px;color:var(--text2);margin-top:2px;">Account value · returns · holdings · capital activity · NAV history</div>
+              </div>
+              <button onclick="downloadStatement()" id="stmt-download-btn"
+                style="background:var(--chime-accent);color:#fff;border:none;border-radius:var(--radius);padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:opacity 0.15s;">
+                <i class="ti ti-download" style="font-size:15px;"></i><span id="stmt-download-btn-lbl">Download PDF</span>
+              </button>
+              <span id="stmt-status" style="font-size:12px;display:none;min-width:120px;"></span>
+            </div>
+
+            <!-- Balance Sheet -->
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border);">
+              <div style="flex:1;">
+                <div id="stmt-balance-label" style="font-weight:700;font-size:13px;">Balance Sheet</div>
+                <div id="stmt-balance-desc" style="font-size:12px;color:var(--text2);margin-top:2px;">Statement of net assets · holdings at market value · investor ownership breakdown</div>
+              </div>
+              <button onclick="downloadBalanceSheet()" id="stmt-bs-btn"
+                style="background:var(--chime-dark);color:#fff;border:none;border-radius:var(--radius);padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:opacity 0.15s;">
+                <i class="ti ti-download" style="font-size:15px;"></i><span id="stmt-bs-btn-lbl">Download PDF</span>
+              </button>
+              <span id="stmt-bs-status" style="font-size:12px;display:none;min-width:120px;"></span>
+            </div>
+
+            <!-- Income Statement -->
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border);">
+              <div style="flex:1;">
+                <div id="stmt-income-label" style="font-weight:700;font-size:13px;">Income Statement</div>
+                <div id="stmt-income-desc" style="font-size:12px;color:var(--text2);margin-top:2px;">Fund operations · dividend income · investment return · per-investor attribution</div>
+              </div>
+              <button onclick="downloadIncomeStatement()" id="stmt-is-btn"
+                style="background:var(--chime-dark);color:#fff;border:none;border-radius:var(--radius);padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:opacity 0.15s;">
+                <i class="ti ti-download" style="font-size:15px;"></i><span id="stmt-is-btn-lbl">Download PDF</span>
+              </button>
+              <span id="stmt-is-status" style="font-size:12px;display:none;min-width:120px;"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- What's included -->
+        <div class="chart-card" style="grid-column:1/-1;">
+          <p class="section-label" id="stmt-included-heading" style="margin-bottom:1rem;">What's included in each statement</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+              <div style="width:28px;height:28px;border-radius:8px;background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="ti ti-chart-bar" style="color:var(--green);font-size:14px;"></i>
+              </div>
+              <div>
+                <div id="stmt-account-summary" style="font-weight:600;font-size:13px;">Account Summary</div>
+                <div id="stmt-account-summary-desc" style="font-size:12px;color:var(--text2);margin-top:2px;">Current value, month start value, change in dollars and %</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+              <div style="width:28px;height:28px;border-radius:8px;background:var(--blue-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="ti ti-trending-up" style="color:var(--blue);font-size:14px;"></i>
+              </div>
+              <div>
+                <div id="stmt-period-returns-lbl" style="font-weight:600;font-size:13px;">Period Returns</div>
+                <div id="stmt-period-returns-desc" style="font-size:12px;color:var(--text2);margin-top:2px;">MTD, YTD, since inception vs S&amp;P 500</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+              <div style="width:28px;height:28px;border-radius:8px;background:var(--purple-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="ti ti-building-bank" style="color:var(--purple-text);font-size:14px;"></i>
+              </div>
+              <div>
+                <div id="stmt-portfolio-holdings" style="font-weight:600;font-size:13px;">Portfolio Holdings</div>
+                <div id="stmt-portfolio-holdings-desc" style="font-size:12px;color:var(--text2);margin-top:2px;">VTI, BND and cash with price, value and allocation</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+              <div style="width:28px;height:28px;border-radius:8px;background:var(--amber-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="ti ti-coin" style="color:var(--amber-text);font-size:14px;"></i>
+              </div>
+              <div>
+                <div id="stmt-capital-activity-lbl" style="font-weight:600;font-size:13px;">Capital Activity</div>
+                <div id="stmt-capital-activity-desc" style="font-size:12px;color:var(--text2);margin-top:2px;">Deposits made during the period with NAV at purchase</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+              <div style="width:28px;height:28px;border-radius:8px;background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="ti ti-table" style="color:var(--green);font-size:14px;"></i>
+              </div>
+              <div>
+                <div id="stmt-nav-history-lbl" style="font-weight:600;font-size:13px;">NAV History</div>
+                <div id="stmt-nav-history-desc" style="font-size:12px;color:var(--text2);margin-top:2px;">Month-by-month NAV and return since inception</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span id="cloud-sync-status" style="font-size:11px;color:var(--text2);display:none;align-items:center;gap:4px;"></span>
-      <button class="back-btn" onclick="showDashboard()"><i class="ti ti-arrow-left" style="font-size:13px;"></i> <span id="back-btn-label">Back to dashboard</span></button>
-      <button class="logout-btn" onclick="logout()"><i class="ti ti-logout" style="font-size:13px;vertical-align:-2px;margin-right:4px;"></i><span id="admin-logout-label">Sign out</span></button>
+  </div>
+
+  </div><!-- /app-content -->
+</div><!-- /app -->
+
+<!-- Settings page -->
+<div id="settings-screen" style="display:none;min-height:100vh;background:var(--bg3);">
+  <div class="top-bar-outer">
+    <div class="top-bar">
+      <div class="top-bar-left" onclick="showSettingsScreen()" style="cursor:default;">
+        <div class="logo-sm"><i class="ti ti-chart-line" style="font-size:17px;color:#fff;"></i></div>
+        <h2>Red Road Securities</h2>
+      </div>
+      <div class="top-bar-right">
+        <button class="logout-btn" onclick="hideSettingsScreen()"><i class="ti ti-arrow-left" style="font-size:13px;vertical-align:-2px;margin-right:4px;"></i><span id="settings-back-btn">Back to portal</span></button>
+      </div>
     </div>
   </div>
+  <div style="max-width:480px;margin:48px auto;padding:0 16px;">
+    <div class="chart-card">
+      <p class="section-label" id="settings-heading" style="margin-bottom:1.5rem;">Settings</p>
+
+      <div style="display:flex;flex-direction:column;gap:1.5rem;">
+        <!-- Language -->
+        <div>
+          <div style="font-weight:600;font-size:14px;margin-bottom:4px;" id="settings-language-label">Language</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px;" id="settings-language-hint">Your language preference is saved to your account</div>
+          <div class="lang-toggle">
+            <button class="lang-btn active" id="settings-lang-en" onclick="setLangAndSave('en')">EN — English</button>
+            <button class="lang-btn" id="settings-lang-es" onclick="setLangAndSave('es')">ES — Español</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Admin page -->
+<div id="admin-screen">
+  <div class="admin-page-header-outer">
+    <div class="admin-page-header">
+      <div class="admin-page-header-left">
+        <div class="logo-sm"><i class="ti ti-settings" style="font-size:17px;color:#fff;"></i></div>
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#fff;letter-spacing:-0.01em;" id="admin-header-label">Admin — data editor</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.6);">Red Road Securities &nbsp;<span id="cloud-synced-at" style="display:none;"></span></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="cloud-sync-status" style="font-size:11px;color:rgba(255,255,255,0.6);display:none;align-items:center;gap:4px;"></span>
+        <button class="back-btn" onclick="showDashboard()"><i class="ti ti-arrow-left" style="font-size:13px;"></i> <span id="back-btn-label">Back to dashboard</span></button>
+        <button class="logout-btn" onclick="logout()"><i class="ti ti-logout" style="font-size:13px;vertical-align:-2px;margin-right:4px;"></i><span id="admin-logout-label">Sign out</span></button>
+      </div>
+    </div>
+  </div>
+  <div class="admin-content">
 
   <div id="admin-panel" style="background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:2rem;">
     <div class="admin-header">
@@ -682,10 +841,7 @@
             </div>
             <div class="form-group"><label id="lbl-dep-nav">NAV at deposit ($)</label><input type="number" step="0.01" id="a-dep-nav" placeholder="e.g. 1.0500" /></div>
           </div>
-          <div class="form-row">
-            <div class="form-group"><label id="lbl-dep-fernando">Fernando Montoya ($)</label><input type="number" step="0.01" id="a-dep-fernando" placeholder="auto-split" /></div>
-            <div class="form-group"><label id="lbl-dep-dario">Dario Montoya ($)</label><input type="number" step="0.01" id="a-dep-dario" placeholder="auto-split" /></div>
-          </div>
+          <div id="dep-investor-fields" class="form-row"></div>
           <button class="save-btn" onclick="saveDeposit()" id="save-dep-btn">Log deposit</button>
           <span class="admin-success" id="dep-log-success">✓ Deposit logged</span>
         </div>
@@ -777,7 +933,8 @@
 
     </div>
   </div>
-</div>
+  </div><!-- /admin-content -->
+</div><!-- /admin-screen -->
 
 <script>
 // ── i18n ──
@@ -900,6 +1057,178 @@ const TR = {
     alert_pos_fill: "Please fill in shares and cost basis.",
     alert_tx_required: "Date and price are required.",
     alert_perf_invalid: "Invalid JSON. Check the format.",
+    // NAV tab
+    tab_nav: "NAV", lbl_nav: "NAV History",
+    // Statements page UI
+    lbl_statements: "Statements",
+    stmt_download_heading: "Download Statement",
+    stmt_download_sub: "PDF report for a selected month — includes account value, returns, holdings and NAV history",
+    stmt_investor_label: "Investor",
+    stmt_period_label: "Period",
+    stmt_monthly: "Monthly Statement",
+    stmt_monthly_desc: "Account value · returns · holdings · capital activity · NAV history",
+    stmt_balance: "Balance Sheet",
+    stmt_balance_desc: "Statement of net assets · holdings at market value · investor ownership breakdown",
+    stmt_income: "Income Statement",
+    stmt_income_desc: "Fund operations · dividend income · investment return · per-investor attribution",
+    stmt_download_pdf: "Download PDF",
+    stmt_included_heading: "What's included in each statement",
+    stmt_account_summary: "Account Summary",
+    stmt_account_summary_desc: "Current value, month start value, change in dollars and %",
+    stmt_period_returns_lbl: "Period Returns",
+    stmt_period_returns_desc: "MTD, YTD, since inception vs S&P 500",
+    stmt_portfolio_holdings: "Portfolio Holdings",
+    stmt_portfolio_holdings_desc: "VTI, BND and cash with price, value and allocation",
+    stmt_capital_activity: "Capital Activity",
+    stmt_capital_activity_desc: "Deposits made during the period with NAV at purchase",
+    stmt_nav_history_lbl: "NAV History",
+    stmt_nav_history_desc: "Month-by-month NAV and return since inception",
+    // Utility
+    btn_edit: "Edit", btn_delete: "Delete", btn_cancel: "Cancel", btn_confirm: "Confirm",
+    status_saved: "Saved",
+    status_generating: "Generating…",
+    status_downloaded: "✓ Downloaded",
+    status_stmt_downloaded: "✓ Statement downloaded",
+    err_select_period: "Please select a period.",
+    err_nav_not_loaded: "NAV history not loaded — please wait and try again",
+    // Settings
+    tab_settings: "Settings",
+    settings_heading: "Settings",
+    settings_language_label: "Language",
+    settings_language_hint: "Your language preference is saved to your account",
+    settings_back: "Back to portal",
+    // PDF — Monthly Statement
+    pdf_investor_statement: "Investor Statement",
+    pdf_monthly_statement: "MONTHLY STATEMENT",
+    pdf_prepared_for: "PREPARED FOR",
+    pdf_ownership: "OWNERSHIP",
+    pdf_account_value: "ACCOUNT VALUE",
+    pdf_beginning_of_month: "BEGINNING OF MONTH",
+    pdf_monthly_change: "MONTHLY CHANGE",
+    pdf_as_of: "as of",
+    pdf_period_returns: "PERIOD RETURNS",
+    pdf_mtd: "MTD", pdf_ytd: "YTD",
+    pdf_since_inception: "SINCE INCEPTION",
+    pdf_sp500_mtd: "S&P 500 (MTD)",
+    pdf_portfolio_holdings: "PORTFOLIO HOLDINGS",
+    pdf_col_ticker: "Ticker", pdf_col_description: "Description", pdf_col_shares: "Shares",
+    pdf_col_price: "Price", pdf_col_market_value: "Market Value", pdf_col_allocation: "Allocation",
+    pdf_cash: "Cash & equivalents",
+    pdf_capital_activity: "CAPITAL ACTIVITY",
+    pdf_col_date: "Date", pdf_col_amount_invested: "Amount Invested",
+    pdf_col_nav_at_purchase: "NAV at Purchase", pdf_col_units_purchased: "Units Purchased",
+    pdf_no_capital_activity: "No capital activity in this period.",
+    pdf_nav_history_full: "NAV HISTORY — FUND PERFORMANCE SINCE INCEPTION",
+    pdf_col_month: "Month", pdf_col_nav_start: "NAV — Start",
+    pdf_col_nav_end: "NAV — End", pdf_col_monthly_return: "Monthly Return",
+    pdf_managed_by: "Managed by Pablo Montoya  ·  pablomontoyarobledo@gmail.com",
+    pdf_generated: "Generated", pdf_page: "Page", pdf_of: "of",
+    // PDF — Balance Sheet
+    pdf_net_assets_stmt: "Statement of Net Assets",
+    pdf_as_of_prefix: "As of",
+    pdf_assets: "ASSETS",
+    pdf_inv_fair_value: "Investments, at fair value (see Schedule of Investments)",
+    pdf_equity_securities: "Equity securities:",
+    pdf_total_equity_securities: "Total equity securities",
+    pdf_fixed_income: "Fixed income securities",
+    pdf_other_investments: "Other investments",
+    pdf_total_inv_cost_prefix: "Total investments at fair value (cost: $",
+    pdf_cash_equiv: "Cash and cash equivalents",
+    pdf_divs_receivable: "Dividends and interest receivable",
+    pdf_rec_inv_sold: "Receivable for investments sold",
+    pdf_sub_receivable: "Subscription receivable",
+    pdf_prepaid: "Prepaid expenses and other assets",
+    pdf_total_assets: "Total assets",
+    pdf_liabilities: "LIABILITIES",
+    pdf_mgmt_fees_payable: "Management fees payable",
+    pdf_perf_fees_payable: "Performance fees payable",
+    pdf_payable_inv_purchased: "Payable for investments purchased",
+    pdf_redemptions_payable: "Redemptions payable",
+    pdf_accrued_admin: "Accrued administrative expenses",
+    pdf_accrued_audit: "Accrued audit and legal fees",
+    pdf_accrued_custodial: "Accrued custodial fees",
+    pdf_due_to_broker: "Due to broker",
+    pdf_other_liabilities: "Other liabilities and accrued expenses",
+    pdf_total_liabilities: "Total liabilities",
+    pdf_net_assets: "NET ASSETS",
+    pdf_composition_net_assets: "COMPOSITION OF NET ASSETS",
+    pdf_paid_in_capital: "Paid-in capital (investor contributions)",
+    pdf_undistributed_nii: "Undistributed net investment income",
+    pdf_accumulated_realized: "Accumulated net realized gain (loss) on investments",
+    pdf_net_unrealized: "Net unrealized appreciation (depreciation) on investments",
+    pdf_net_assets_total: "Net assets",
+    pdf_nav_per_unit_section: "NET ASSET VALUE PER UNIT",
+    pdf_total_units_outstanding: "Total units (shares) outstanding",
+    pdf_nav_per_unit_line: "Net asset value per unit",
+    pdf_investor_ownership_section: "INVESTOR OWNERSHIP — UNITS OUTSTANDING",
+    pdf_col_investor: "Investor", pdf_col_units_held: "Units Held",
+    pdf_col_ownership_pct: "Ownership %", pdf_col_account_value: "Account Value",
+    pdf_col_unrealized_gl: "Unrealized Gain (Loss)", pdf_total: "Total",
+    pdf_schedule_investments: "SCHEDULE OF INVESTMENTS",
+    pdf_col_security_name: "Security Name", pdf_col_cost_share: "Cost/Share",
+    pdf_col_total_cost: "Total Cost", pdf_col_market_price: "Market Price",
+    pdf_col_pct_net_assets: "% Net Assets", pdf_col_unrealized_gl2: "Unrealized G/(L)",
+    pdf_schedule_note: "* Market values shown above are scaled to historical NAV. Cost basis reflects actual acquisition cost on a FIFO basis.",
+    pdf_shares_sub_prefix: " shares · historical price $",
+    pdf_shares_sub_cost: " · cost basis $",
+    // PDF — Income Statement
+    pdf_operations_stmt: "Statement of Operations",
+    pdf_for_period_ended: "For the period ended ",
+    pdf_mtd_return: "MTD RETURN", pdf_ytd_return: "YTD RETURN",
+    pdf_investment_income: "INVESTMENT INCOME",
+    pdf_dividend_income: "Dividend income:",
+    pdf_interest_income: "Interest income",
+    pdf_withholding_taxes: "Less: foreign withholding taxes",
+    pdf_total_investment_income: "Total investment income",
+    pdf_no_dividends: "No dividends received in this period",
+    pdf_operating_expenses: "OPERATING EXPENSES",
+    pdf_mgmt_fees_rate: "Management fees  (0.00% per annum)",
+    pdf_perf_fees: "Performance fees  (carried interest)",
+    pdf_admin_fees: "Administrative fees",
+    pdf_custodial_fees: "Custodial fees",
+    pdf_audit_fees: "Audit fees",
+    pdf_legal_fees: "Legal fees",
+    pdf_transfer_agent: "Transfer agent fees",
+    pdf_reg_fees: "Registration and filing fees",
+    pdf_other_expenses: "Other expenses",
+    pdf_total_expenses: "Total expenses",
+    pdf_net_investment_income: "Net investment income (loss)",
+    pdf_realized_unrealized_section: "REALIZED AND UNREALIZED GAIN (LOSS) ON INVESTMENTS",
+    pdf_net_realized_gain_lbl: "Net realized gain (loss) on investments:",
+    pdf_proceeds_disposition: "Proceeds from disposition of investments",
+    pdf_cost_investments_sold: "Cost of investments sold",
+    pdf_net_realized: "Net realized gain (loss)",
+    pdf_net_change_unrealized_lbl: "Net change in unrealized appreciation (depreciation):",
+    pdf_beginning_unrealized: "Beginning unrealized appreciation (depreciation)",
+    pdf_ending_unrealized: "Ending unrealized appreciation (depreciation)",
+    pdf_net_change_unrealized_line: "Net change in unrealized appreciation (depreciation)",
+    pdf_net_realized_unrealized: "Net realized and unrealized gain (loss)",
+    pdf_net_increase_from_ops: "NET INCREASE (DECREASE) IN NET ASSETS FROM OPERATIONS",
+    pdf_no_securities_sold: "No securities sold in this period",
+    pdf_changes_net_assets: "CHANGES IN NET ASSETS",
+    pdf_net_increase_ops: "Net increase (decrease) from operations",
+    pdf_capital_contributions: "Capital contributions — investors",
+    pdf_capital_withdrawals: "Capital withdrawals — investors",
+    pdf_distributions: "Distributions to investors",
+    pdf_distrib_reinvested: "Distributions reinvested",
+    pdf_net_increase_net_assets: "Net increase (decrease) in net assets",
+    pdf_net_assets_beginning: "Net assets, beginning of period",
+    pdf_net_assets_end_period: "Net assets, end of period",
+    pdf_capital_activity_detail: "CAPITAL ACTIVITY DETAIL",
+    pdf_col_total_contribution: "Total Contribution",
+    pdf_investor_attribution: "INVESTOR ATTRIBUTION",
+    pdf_col_beginning_value: "Beginning Value", pdf_col_contributions: "Contributions",
+    pdf_col_ending_value: "Ending Value", pdf_col_return_pct: "Return %",
+    pdf_col_investment_gain: "Investment Gain (Loss)",
+    pdf_supplemental: "SUPPLEMENTAL INFORMATION",
+    pdf_expense_ratio: "Expense ratio (annualized)",
+    pdf_mgmt_fee_rate: "Management fee rate (annualized)",
+    pdf_portfolio_turnover: "Portfolio turnover rate",
+    pdf_units_beginning: "Units outstanding, beginning of period",
+    pdf_units_end: "Units outstanding, end of period",
+    pdf_nav_beginning_period: "Net asset value per unit, beginning of period",
+    pdf_nav_end_period_line: "Net asset value per unit, end of period",
+    pdf_sp500_total_return: "S&P 500 Total Return (MTD)",
   },
   es: {
     loginSubtitle: "Portal del inversor",
@@ -1004,6 +1333,178 @@ const TR = {
     alert_pos_fill: "Por favor complete las acciones y el costo base.",
     alert_tx_required: "La fecha y el precio son obligatorios.",
     alert_perf_invalid: "JSON inválido. Revise el formato.",
+    // NAV tab
+    tab_nav: "NAV", lbl_nav: "Historial de NAV",
+    // Statements page UI
+    lbl_statements: "Extractos",
+    stmt_download_heading: "Descargar Extracto",
+    stmt_download_sub: "Reporte PDF del mes seleccionado — incluye valor de cuenta, retornos, posiciones e historial de NAV",
+    stmt_investor_label: "Inversor",
+    stmt_period_label: "Período",
+    stmt_monthly: "Extracto Mensual",
+    stmt_monthly_desc: "Valor de cuenta · retornos · posiciones · actividad de capital · historial de NAV",
+    stmt_balance: "Balance General",
+    stmt_balance_desc: "Estado de activos netos · posiciones a valor de mercado · distribución de participación",
+    stmt_income: "Estado de Resultados",
+    stmt_income_desc: "Operaciones del fondo · ingresos por dividendos · retorno de inversión · atribución por inversor",
+    stmt_download_pdf: "Descargar PDF",
+    stmt_included_heading: "Qué incluye cada extracto",
+    stmt_account_summary: "Resumen de Cuenta",
+    stmt_account_summary_desc: "Valor actual, valor inicio de mes, cambio en dólares y %",
+    stmt_period_returns_lbl: "Retornos del Período",
+    stmt_period_returns_desc: "MTD, YTD, desde el inicio vs S&P 500",
+    stmt_portfolio_holdings: "Posiciones del Portafolio",
+    stmt_portfolio_holdings_desc: "VTI, BND y efectivo con precio, valor y asignación",
+    stmt_capital_activity: "Actividad de Capital",
+    stmt_capital_activity_desc: "Depósitos realizados en el período con NAV al momento de compra",
+    stmt_nav_history_lbl: "Historial de NAV",
+    stmt_nav_history_desc: "NAV mes a mes y retorno desde el inicio",
+    // Utility
+    btn_edit: "Editar", btn_delete: "Eliminar", btn_cancel: "Cancelar", btn_confirm: "Confirmar",
+    status_saved: "Guardado",
+    status_generating: "Generando…",
+    status_downloaded: "✓ Descargado",
+    status_stmt_downloaded: "✓ Extracto descargado",
+    err_select_period: "Por favor seleccione un período.",
+    err_nav_not_loaded: "Historial de NAV no cargado — espere e intente de nuevo",
+    // Settings
+    tab_settings: "Configuración",
+    settings_heading: "Configuración",
+    settings_language_label: "Idioma",
+    settings_language_hint: "Su preferencia de idioma queda guardada en su cuenta",
+    settings_back: "Volver al portal",
+    // PDF — Monthly Statement
+    pdf_investor_statement: "Estado de Cuenta del Inversor",
+    pdf_monthly_statement: "ESTADO MENSUAL",
+    pdf_prepared_for: "PREPARADO PARA",
+    pdf_ownership: "PARTICIPACIÓN",
+    pdf_account_value: "VALOR DE CUENTA",
+    pdf_beginning_of_month: "INICIO DEL MES",
+    pdf_monthly_change: "CAMBIO MENSUAL",
+    pdf_as_of: "al",
+    pdf_period_returns: "RETORNOS DEL PERÍODO",
+    pdf_mtd: "MTD", pdf_ytd: "YTD",
+    pdf_since_inception: "DESDE EL INICIO",
+    pdf_sp500_mtd: "S&P 500 (MTD)",
+    pdf_portfolio_holdings: "POSICIONES DEL PORTAFOLIO",
+    pdf_col_ticker: "Ticker", pdf_col_description: "Descripción", pdf_col_shares: "Acciones",
+    pdf_col_price: "Precio", pdf_col_market_value: "Valor de Mercado", pdf_col_allocation: "Asignación",
+    pdf_cash: "Efectivo y equivalentes",
+    pdf_capital_activity: "ACTIVIDAD DE CAPITAL",
+    pdf_col_date: "Fecha", pdf_col_amount_invested: "Monto Invertido",
+    pdf_col_nav_at_purchase: "NAV al Comprar", pdf_col_units_purchased: "Unidades Compradas",
+    pdf_no_capital_activity: "Sin actividad de capital en este período.",
+    pdf_nav_history_full: "HISTORIAL DE NAV — RENDIMIENTO DEL FONDO DESDE EL INICIO",
+    pdf_col_month: "Mes", pdf_col_nav_start: "NAV — Inicio",
+    pdf_col_nav_end: "NAV — Fin", pdf_col_monthly_return: "Retorno Mensual",
+    pdf_managed_by: "Administrado por Pablo Montoya  ·  pablomontoyarobledo@gmail.com",
+    pdf_generated: "Generado", pdf_page: "Página", pdf_of: "de",
+    // PDF — Balance Sheet
+    pdf_net_assets_stmt: "Estado de Activos Netos",
+    pdf_as_of_prefix: "Al",
+    pdf_assets: "ACTIVOS",
+    pdf_inv_fair_value: "Inversiones, al valor razonable (ver Detalle de Inversiones)",
+    pdf_equity_securities: "Valores de renta variable:",
+    pdf_total_equity_securities: "Total valores de renta variable",
+    pdf_fixed_income: "Valores de renta fija",
+    pdf_other_investments: "Otras inversiones",
+    pdf_total_inv_cost_prefix: "Total inversiones al valor razonable (costo: $",
+    pdf_cash_equiv: "Efectivo y equivalentes de efectivo",
+    pdf_divs_receivable: "Dividendos e intereses por cobrar",
+    pdf_rec_inv_sold: "Por cobrar por inversiones vendidas",
+    pdf_sub_receivable: "Por cobrar por suscripciones",
+    pdf_prepaid: "Gastos prepagados y otros activos",
+    pdf_total_assets: "Total activos",
+    pdf_liabilities: "PASIVOS",
+    pdf_mgmt_fees_payable: "Honorarios de gestión por pagar",
+    pdf_perf_fees_payable: "Honorarios de desempeño por pagar",
+    pdf_payable_inv_purchased: "Por pagar por inversiones adquiridas",
+    pdf_redemptions_payable: "Rescates por pagar",
+    pdf_accrued_admin: "Gastos administrativos acumulados",
+    pdf_accrued_audit: "Honorarios de auditoría y legales acumulados",
+    pdf_accrued_custodial: "Honorarios de custodia acumulados",
+    pdf_due_to_broker: "Por pagar al corredor",
+    pdf_other_liabilities: "Otros pasivos y gastos acumulados",
+    pdf_total_liabilities: "Total pasivos",
+    pdf_net_assets: "ACTIVOS NETOS",
+    pdf_composition_net_assets: "COMPOSICIÓN DE ACTIVOS NETOS",
+    pdf_paid_in_capital: "Capital aportado (contribuciones de inversores)",
+    pdf_undistributed_nii: "Renta neta de inversión no distribuida",
+    pdf_accumulated_realized: "Ganancia (pérdida) realizada acumulada en inversiones",
+    pdf_net_unrealized: "Apreciación (depreciación) neta no realizada en inversiones",
+    pdf_net_assets_total: "Activos netos",
+    pdf_nav_per_unit_section: "VALOR ACTIVO NETO POR UNIDAD",
+    pdf_total_units_outstanding: "Total de unidades (participaciones) en circulación",
+    pdf_nav_per_unit_line: "Valor activo neto por unidad",
+    pdf_investor_ownership_section: "PARTICIPACIÓN DE INVERSORES — UNIDADES EN CIRCULACIÓN",
+    pdf_col_investor: "Inversor", pdf_col_units_held: "Unidades",
+    pdf_col_ownership_pct: "Participación %", pdf_col_account_value: "Valor de Cuenta",
+    pdf_col_unrealized_gl: "Ganancia (Pérdida) No Realizada", pdf_total: "Total",
+    pdf_schedule_investments: "DETALLE DE INVERSIONES",
+    pdf_col_security_name: "Nombre del Activo", pdf_col_cost_share: "Costo/Acc.",
+    pdf_col_total_cost: "Costo Total", pdf_col_market_price: "Precio de Mercado",
+    pdf_col_pct_net_assets: "% Activos Netos", pdf_col_unrealized_gl2: "G/(P) No Real.",
+    pdf_schedule_note: "* Los valores de mercado mostrados están escalados al NAV histórico. El costo base refleja el costo de adquisición real en base FIFO.",
+    pdf_shares_sub_prefix: " acciones · precio histórico $",
+    pdf_shares_sub_cost: " · costo base $",
+    // PDF — Income Statement
+    pdf_operations_stmt: "Estado de Resultados",
+    pdf_for_period_ended: "Para el período terminado el ",
+    pdf_mtd_return: "RETORNO MTD", pdf_ytd_return: "RETORNO YTD",
+    pdf_investment_income: "INGRESOS DE INVERSIÓN",
+    pdf_dividend_income: "Ingresos por dividendos:",
+    pdf_interest_income: "Ingresos por intereses",
+    pdf_withholding_taxes: "Menos: retenciones fiscales extranjeras",
+    pdf_total_investment_income: "Total ingresos de inversión",
+    pdf_no_dividends: "Sin dividendos recibidos en este período",
+    pdf_operating_expenses: "GASTOS OPERATIVOS",
+    pdf_mgmt_fees_rate: "Honorarios de gestión  (0,00% anual)",
+    pdf_perf_fees: "Honorarios de desempeño  (interés preferente)",
+    pdf_admin_fees: "Honorarios administrativos",
+    pdf_custodial_fees: "Honorarios de custodia",
+    pdf_audit_fees: "Honorarios de auditoría",
+    pdf_legal_fees: "Honorarios legales",
+    pdf_transfer_agent: "Honorarios del agente de transferencia",
+    pdf_reg_fees: "Honorarios de registro y presentación",
+    pdf_other_expenses: "Otros gastos",
+    pdf_total_expenses: "Total gastos",
+    pdf_net_investment_income: "Renta neta de inversión (pérdida)",
+    pdf_realized_unrealized_section: "GANANCIA (PÉRDIDA) REALIZADA Y NO REALIZADA EN INVERSIONES",
+    pdf_net_realized_gain_lbl: "Ganancia (pérdida) realizada neta en inversiones:",
+    pdf_proceeds_disposition: "Ingresos por disposición de inversiones",
+    pdf_cost_investments_sold: "Costo de inversiones vendidas",
+    pdf_net_realized: "Ganancia (pérdida) realizada neta",
+    pdf_net_change_unrealized_lbl: "Cambio neto en apreciación (depreciación) no realizada:",
+    pdf_beginning_unrealized: "Apreciación (depreciación) no realizada al inicio",
+    pdf_ending_unrealized: "Apreciación (depreciación) no realizada al cierre",
+    pdf_net_change_unrealized_line: "Cambio neto en apreciación (depreciación) no realizada",
+    pdf_net_realized_unrealized: "Ganancia (pérdida) realizada y no realizada neta",
+    pdf_net_increase_from_ops: "AUMENTO (DISMINUCIÓN) NETO EN ACTIVOS NETOS POR OPERACIONES",
+    pdf_no_securities_sold: "Sin valores vendidos en este período",
+    pdf_changes_net_assets: "CAMBIOS EN ACTIVOS NETOS",
+    pdf_net_increase_ops: "Aumento (disminución) neto por operaciones",
+    pdf_capital_contributions: "Aportes de capital — inversores",
+    pdf_capital_withdrawals: "Retiros de capital — inversores",
+    pdf_distributions: "Distribuciones a inversores",
+    pdf_distrib_reinvested: "Distribuciones reinvertidas",
+    pdf_net_increase_net_assets: "Aumento (disminución) neto en activos netos",
+    pdf_net_assets_beginning: "Activos netos, inicio del período",
+    pdf_net_assets_end_period: "Activos netos, fin del período",
+    pdf_capital_activity_detail: "DETALLE DE ACTIVIDAD DE CAPITAL",
+    pdf_col_total_contribution: "Aporte Total",
+    pdf_investor_attribution: "ATRIBUCIÓN POR INVERSOR",
+    pdf_col_beginning_value: "Valor Inicial", pdf_col_contributions: "Aportes",
+    pdf_col_ending_value: "Valor Final", pdf_col_return_pct: "Retorno %",
+    pdf_col_investment_gain: "Ganancia (Pérdida) de Inversión",
+    pdf_supplemental: "INFORMACIÓN SUPLEMENTARIA",
+    pdf_expense_ratio: "Ratio de gastos (anualizado)",
+    pdf_mgmt_fee_rate: "Tasa de honorarios de gestión (anualizada)",
+    pdf_portfolio_turnover: "Tasa de rotación del portafolio",
+    pdf_units_beginning: "Unidades en circulación, inicio del período",
+    pdf_units_end: "Unidades en circulación, fin del período",
+    pdf_nav_beginning_period: "Valor activo neto por unidad, inicio del período",
+    pdf_nav_end_period_line: "Valor activo neto por unidad, fin del período",
+    pdf_sp500_total_return: "Retorno Total S&P 500 (MTD)",
   }
 };
 
@@ -1015,7 +1516,7 @@ function setLang(lang) {
   currentLang = lang;
   document.documentElement.lang = lang;
   // Sync all toggle buttons
-  ["login-lang-en","login-lang-es","app-lang-en","app-lang-es"].forEach(id => {
+  ["login-lang-en","login-lang-es","settings-lang-en","settings-lang-es"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("active", id.endsWith(lang));
   });
@@ -1107,7 +1608,25 @@ function setLang(lang) {
     "tx-hint": "tx_hint",
     "ptab-overview": "tab_overview", "ptab-performance": "tab_performance",
     "ptab-positions": "tab_positions", "ptab-ownership": "tab_ownership",
-    "ptab-transactions": "tab_transactions",
+    "ptab-transactions": "tab_transactions", "ptab-nav": "tab_nav", "ptab-statements": "lbl_statements",
+    "lbl-statements": "lbl_statements",
+    "stmt-download-heading": "stmt_download_heading",
+    "stmt-investor-label": "stmt_investor_label", "stmt-period-label": "stmt_period_label",
+    "stmt-monthly-label": "stmt_monthly", "stmt-monthly-desc": "stmt_monthly_desc",
+    "stmt-balance-label": "stmt_balance", "stmt-balance-desc": "stmt_balance_desc",
+    "stmt-income-label": "stmt_income", "stmt-income-desc": "stmt_income_desc",
+    "stmt-download-btn-lbl": "stmt_download_pdf",
+    "stmt-bs-btn-lbl": "stmt_download_pdf", "stmt-is-btn-lbl": "stmt_download_pdf",
+    "stmt-included-heading": "stmt_included_heading",
+    "stmt-account-summary": "stmt_account_summary", "stmt-account-summary-desc": "stmt_account_summary_desc",
+    "stmt-period-returns-lbl": "stmt_period_returns_lbl", "stmt-period-returns-desc": "stmt_period_returns_desc",
+    "stmt-portfolio-holdings": "stmt_portfolio_holdings", "stmt-portfolio-holdings-desc": "stmt_portfolio_holdings_desc",
+    "stmt-capital-activity-lbl": "stmt_capital_activity", "stmt-capital-activity-desc": "stmt_capital_activity_desc",
+    "stmt-nav-history-lbl": "stmt_nav_history_lbl", "stmt-nav-history-desc": "stmt_nav_history_desc",
+    "settings-heading": "settings_heading",
+    "settings-language-label": "settings_language_label",
+    "settings-language-hint": "settings_language_hint",
+    "settings-back-btn": "settings_back",
     "lbl-period-returns": "lbl_period_returns",
     "lbl-mtd": "lbl_mtd", "lbl-qtd": "lbl_qtd", "lbl-ytd": "lbl_ytd", "lbl-inception": "lbl_inception",
     "lbl-income": "lbl_income",
@@ -1133,10 +1652,11 @@ function setLang(lang) {
   // Re-render dynamic sections if logged in
   if (currentUser) {
     renderMetrics();
+    renderIncome();
     renderOwnership();
     renderTx();
     renderDeposits();
-    renderBenchmarks();
+    loadBenchmarkData();
     renderOverviewChart();
     _updateChartLabel();
     _applyPriceStatus();
@@ -1179,14 +1699,19 @@ function clearDepFilters() {
 
 // ── DATA ──
 const USERS = {
-  "pablomontoyarobledo@gmail.com":  { pwHash:"d75ceebe6cb6ed248441edc81bc7c28baf38ad2f079a5b58f358369dc0e7546e", name:"Pablo Montoya — Manager", admin:true  },
-  "dario.montoya@mdosas.com":       { pwHash:"1b1d798d5d0c7c98f9c442a77deb61a122ba489059b405e601d2556951981281", name:"Dario Montoya",            admin:false },
-  "fernando.montoya@mdosas.com":    { pwHash:"8fd97a694b066d5fb4f251eca8bbdf3f5210321230cfab366a028bff435bff68", name:"Fernando Montoya",         admin:false },
+  "pablomontoyarobledo@gmail.com":  { salt:"59504906f46fd7465716714946e181c0", pwHash:"313290f0660bf830feaeafbe6bd40f9bef7845697ac621bc1bcd9ec7afb4e6cf", name:"Pablo Montoya — Manager", admin:true  },
+  "dario.montoya@mdosas.com":       { salt:"4b5fd6d20cd93ea26971e222a7af91cd", pwHash:"caf2b22ed9880313e46ce290d0af5a3d28abac729b6dec96253d85346abce7b7", name:"Dario Montoya",            admin:false },
+  "fernando.montoya@mdosas.com":    { salt:"fb75245a1916299296edbd554d73db22", pwHash:"941bf8e89969456714cda3b9bce3de6958f7cbc52b0732cd23ceb1d6e5ba1549", name:"Fernando Montoya",         admin:false },
 };
 
-async function sha256hex(str) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+async function pbkdf2hex(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: enc.encode(salt), iterations: 100000, hash: "SHA-256" },
+    keyMaterial, 256
+  );
+  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 const DEFAULT_POSITIONS = [
@@ -1212,14 +1737,29 @@ const DEFAULT_INVESTORS = [
 
 // Compute unit ledger dynamically from deposits array
 function calcUnits() {
-  let fernandoUnits = 0, darioUnits = 0;
+  const units = {};
+  for (const inv of investors) units[inv.id] = 0;
+  let totalUnits = 0;
   for (const d of deposits) {
     const nav = d.nav > 0 ? d.nav : INCEPTION_NAV;
-    fernandoUnits += (d.fernando || 0) / nav;
-    darioUnits    += (d.dario    || 0) / nav;
+    if (d.investor) {
+      // Format from allocate-deposit.js: {investor: "juana_robledo", amount: 4490}
+      // Find which investor this key belongs to
+      const inv = investors.find(i => i.id === d.investor || (i.id.startsWith("inv_") ? i.id.slice(4) : i.id) === d.investor);
+      if (inv) units[inv.id] = (units[inv.id] || 0) + (d.amount || 0) / nav;
+    } else {
+      // Format: {fernando: 1000, dario: 500, juana_robledo: 4490}
+      for (const inv of investors) {
+        const key = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+        units[inv.id] = (units[inv.id] || 0) + (d[key] || 0) / nav;
+      }
+    }
   }
-  const totalUnits = fernandoUnits + darioUnits;
-  return { fernandoUnits, darioUnits, totalUnits };
+  for (const inv of investors) totalUnits += units[inv.id] || 0;
+  units.totalUnits    = totalUnits;
+  units.fernandoUnits = units["inv_fernando"] || 0;
+  units.darioUnits    = units["inv_dario"]    || 0;
+  return units;
 }
 
 function load(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } }
@@ -1262,28 +1802,47 @@ let _priceStatusTime  = null;
 const fmt    = n => n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2});
 const fmtPct = n => (n>=0?"+":"")+n.toFixed(2)+"%";
 
+function _launchApp(email, entry) {
+  currentUser = { ...entry, loginEmail: email };
+  const savedLang = localStorage.getItem("rrs_lang_" + email);
+  if (savedLang && savedLang !== currentLang) setLang(savedLang);
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  document.getElementById("investor-badge").textContent = entry.name;
+  if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } renderDepositForm(); loadPendingDeposits(); checkAllocateUrlParam(); }
+  fetchPrices();
+  fetchFXRate();
+  const _s = fn => { try { fn(); } catch(e) { console.error(fn.name, e); } };
+  _s(renderTx); _s(renderChart); _s(renderDeposits);
+  _s(renderMetrics); _s(renderIncome); _s(renderOwnership); _s(renderBenchmarks);
+  _s(renderOverviewChart); _s(_applyPageTabLabels);
+  loadFromCloud();
+}
+
 async function tryLogin() {
   const email = document.getElementById("email").value.trim().toLowerCase();
   const pw = document.getElementById("pw").value.trim();
   const entry = USERS[email];
-  const hash = await sha256hex(pw);
-  if (entry && entry.pwHash === hash) {
-    currentUser = entry;
-    document.getElementById("login-screen").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    document.getElementById("investor-badge").textContent = entry.name;
-    if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } loadPendingDeposits(); checkAllocateUrlParam(); }
-    fetchPrices();
-    fetchFXRate();
-    const _s = fn => { try { fn(); } catch(e) { console.error(fn.name, e); } };
-    _s(renderTx); _s(renderChart); _s(renderDeposits);
-    _s(renderMetrics); _s(renderOwnership); _s(renderBenchmarks);
-    _s(renderOverviewChart); _s(_applyPageTabLabels);
-    loadFromCloud();
+  if (!entry) { document.getElementById("login-error").style.display = "block"; return; }
+  const hash = await pbkdf2hex(pw, entry.salt);
+  if (hash === entry.pwHash) {
+    localStorage.setItem("rrs_session", JSON.stringify({ email, hash }));
+    _launchApp(email, entry);
   } else {
     document.getElementById("login-error").style.display = "block";
   }
 }
+
+window.addEventListener("DOMContentLoaded", async function restoreSession() {
+  try {
+    const raw = localStorage.getItem("rrs_session");
+    if (!raw) return;
+    const { email, hash } = JSON.parse(raw);
+    const entry = USERS[email];
+    if (entry && hash === entry.pwHash) _launchApp(email, entry);
+  } catch(e) { localStorage.removeItem("rrs_session"); }
+});
+
 document.getElementById("email").addEventListener("keydown", e => { if(e.key==="Enter") tryLogin(); });
 document.getElementById("pw").addEventListener("keydown", e => { if(e.key==="Enter") tryLogin(); });
 
@@ -1311,6 +1870,26 @@ function logout() {
   document.getElementById("login-error").style.display = "none";
   if (perfChart) { perfChart.destroy(); perfChart = null; }
   if (overviewChart) { overviewChart.destroy(); overviewChart = null; }
+  localStorage.removeItem("rrs_session");
+}
+
+function showSettingsScreen() {
+  document.getElementById("app").style.display = "none";
+  document.getElementById("admin-screen").style.display = "none";
+  document.getElementById("settings-screen").style.display = "block";
+  window.scrollTo(0, 0);
+}
+
+function hideSettingsScreen() {
+  document.getElementById("settings-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+}
+
+function setLangAndSave(lang) {
+  setLang(lang);
+  if (currentUser?.loginEmail) {
+    localStorage.setItem("rrs_lang_" + currentUser.loginEmail, lang);
+  }
 }
 
 function fetchWithTimeout(url, ms) {
@@ -1319,38 +1898,30 @@ function fetchWithTimeout(url, ms) {
   return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
 }
 
-async function fetchSinglePrice(ticker) {
-  const url1 = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
-  const url2 = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
-  const parse = async url => {
-    const p = (await (await fetchWithTimeout(url, 4000)).json()).chart.result[0].meta.regularMarketPrice;
-    if (!p || p <= 0) throw new Error("no price");
-    return p;
-  };
-  // Race both Yahoo endpoints with 4s timeout each
-  try { return await Promise.any([parse(url1), parse(url2)]); } catch {}
-  // Fallback: allorigins CORS proxy with 6s timeout
-  try {
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url1)}`;
-    const p = JSON.parse((await (await fetchWithTimeout(proxy, 6000)).json()).contents).chart.result[0].meta.regularMarketPrice;
-    if (p && p > 0) return p;
-  } catch {}
-  return null;
-}
-
 async function fetchPrices() {
   _priceStatusState = "loading";
   _applyPriceStatus();
   livePrice["CASH"] = 1.00;
-  const tickers = positions.filter(p => p.ticker !== "CASH");
-  const results = await Promise.all(tickers.map(p => fetchSinglePrice(p.ticker)));
-  let anyFailed = false;
-  tickers.forEach((p, i) => {
-    if (results[i]) { livePrice[p.ticker] = results[i]; }
-    else { anyFailed = true; }
-  });
-  _priceStatusTime = new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
-  _priceStatusState = anyFailed ? "failed" : "ok";
+
+  const tickers = positions.filter(p => p.ticker !== "CASH").map(p => p.ticker);
+  if (!tickers.length) { _priceStatusState = "ok"; _applyPriceStatus(); return; }
+
+  try {
+    const r = await fetchWithTimeout(`/api/prices?tickers=${tickers.join(",")}`, 10000);
+    if (!r.ok) throw new Error(`status ${r.status}`);
+    const data = await r.json();
+    let anyFailed = false;
+    tickers.forEach(t => {
+      if (data.prices?.[t]) livePrice[t] = data.prices[t];
+      else anyFailed = true;
+    });
+    _priceStatusTime  = new Date().toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit" });
+    _priceStatusState = anyFailed ? "partial" : "ok";
+  } catch (e) {
+    console.warn("fetchPrices failed:", e);
+    _priceStatusState = "failed";
+  }
+
   _applyPriceStatus();
   renderPositions();
   renderMetrics();
@@ -1363,6 +1934,62 @@ function getTotalValue() {
   if (_priceStatusState === "ok") return computed;
   if (navSnapshotValue > 0) return navSnapshotValue;
   return computed;
+}
+
+function renderIncome() {
+  // Sum income from transactions array.
+  // Uses netAmount when IB has provided the exact cash amount,
+  // falls back to price * currentShares for legacy records without netAmount.
+  const posMap = {};
+  for (const p of positions) posMap[p.ticker] = p;
+
+  let divTotal  = 0;
+  let intTotal  = 0;
+  let feeTotal  = 0;
+  let hasApprox = false;
+
+  for (const tx of transactions) {
+    if (tx.type === "dividend") {
+      if (tx.netAmount != null) {
+        divTotal += tx.netAmount;
+      } else {
+        // Approximate: per-share rate × current shares (may differ from actual)
+        const pos = posMap[tx.ticker];
+        if (pos && tx.price) { divTotal += tx.price * pos.shares; hasApprox = true; }
+      }
+    } else if (tx.type === "interest") {
+      if (tx.netAmount != null) intTotal += tx.netAmount;
+    } else if (tx.type === "fee") {
+      if (tx.netAmount != null) feeTotal += tx.netAmount;
+    }
+  }
+  // Commissions from buy/sell trades
+  for (const tx of transactions) {
+    if ((tx.type === "buy" || tx.type === "sell") && tx.commission) {
+      feeTotal -= Math.abs(tx.commission);
+    }
+  }
+
+  const divEl  = document.getElementById("income-dividends");
+  const intEl  = document.getElementById("income-interest");
+  const feeEl  = document.getElementById("income-fees");
+  const lbl    = document.getElementById("lbl-income");
+
+  if (divEl) {
+    divEl.textContent = divTotal ? "$" + divTotal.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}) : "—";
+    divEl.className = "income-value " + (divTotal >= 0 ? "pos" : "neg");
+    if (hasApprox) divEl.title = "Approximate — based on current share count until next IB pull";
+  }
+  if (intEl) {
+    intEl.textContent = intTotal ? "$" + intTotal.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}) : "—";
+    intEl.className = "income-value " + (intTotal >= 0 ? "pos" : "neg");
+  }
+  if (feeEl) {
+    const feeAbs = Math.abs(feeTotal);
+    feeEl.textContent = feeTotal ? "-$" + feeAbs.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}) : "—";
+    feeEl.className = "income-value neg";
+  }
+  if (lbl && hasApprox) lbl.textContent = (currentLang === "es" ? "Ingresos y costos — desde el inicio" : "Income & costs — since inception") + " *";
 }
 
 function renderMetrics() {
@@ -1394,32 +2021,42 @@ function renderMetrics() {
 
 function renderOwnership() {
   const totalValue = getTotalValue();
-  const { fernandoUnits, darioUnits, totalUnits } = calcUnits();
-  const fernandoPct  = totalUnits > 0 ? (fernandoUnits / totalUnits) * 100 : 0;
-  const darioPct     = totalUnits > 0 ? (darioUnits    / totalUnits) * 100 : 0;
-  const fernandoDeposited = deposits.reduce((s,d) => s + (d.fernando||0), 0);
-  const darioDeposited    = deposits.reduce((s,d) => s + (d.dario||0),    0);
-  const locale = currentLang === "es" ? "es-ES" : "en-US";
-  const fmtUnits = n => Math.round(n).toLocaleString(locale);
-  const fmtPctOwn = n => n.toLocaleString(locale, {minimumFractionDigits:2, maximumFractionDigits:2});
-
-  document.getElementById("fernando-value").textContent = totalUnits > 0 ? fmt(totalValue * (fernandoUnits / totalUnits)) : fmt(0);
-  document.getElementById("dario-value").textContent    = totalUnits > 0 ? fmt(totalValue * (darioUnits    / totalUnits)) : fmt(0);
-
+  const unitMap    = calcUnits();
+  const { totalUnits } = unitMap;
+  const locale     = currentLang === "es" ? "es-ES" : "en-US";
+  const fmtUnits   = n => Math.round(n).toLocaleString(locale);
+  const fmtPctOwn  = n => n.toLocaleString(locale, {minimumFractionDigits:2, maximumFractionDigits:2});
   const depLabel   = currentLang==="es" ? "Depositado" : "Deposited";
   const ownLabel   = currentLang==="es" ? "participación · " : "ownership · ";
   const unitSuffix = currentLang==="es" ? " unidades" : " units";
+  const palette    = ["var(--chime-accent)", "#7F77DD", "#E07B53", "#5B9BD5", "#70B77E"];
 
-  document.getElementById("fernando-pct").textContent      = `${fmtPctOwn(fernandoPct)}% ${ownLabel}${fmtUnits(fernandoUnits)}${unitSuffix}`;
-  document.getElementById("dario-pct").textContent         = `${fmtPctOwn(darioPct)}% ${ownLabel}${fmtUnits(darioUnits)}${unitSuffix}`;
-  document.getElementById("fernando-deposited").textContent = `${depLabel}: ${fmt(fernandoDeposited)}`;
-  document.getElementById("dario-deposited").textContent   = `${depLabel}: ${fmt(darioDeposited)}`;
+  const cards = investors.map((inv, i) => {
+    const key       = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+    const invUnits  = unitMap[inv.id] || 0;
+    const pct       = totalUnits > 0 ? (invUnits / totalUnits) * 100 : 0;
+    const value     = totalUnits > 0 ? totalValue * (invUnits / totalUnits) : 0;
+    const deposited = deposits.reduce((s, d) => {
+      const amt = d.investor ? (d.investor === inv.id || d.investor === key ? d.amount : 0) : (d[key] || 0);
+      return s + amt;
+    }, 0);
+    const initials  = (inv.firstName?.[0] || "") + (inv.lastName?.[0] || "");
+    const color     = palette[i % palette.length];
+    return `<div class="ownership-card">
+      <div class="ownership-card-header">
+        <div class="avatar" style="background:${color};">${initials}</div>
+        <div>
+          <div class="ownership-name">${inv.firstName} ${inv.lastName}</div>
+          <div class="ownership-pct">${fmtPctOwn(pct)}% ${ownLabel}${fmtUnits(invUnits)}${unitSuffix}</div>
+        </div>
+      </div>
+      <div class="ownership-value pos">${fmt(value)}</div>
+      <div class="ownership-deposited">${depLabel}: ${fmt(deposited)}</div>
+      <div class="ownership-bar-wrap"><div class="ownership-bar-bg"><div style="height:6px;background:${color};border-radius:3px;width:${pct.toFixed(2)}%"></div></div></div>
+    </div>`;
+  }).join("");
 
-  // Update ownership bar widths
-  const bars = document.querySelectorAll(".ownership-bar-fill-f");
-  bars.forEach(b => b.style.width = fernandoPct.toFixed(2) + "%");
-  const barsD = document.querySelectorAll(".ownership-bar-fill-d");
-  barsD.forEach(b => b.style.width = darioPct.toFixed(2) + "%");
+  document.getElementById("ownership-cards").innerHTML = cards;
 }
 
 function renderPositions() {
@@ -1792,6 +2429,7 @@ async function syncFromIB() {
 
     // Re-render everything
     renderMetrics();
+    renderIncome();
     renderPositions();
     renderOwnership();
     renderChart();
@@ -1883,7 +2521,7 @@ async function loadFromCloud() {
         const el = document.getElementById("cloud-synced-at");
         if (el) { el.textContent = `· cloud ${ts}`; el.style.display = "inline"; }
       }
-      renderPositions(); renderMetrics(); renderOwnership(); renderTx(); renderDeposits();
+      renderPositions(); renderMetrics(); renderIncome(); renderOwnership(); renderTx(); renderDeposits();
       if (document.getElementById("admin-screen").style.display !== "none") {
         populateAdminFields();
         if (document.getElementById("admin-investors") && document.getElementById("admin-investors").style.display !== "none") renderInvestors();
@@ -1899,6 +2537,9 @@ async function loadFromCloud() {
       if (invData.investors && invData.investors.length) {
         investors = invData.investors;
         save("mff_investors", investors);
+        renderDepositForm();
+        renderOwnership();
+        renderDeposits();
         if (document.getElementById("admin-investors") && document.getElementById("admin-investors").style.display !== "none") renderInvestors();
       }
     } catch {}
@@ -2383,6 +3024,7 @@ function resetAllData() {
   investors    = DEFAULT_INVESTORS;
   livePrice    = {};
   renderMetrics();
+  renderIncome();
   renderOwnership();
   renderPositions();
   renderTx();
@@ -2404,62 +3046,146 @@ function renderDeposits() {
     const yOk = !selYear  || d.date.startsWith(selYear);
     return mOk && yOk;
   });
-  const totalAmt  = deposits.reduce((s,d) => s + d.amount, 0);
-  const totalFern = deposits.reduce((s,d) => s + (d.fernando||0), 0);
-  const totalDar  = deposits.reduce((s,d) => s + (d.dario||0), 0);
-  const locale = currentLang === "es" ? "es-ES" : "en-US";
+
+  // Build per-investor key list
+  const invKeys = investors.map(inv => ({
+    inv,
+    key: inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id,
+  }));
+
+  // Update thead dynamically — keep first 4 cols, replace investor cols
+  const thead = document.querySelector(".deposits-table thead tr");
+  if (thead) {
+    while (thead.children.length > 4) thead.removeChild(thead.lastChild);
+    invKeys.forEach(({ inv }) => {
+      const th = document.createElement("th");
+      th.textContent = `${inv.firstName} ${inv.lastName}`;
+      thead.appendChild(th);
+    });
+  }
+
+  const totalAmt = deposits.reduce((s, d) => s + d.amount, 0);
+  const locale   = currentLang === "es" ? "es-ES" : "en-US";
+
   const rows = filtered.map(d => {
-    const dt = new Date(d.date + "T12:00:00");
+    const dt        = new Date(d.date + "T12:00:00");
     const dateLabel = dt.toLocaleDateString(locale, {month:"short",day:"numeric",year:"numeric"});
-    const srcCls = d.source === "Dario Montoya" ? "source-moneche" : "source-fernando";
-    const darioStr = d.dario ? fmtDep(d.dario) : "—";
+    // If deposit uses {investor: key} format, resolve display name from investors list
+    let displaySource = d.source || "—";
+    if (d.investor) {
+      const inv = investors.find(i => i.id === d.investor);
+      if (inv) displaySource = `${inv.firstName} ${inv.lastName}`;
+    }
+    const srcCls = displaySource.toLowerCase().includes("dario") ? "source-moneche" : "source-fernando";
+    const invCols   = invKeys.map(({ inv, key }) => {
+      const amt = d.investor ? (d.investor === inv.id || d.investor === key ? d.amount : 0) : (d[key] || 0);
+      return `<td>${amt ? fmtDep(amt) : "—"}</td>`;
+    }).join("");
     return `<tr>
       <td data-date="${d.date}">${dateLabel}</td>
       <td>${fmtDep(d.amount)}</td>
-      <td><span class="${srcCls}">${d.source}</span></td>
+      <td><span class="${srcCls}">${displaySource}</span></td>
       <td>${fmt(d.nav)}</td>
-      <td>${fmtDep(d.fernando)}</td>
-      <td>${darioStr}</td>
+      ${invCols}
     </tr>`;
   }).join("");
+
+  const invTotalCols = invKeys.map(({ inv, key }) =>
+    `<td>${fmtDep(deposits.reduce((s,d) => {
+      const amt = d.investor ? (d.investor === inv.id || d.investor === key ? d.amount : 0) : (d[key]||0);
+      return s + amt;
+    }, 0))}</td>`
+  ).join("");
   const totalRow = `<tr class="total-row">
     <td id="dep-total-label">${t("dep_total_label")}</td>
     <td>${fmtDep(totalAmt)}</td><td></td><td></td>
-    <td>${fmtDep(totalFern)}</td>
-    <td>${fmtDep(totalDar)}</td>
+    ${invTotalCols}
   </tr>`;
   document.getElementById("dep-body").innerHTML = rows + totalRow;
+}
+
+function renderDepositForm() {
+  // Populate source dropdown
+  const src = document.getElementById("a-dep-source");
+  if (src) {
+    src.innerHTML = investors.map(inv =>
+      `<option value="${inv.firstName} ${inv.lastName}">${inv.firstName} ${inv.lastName}</option>`
+    ).join("");
+  }
+
+  // Populate per-investor split fields
+  const container = document.getElementById("dep-investor-fields");
+  if (container) {
+    container.innerHTML = investors.map(inv =>
+      `<div class="form-group"><label>${inv.firstName} ${inv.lastName} ($)</label><input type="number" step="0.01" id="a-dep-inv-${inv.id}" placeholder="auto-split" /></div>`
+    ).join("");
+  }
+
+  // Populate statements investor selector
+  const stmtSel = document.getElementById("stmt-investor");
+  if (stmtSel) {
+    stmtSel.innerHTML = investors.map(inv =>
+      `<option value="${inv.id}">${inv.firstName} ${inv.lastName}</option>`
+    ).join("");
+  }
+
+  // Pre-fill date with today
+  const dateEl = document.getElementById("a-dep-date");
+  if (dateEl && !dateEl.value) {
+    dateEl.value = new Date().toISOString().slice(0, 10);
+  }
+
+  // Pre-fill NAV from latest nav-history entry
+  _prefillDepositNav();
+}
+
+function _prefillDepositNav() {
+  const navEl   = document.getElementById("a-dep-nav");
+  const navLbl  = document.getElementById("lbl-dep-nav");
+  if (!navEl) return;
+  const series  = navHist?.series;
+  if (!series?.length) return;
+
+  // Use the most recent entry in nav-history
+  const latest  = series[series.length - 1];
+  if (!navEl.value) navEl.value = latest.nav.toFixed(6);
+
+  // Update label to show the source date so the admin knows which day's NAV is pre-filled
+  const dt = new Date(latest.date + "T12:00:00");
+  const dtLabel = dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (navLbl) navLbl.textContent = `NAV at deposit ($) — ${dtLabel}: ${latest.nav.toFixed(6)}`;
 }
 
 function autoSplitDeposit() {
   const source = document.getElementById("a-dep-source").value;
   const amount = parseFloat(document.getElementById("a-dep-amount").value) || 0;
-  if (source === "Fernando Montoya") {
-    document.getElementById("a-dep-fernando").value = amount || "";
-    document.getElementById("a-dep-dario").value    = "";
-  } else if (source === "Dario Montoya") {
-    document.getElementById("a-dep-fernando").value = "";
-    document.getElementById("a-dep-dario").value    = amount || "";
-  }
+  investors.forEach(inv => {
+    const el   = document.getElementById(`a-dep-inv-${inv.id}`);
+    if (!el) return;
+    const name = `${inv.firstName} ${inv.lastName}`;
+    el.value   = source === name ? (amount || "") : "";
+  });
 }
 
 function saveDeposit() {
-  const date     = document.getElementById("a-dep-date").value;
-  const amount   = parseFloat(document.getElementById("a-dep-amount").value);
-  const source   = document.getElementById("a-dep-source").value;
-  const nav      = parseFloat(document.getElementById("a-dep-nav").value);
-  const fernando = parseFloat(document.getElementById("a-dep-fernando").value) || 0;
-  const dario    = parseFloat(document.getElementById("a-dep-dario").value)    || 0;
+  const date   = document.getElementById("a-dep-date").value;
+  const amount = parseFloat(document.getElementById("a-dep-amount").value);
+  const source = document.getElementById("a-dep-source").value;
+  const nav    = parseFloat(document.getElementById("a-dep-nav").value);
   if (!date || isNaN(amount) || isNaN(nav)) return alert(t("alert_dep_required"));
-  deposits.push({ date, amount, source, nav, fernando, dario });
+  const rec = { date, amount, source, nav };
+  investors.forEach(inv => {
+    const key  = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+    const el   = document.getElementById(`a-dep-inv-${inv.id}`);
+    rec[key]   = el ? (parseFloat(el.value) || 0) : 0;
+  });
+  deposits.push(rec);
   deposits.sort((a,b) => a.date.localeCompare(b.date));
   save("mff_deposits", deposits);
   triggerAutoSync();
-  renderDeposits();
-  renderMetrics();
-  renderOwnership();
-  // Clear form
-  ["a-dep-date","a-dep-amount","a-dep-nav","a-dep-fernando","a-dep-dario"].forEach(id => document.getElementById(id).value = "");
+  renderDeposits(); renderMetrics(); renderIncome(); renderOwnership();
+  ["a-dep-date","a-dep-amount","a-dep-nav"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+  investors.forEach(inv => { const el = document.getElementById(`a-dep-inv-${inv.id}`); if (el) el.value = ""; });
   const el = document.getElementById("dep-log-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",2500);
 }
 
@@ -2609,14 +3335,18 @@ function renderPeriodReturns(series, inceptionNav) {
   set("period-inception", inception);
 }
 
-function _applyNavHistory(navHist) {
+let navHist = null;     // module-level so renderBenchmarks can access it
+let inceptionNav = 1.0; // module-level so renderBenchmarks can access it
+
+function _applyNavHistory(_navHistArg) {
+  navHist = _navHistArg;
   if (!navHist?.series?.length) return;
 
   // Capture latest IB-computed portfolio value; persist to localStorage so it's ready on next login
   const lastPt = navHist.series[navHist.series.length - 1];
   if (lastPt?.totalValue > 0) { navSnapshotValue = lastPt.totalValue; save("mff_nav_snapshot", navSnapshotValue); }
 
-  const inceptionNav = navHist.inception?.nav || 1.0;
+  inceptionNav = navHist.inception?.nav || 1.0;
 
   const dates = navHist.series.map(e => e.date);
   COMPARISON_CHART_DATA.labels    = dates.map(d => navDateLabel(d, "en"));
@@ -2632,9 +3362,11 @@ function _applyNavHistory(navHist) {
 
   renderPeriodReturns(navHist.series, inceptionNav);
   renderNavTable(navHist.series, inceptionNav);
+  loadBenchmarkData();
   renderChart();
   renderOverviewChart();
   renderMetrics();
+  if (currentUser?.admin) _prefillDepositNav();
 
   // Fetch S&P 500 in background and refresh chart when ready
   fetchSPXSeries(dates).then(spy => {
@@ -2732,32 +3464,115 @@ function renderOverviewChart() {
 }
 
 // ── BENCHMARK DATA ──
-const BENCHMARK_DATA = [
-  { month:"Jan '26", label_es:"Ene '26", portfolio:0.729,  spxtr:1.450,   efa:4.905,  vt:3.112  },
-  { month:"Feb '26", label_es:"Feb '26", portfolio:-0.028, spxtr:-0.760,  efa:4.606,  vt:1.643  },
-  { month:"Mar '26", label_es:"Mar '26", portfolio:-4.032, spxtr:-4.980,  efa:-7.829, vt:-6.215 },
-  { month:"Apr '26", label_es:"Abr '26", portfolio:7.854,  spxtr:10.493,  efa:5.343,  vt:9.312  },
-  { month:"May '26", label_es:"May '26", portfolio:4.098,  spxtr:5.263,   efa:2.424,  vt:4.577  },
-];
+// Benchmark data is fetched live — no hardcoded values
+let _benchmarkMonths = null; // cached API response { key, spxtr, efa, vt }[]
 
-function renderBenchmarks() {
-  const fmtR = n => {
+function _monthKeyToLabel(key) {
+  // "2026-01" → "Jan '26" / "Ene '26"
+  const [y, m] = key.split("-");
+  const enNames = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const esNames = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const yr = "'" + y.slice(2);
+  return currentLang === "es" ? `${esNames[+m]} ${yr}` : `${enNames[+m]} ${yr}`;
+}
+
+function _monthKeyToFull(key) {
+  const [y, m] = key.split("-");
+  const enFull = ["","January","February","March","April","May","June","July","August","September","October","November","December"];
+  const esFull = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  return currentLang === "es" ? `${esFull[+m]} ${y}` : `${enFull[+m]} ${y}`;
+}
+
+function _computeFundMonthlyReturns(series, inceptionNav) {
+  // Group nav-history points by YYYY-MM
+  const months = {};
+  for (const pt of series) {
+    const key = pt.date.slice(0, 7);
+    if (!months[key]) months[key] = [];
+    months[key].push(pt);
+  }
+  const monthKeys = Object.keys(months).sort();
+  const result = {};
+  for (let i = 0; i < monthKeys.length; i++) {
+    const key = monthKeys[i];
+    const pts = months[key];
+    const navEnd = pts[pts.length - 1].nav;
+    let navStart;
+    if (i === 0) { navStart = inceptionNav || 1.0; }
+    else { const prev = monthKeys[i-1]; navStart = months[prev][months[prev].length-1].nav; }
+    result[key] = parseFloat(((navEnd / navStart - 1) * 100).toFixed(3));
+  }
+  return result;
+}
+
+function renderBenchmarks(benchMonths) {
+  // benchMonths: [{ key, spxtr, efa, vt }] from API, or null if still loading
+  const series = navHist?.series;
+  if (!series?.length) return;
+
+  const fundReturns = _computeFundMonthlyReturns(series, inceptionNav);
+  const allKeys = [...new Set([
+    ...Object.keys(fundReturns),
+    ...(benchMonths || []).map(b => b.key),
+  ])].filter(k => k >= "2025-12").sort();
+
+  const fmtR = (n, dim) => {
+    if (n == null) return `<span style="color:var(--text3);">—</span>`;
     const s = (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
     const cls = n >= 0 ? "pos" : "neg";
-    return `<span class="${cls}">${s}</span>`;
+    return `<span class="${cls}" ${dim ? 'style="color:var(--text2);"' : ""}>${s}</span>`;
   };
-  const rows = BENCHMARK_DATA.map(d => {
-    const monthLabel = currentLang === "es" ? d.label_es : d.month;
+
+  // Best / worst month from Fund ONE (completed months only — skip current partial month)
+  const today = new Date().toISOString().slice(0, 7);
+  const completedKeys = allKeys.filter(k => k < today && fundReturns[k] != null);
+  if (completedKeys.length) {
+    const best  = completedKeys.reduce((a,b) => fundReturns[a] >= fundReturns[b] ? a : b);
+    const worst = completedKeys.reduce((a,b) => fundReturns[a] <= fundReturns[b] ? a : b);
+    const bVal = fundReturns[best], wVal = fundReturns[worst];
+    const bEl = document.getElementById("best-month-val");
+    const wEl = document.getElementById("worst-month-val");
+    if (bEl) { bEl.textContent = (bVal >= 0 ? "+" : "") + bVal.toFixed(2) + "%"; bEl.className = "period-value " + (bVal>=0?"pos":"neg"); }
+    if (wEl) { wEl.textContent = (wVal >= 0 ? "+" : "") + wVal.toFixed(2) + "%"; wEl.className = "period-value " + (wVal>=0?"pos":"neg"); }
+    const bDate = document.getElementById("best-month-date");
+    const wDate = document.getElementById("worst-month-date");
+    if (bDate) bDate.textContent = _monthKeyToFull(best);
+    if (wDate) wDate.textContent = _monthKeyToFull(worst);
+  }
+
+  const benchMap = {};
+  for (const b of (benchMonths || [])) benchMap[b.key] = b;
+
+  const rows = [...allKeys].reverse().map(key => {
+    const isCurrent = key === today;
+    const fund = fundReturns[key];
+    const bm = benchMap[key] || {};
+    const label = _monthKeyToLabel(key) + (isCurrent ? ` <span style="font-size:10px;color:var(--text3);">(MTD)</span>` : "");
     return `<tr>
-      <td style="font-weight:500;">${monthLabel}</td>
-      <td>${fmtR(d.portfolio)}</td>
-      <td style="color:var(--text2);">${fmtR(d.spxtr)}</td>
-      <td style="color:var(--text2);">${fmtR(d.efa)}</td>
-      <td style="color:var(--text2);">${fmtR(d.vt)}</td>
+      <td style="font-weight:500;">${label}</td>
+      <td>${fmtR(fund ?? null, false)}</td>
+      <td>${fmtR(bm.spxtr ?? null, true)}</td>
+      <td>${fmtR(bm.efa ?? null, true)}</td>
+      <td>${fmtR(bm.vt ?? null, true)}</td>
     </tr>`;
   }).join("");
+
   const el = document.getElementById("bench-body");
-  if (el) el.innerHTML = rows;
+  if (el) el.innerHTML = rows || `<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:1rem;">No data</td></tr>`;
+}
+
+async function loadBenchmarkData() {
+  if (_benchmarkMonths) { renderBenchmarks(_benchmarkMonths); return; }
+  // Render Fund ONE column immediately from nav-history while benchmarks load
+  renderBenchmarks(null);
+  try {
+    const r = await fetch("/api/spx-history?mode=monthly");
+    if (r.ok) {
+      const d = await r.json();
+      _benchmarkMonths = d.months || [];
+      renderBenchmarks(_benchmarkMonths);
+    }
+  } catch {}
 }
 
 // ── USD/COP EXCHANGE RATE ──
@@ -2912,13 +3727,969 @@ function commitIBImport() {
   save("mff_positions", positions);
   transactions = ibParsed.transactions;
   save("mff_transactions", transactions);
-  renderTx(); renderPositions(); renderMetrics(); renderOwnership(); fetchPrices();
+  renderTx(); renderPositions(); renderMetrics(); renderIncome(); renderOwnership(); fetchPrices();
   triggerAutoSync();
   const el = document.getElementById("ib-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",3000);
   ibParsed = null;
   document.getElementById("ib-import-preview").style.display = "none";
   document.getElementById("ib-file-input").value = "";
   showIBStatus("Import applied. Positions, transactions, and prices updated.", "ok");
+}
+
+// ── STATEMENTS ──────────────────────────────────────────────────────────────
+
+function populateStatementMonths() {
+  const sel = document.getElementById("stmt-month");
+  if (!sel || sel.dataset.populated) return;
+  sel.innerHTML = "";
+  const today = new Date();
+  // Go back to first of current month → prev month is last completed
+  const end = new Date(today.getFullYear(), today.getMonth(), 0); // last day of prev month
+  const start = new Date(2025, 11, 1); // Dec 2025
+  const months = [];
+  let d = new Date(start);
+  while (d <= end) {
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = d.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+    months.push({ key, label });
+    d.setMonth(d.getMonth() + 1);
+  }
+  months.reverse().forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.key;
+    opt.textContent = m.label;
+    sel.appendChild(opt);
+  });
+  sel.dataset.populated = "1";
+
+  // Show/hide investor picker based on role
+  const grp = document.getElementById("stmt-investor-group");
+  if (grp) grp.style.display = currentUser?.admin ? "" : "none";
+  // Pre-select own investor for non-admin — match by email
+  if (!currentUser?.admin) {
+    const invSel = document.getElementById("stmt-investor");
+    const email  = currentUser?.loginEmail || "";
+    const match  = investors.find(inv => inv.email && inv.email.toLowerCase() === email.toLowerCase());
+    if (match) invSel.value = match.id;
+  }
+}
+
+async function downloadStatement() {
+  const btn    = document.getElementById("stmt-download-btn");
+  const status = document.getElementById("stmt-status");
+  const month  = document.getElementById("stmt-month").value;
+  const invId  = currentUser?.admin
+    ? document.getElementById("stmt-investor").value
+    : (investors.find(inv => inv.email?.toLowerCase() === currentUser?.loginEmail?.toLowerCase())?.id || investors[0]?.id || "");
+
+  if (!month) { status.textContent = t("err_select_period"); status.style.color = "var(--red)"; status.style.display = "inline"; return; }
+
+  btn.disabled = true;
+  btn.innerHTML = `<i class="ti ti-loader spin" style="font-size:16px;"></i> ${t("status_generating")}`;
+  status.style.display = "none";
+  try {
+    await _generateStatementPDF(invId, month);
+    status.textContent = t("status_stmt_downloaded");
+    status.style.color = "var(--green)";
+    status.style.display = "inline";
+    setTimeout(() => { status.style.display = "none"; }, 4000);
+  } catch (e) {
+    status.textContent = "✗ " + e.message;
+    status.style.color = "var(--red)";
+    status.style.display = "inline";
+  }
+  btn.disabled = false;
+  btn.innerHTML = `<i class="ti ti-download" style="font-size:16px;"></i><span id="stmt-download-btn-lbl">${t("stmt_download_pdf")}</span>`;
+}
+
+async function _generateStatementPDF(investorId, periodMonth) {
+  if (!window.jspdf) throw new Error("PDF library not loaded — please refresh the page");
+  const { jsPDF } = window.jspdf;
+
+  // ── Data ──
+  const inv = (investors || []).find(i => i.id === investorId);
+  if (!inv) throw new Error("Investor data not available — please wait for sync to complete");
+  const series = navHist?.series || [];
+  if (!series.length) throw new Error("NAV history not loaded — please wait a moment and try again");
+
+  const [yr, mo] = periodMonth.split("-");
+  const mStart = `${yr}-${mo}-01`;
+  const mEnd   = new Date(+yr, +mo, 1).toISOString().slice(0,10); // first of NEXT month
+
+  const navEnd   = series.filter(p => p.date < mEnd).slice(-1)[0];
+  const navStart = series.filter(p => p.date < mStart).slice(-1)[0];
+  const navYrStart = series.filter(p => p.date < `${yr}-01-01`).slice(-1)[0];
+
+  const stmtUnitMap = calcUnits();
+  const { totalUnits } = stmtUnitMap;
+  const myUnits = stmtUnitMap[investorId] || 0;
+  const myPct   = totalUnits > 0 ? myUnits / totalUnits : 0;
+
+  const totalVal      = navEnd?.totalValue   || 0;
+  const totalValStart = navStart?.totalValue || 0;
+  const myVal         = totalVal      * myPct;
+  const myValStart    = totalValStart * myPct;
+  const myChange      = myVal - myValStart;
+
+  const mtd            = navStart && navEnd ? (navEnd.nav / navStart.nav - 1) * 100 : null;
+  const ytd            = navYrStart && navEnd ? (navEnd.nav / navYrStart.nav - 1) * 100 : null;
+  const sinceInc       = navEnd ? (navEnd.nav / (inceptionNav || 1) - 1) * 100 : null;
+  const bmMonth        = (_benchmarkMonths || []).find(b => b.key === periodMonth);
+  const spxtrMTD       = bmMonth?.spxtr ?? null;
+
+  const periodDeposits = (deposits || []).filter(d => d.date?.startsWith(periodMonth));
+  const monthLabel     = new Date(`${periodMonth}-15`).toLocaleDateString("en-US", { month:"long", year:"numeric" });
+
+  // ── PDF setup ──
+  const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+  const W=210, H=297, ML=14, MR=14, CW=W-ML-MR;
+
+  const C = {
+    dark:    [13,  43, 30],
+    accent:  [0,  202,109],
+    light:   [244,247,245],
+    white:   [255,255,255],
+    tDark:   [15,  31, 23],
+    tMed:    [74,  99, 88],
+    tLight:  [138,163,150],
+    pos:     [0,  151, 71],
+    neg:     [192, 57, 43],
+    border:  [220,230,224],
+    dimText: [180,200,190],
+  };
+
+  const $ = n => n == null ? "—" : "$" + Math.round(Math.abs(n)).toLocaleString("en-US");
+  const P = n => n == null ? "—" : (n>=0?"+":"")+n.toFixed(2)+"%";
+  const autoTbl = (opts) => doc.autoTable({ margin:{left:ML,right:MR,bottom:22}, ...opts });
+
+  let y = 0;
+
+  // ── HEADER ──
+  doc.setFillColor(...C.dark);  doc.rect(0, 0, W, 40, "F");
+  doc.setFillColor(...C.accent); doc.rect(0, 40, W, 1.5, "F");
+
+  // Logo circle
+  doc.setFillColor(...C.accent); doc.circle(ML+6, 20, 6, "F");
+  doc.setTextColor(...C.dark); doc.setFont("helvetica","bold"); doc.setFontSize(7.5);
+  doc.text("RRS", ML+6, 20.8, {align:"center", baseline:"middle"});
+
+  // Title
+  doc.setTextColor(...C.white);
+  doc.setFont("helvetica","bold"); doc.setFontSize(16);
+  doc.text("Red Road Securities", ML+16, 17);
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...C.dimText);
+  doc.text(t("pdf_investor_statement"), ML+16, 25);
+
+  // Period (right)
+  doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(13);
+  doc.text(monthLabel, W-MR, 17, {align:"right"});
+  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...C.dimText);
+  doc.text(t("pdf_monthly_statement"), W-MR, 25, {align:"right"});
+
+  y = 50;
+
+  // ── INVESTOR INFO ──
+  doc.setTextColor(...C.tLight); doc.setFont("helvetica","bold"); doc.setFontSize(7.5);
+  doc.text(t("pdf_prepared_for"), ML, y); y += 5;
+  doc.setTextColor(...C.tDark); doc.setFont("helvetica","bold"); doc.setFontSize(18);
+  doc.text(`${inv.firstName} ${inv.lastName}`, ML, y);
+
+  // Ownership pill (top right)
+  doc.setFillColor(...C.light); doc.roundedRect(W-MR-46, y-8, 46, 14, 3, 3, "F");
+  doc.setTextColor(...C.tLight); doc.setFont("helvetica","bold"); doc.setFontSize(6.5);
+  doc.text(t("pdf_ownership"), W-MR-23, y-3.5, {align:"center"});
+  doc.setTextColor(...C.tDark); doc.setFontSize(13);
+  doc.text((myPct*100).toFixed(2)+"%", W-MR-23, y+4, {align:"center"});
+
+  y += 7;
+  doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...C.tMed);
+  doc.text(inv.email || "", ML, y); y += 13;
+
+  // ── ACCOUNT SUMMARY ──
+  const bW = (CW-8)/3;
+  const sumBoxes = [
+    { lbl:t("pdf_account_value"),      val:$(myVal),                          sub:`${t("pdf_as_of")} ${navEnd?.date||"—"}`,   clr:null },
+    { lbl:t("pdf_beginning_of_month"), val:$(myValStart),                     sub:`${t("pdf_as_of")} ${navStart?.date||"—"}`, clr:null },
+    { lbl:t("pdf_monthly_change"),     val:(myChange>=0?"+":"-")+$(myChange), sub:P(mtd),                                     clr:myChange>=0 },
+  ];
+  sumBoxes.forEach((b, i) => {
+    const bx = ML + i*(bW+4);
+    doc.setDrawColor(...C.border); doc.setFillColor(...C.white); doc.setLineWidth(0.3);
+    doc.roundedRect(bx, y, bW, 26, 2.5, 2.5, "FD");
+    doc.setFillColor(...C.accent); doc.rect(bx, y, bW, 1.2, "F");
+    doc.setFontSize(6.5); doc.setFont("helvetica","bold"); doc.setTextColor(...C.tLight);
+    doc.text(b.lbl, bx+4, y+6);
+    doc.setFontSize(14); doc.setFont("helvetica","bold");
+    doc.setTextColor(...(b.clr===true ? C.pos : b.clr===false ? C.neg : C.tDark));
+    doc.text(b.val, bx+4, y+15);
+    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(...C.tMed);
+    doc.text(b.sub, bx+4, y+22);
+  });
+  y += 32;
+
+  // ── PERIOD RETURNS ──
+  doc.setFillColor(...C.light); doc.rect(ML, y, CW, 7, "F");
+  doc.setTextColor(...C.tLight); doc.setFont("helvetica","bold"); doc.setFontSize(7);
+  doc.text(t("pdf_period_returns"), ML+3, y+4.5); y += 9;
+
+  const rW = (CW-12)/4;
+  [
+    { lbl:t("pdf_mtd"),            val:P(mtd),       n:mtd       },
+    { lbl:t("pdf_ytd"),            val:P(ytd),       n:ytd       },
+    { lbl:t("pdf_since_inception"),val:P(sinceInc),  n:sinceInc  },
+    { lbl:t("pdf_sp500_mtd"),      val:P(spxtrMTD),  n:spxtrMTD, dim:true },
+  ].forEach((r, i) => {
+    const bx = ML + i*(rW+4);
+    doc.setDrawColor(...C.border); doc.setFillColor(...(r.dim ? C.light : C.white)); doc.setLineWidth(0.3);
+    doc.roundedRect(bx, y, rW, 20, 2.5, 2.5, "FD");
+    doc.setFontSize(6.5); doc.setFont("helvetica","bold"); doc.setTextColor(...C.tLight);
+    doc.text(r.lbl, bx+rW/2, y+6, {align:"center"});
+    doc.setFontSize(13); doc.setFont("helvetica","bold");
+    doc.setTextColor(...(r.n==null ? C.tMed : r.n>=0 ? C.pos : C.neg));
+    doc.text(r.val, bx+rW/2, y+15, {align:"center"});
+  });
+  y += 26;
+
+  // ── PORTFOLIO HOLDINGS ──
+  doc.setFillColor(...C.light); doc.rect(ML, y, CW, 7, "F");
+  doc.setTextColor(...C.tLight); doc.setFont("helvetica","bold"); doc.setFontSize(7);
+  doc.text(t("pdf_portfolio_holdings"), ML+3, y+4.5); y += 7;
+
+  const totalFV = (positions||[]).reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||0), 0) + (cashBalance||0);
+  const holdRows = (positions||[]).map(p => {
+    const px = livePrice[p.ticker] || p.ibClose || 0;
+    const val = p.shares * px;
+    return [p.ticker, p.name||"", p.shares.toLocaleString("en-US",{maximumFractionDigits:2}),
+            "$"+px.toFixed(2), "$"+Math.round(val).toLocaleString(),
+            totalFV>0 ? (val/totalFV*100).toFixed(1)+"%" : "—"];
+  });
+  if (cashBalance) holdRows.push(["CASH", t("pdf_cash"),"—","—","$"+Math.round(cashBalance).toLocaleString(),totalFV>0?(cashBalance/totalFV*100).toFixed(1)+"%":"—"]);
+
+  autoTbl({ startY:y,
+    head:[[t("pdf_col_ticker"),t("pdf_col_description"),t("pdf_col_shares"),t("pdf_col_price"),t("pdf_col_market_value"),t("pdf_col_allocation")]],
+    body: holdRows,
+    styles:{ fontSize:8, cellPadding:3, textColor:C.tDark, lineColor:C.border, lineWidth:0.2 },
+    headStyles:{ fillColor:C.dark, textColor:255, fontStyle:"bold", fontSize:7.5 },
+    alternateRowStyles:{ fillColor:C.light },
+    columnStyles:{ 0:{fontStyle:"bold",textColor:C.dark,cellWidth:18}, 1:{textColor:C.tMed,cellWidth:60},
+                   2:{halign:"right",cellWidth:24}, 3:{halign:"right",cellWidth:22},
+                   4:{halign:"right",fontStyle:"bold",cellWidth:28}, 5:{halign:"right",cellWidth:22} },
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // ── CAPITAL ACTIVITY ──
+  if (y > H-70) { doc.addPage(); y = 20; }
+  doc.setFillColor(...C.light); doc.rect(ML, y, CW, 7, "F");
+  doc.setTextColor(...C.tLight); doc.setFont("helvetica","bold"); doc.setFontSize(7);
+  doc.text(t("pdf_capital_activity"), ML+3, y+4.5); y += 7;
+
+  const stmtInvKey = investorId.startsWith("inv_") ? investorId.slice(4) : investorId;
+  const actRows = periodDeposits.map(d => {
+    const amt = d[stmtInvKey] || 0;
+    if (!amt) return null;
+    return [d.date||"—", "$"+amt.toLocaleString("en-US"),
+            d.nav ? "$"+d.nav.toFixed(4) : "—",
+            d.nav ? (amt/d.nav).toFixed(4) : "—"];
+  }).filter(Boolean);
+
+  if (!actRows.length) {
+    doc.setTextColor(...C.tMed); doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
+    doc.text(t("pdf_no_capital_activity"), ML, y+5); y += 14;
+  } else {
+    autoTbl({ startY:y,
+      head:[[t("pdf_col_date"),t("pdf_col_amount_invested"),t("pdf_col_nav_at_purchase"),t("pdf_col_units_purchased")]],
+      body: actRows,
+      styles:{ fontSize:8, cellPadding:3, textColor:C.tDark },
+      headStyles:{ fillColor:C.dark, textColor:255, fontStyle:"bold", fontSize:7.5 },
+      alternateRowStyles:{ fillColor:C.light },
+      columnStyles:{ 1:{halign:"right"}, 2:{halign:"right"}, 3:{halign:"right"} },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+  }
+
+  // ── NAV HISTORY ──
+  if (y > H-60) { doc.addPage(); y = 20; }
+  doc.setFillColor(...C.light); doc.rect(ML, y, CW, 7, "F");
+  doc.setTextColor(...C.tLight); doc.setFont("helvetica","bold"); doc.setFontSize(7);
+  doc.text(t("pdf_nav_history_full"), ML+3, y+4.5); y += 7;
+
+  const fundMRets  = _computeFundMonthlyReturns(series, inceptionNav);
+  const navHistRows = Object.keys(fundMRets).sort().reverse().map(key => {
+    const pts = series.filter(p => p.date.startsWith(key));
+    if (!pts.length) return null;
+    const nEnd = pts[pts.length-1].nav;
+    const prevKey = Object.keys(fundMRets).sort().filter(k => k < key).slice(-1)[0];
+    const prevPts = prevKey ? series.filter(p => p.date.startsWith(prevKey)) : [];
+    const nStart  = prevPts.length ? prevPts[prevPts.length-1].nav : (inceptionNav||1);
+    const ret = fundMRets[key];
+    const lbl = new Date(key+"-15").toLocaleDateString(currentLang==="es"?"es-CO":"en-US",{month:"long",year:"numeric"});
+    return [lbl, "$"+nStart.toFixed(4), "$"+nEnd.toFixed(4),
+            { content:P(ret), styles:{ textColor: ret>=0 ? C.pos : C.neg, fontStyle:"bold" } }];
+  }).filter(Boolean);
+
+  autoTbl({ startY:y,
+    head:[[t("pdf_col_month"),t("pdf_col_nav_start"),t("pdf_col_nav_end"),t("pdf_col_monthly_return")]],
+    body: navHistRows,
+    styles:{ fontSize:8, cellPadding:3, textColor:C.tDark },
+    headStyles:{ fillColor:C.dark, textColor:255, fontStyle:"bold", fontSize:7.5 },
+    alternateRowStyles:{ fillColor:C.light },
+    columnStyles:{ 0:{cellWidth:58}, 1:{halign:"right",cellWidth:36},
+                   2:{halign:"right",cellWidth:36}, 3:{halign:"right",cellWidth:36} },
+  });
+
+  // ── FOOTER (all pages) ──
+  const total = doc.getNumberOfPages();
+  const genDate = new Date().toLocaleDateString(currentLang==="es"?"es-CO":"en-US",{month:"short",day:"numeric",year:"numeric"});
+  for (let p = 1; p <= total; p++) {
+    doc.setPage(p);
+    doc.setFillColor(...C.dark); doc.rect(0, H-16, W, 16, "F");
+    doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(8);
+    doc.text("Red Road Securities", ML, H-9);
+    doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(...C.dimText);
+    doc.text(t("pdf_managed_by"), ML, H-4);
+    doc.text(`${t("pdf_generated")} ${genDate}  ·  ${t("pdf_page")} ${p} ${t("pdf_of")} ${total}`, W-MR, H-4, {align:"right"});
+  }
+
+  doc.save(`RRS_${inv.firstName}_${inv.lastName}_${periodMonth}.pdf`);
+}
+
+// ── BALANCE SHEET ────────────────────────────────────────────────────────────
+
+async function downloadBalanceSheet() {
+  const btn    = document.getElementById("stmt-bs-btn");
+  const status = document.getElementById("stmt-bs-status");
+  const month  = document.getElementById("stmt-month").value;
+  if (!month) { status.textContent = t("err_select_period"); status.style.color = "var(--red)"; status.style.display = "inline"; return; }
+  btn.disabled = true;
+  btn.innerHTML = `<i class="ti ti-loader spin" style="font-size:15px;"></i> ${t("status_generating")}`;
+  status.style.display = "none";
+  try {
+    await _generateBalanceSheetPDF(month);
+    status.textContent = t("status_downloaded"); status.style.color = "var(--green)"; status.style.display = "inline";
+    setTimeout(() => { status.style.display = "none"; }, 4000);
+  } catch (e) {
+    status.textContent = "✗ " + e.message; status.style.color = "var(--red)"; status.style.display = "inline";
+  }
+  btn.disabled = false;
+  btn.innerHTML = `<i class="ti ti-download" style="font-size:15px;"></i><span id="stmt-bs-btn-lbl">${t("stmt_download_pdf")}</span>`;
+}
+
+async function _generateBalanceSheetPDF(periodMonth) {
+  if (!window.jspdf) throw new Error("PDF library not loaded");
+  const { jsPDF } = window.jspdf;
+
+  const series = navHist?.series || [];
+  if (!series.length) throw new Error("NAV history not loaded — please wait and try again");
+
+  const [yr, mo] = periodMonth.split("-");
+  const mEnd     = new Date(+yr, +mo, 1).toISOString().slice(0, 10);
+  const navPt    = series.filter(p => p.date < mEnd).slice(-1)[0];
+  const totalNetAssets = navPt?.totalValue || 0;
+  const navPerUnit     = navPt?.nav || 1;
+  const monthLabel     = new Date(`${periodMonth}-15`).toLocaleDateString("en-US", { month:"long", year:"numeric" });
+  const asOfDate       = navPt?.date || periodMonth;
+
+  const { fernandoUnits, darioUnits, totalUnits } = calcUnits();
+  const fPct = totalUnits > 0 ? fernandoUnits / totalUnits : 0;
+  const dPct = totalUnits > 0 ? darioUnits   / totalUnits : 0;
+
+  const pos    = positions || [];
+  const totalFV = pos.reduce((s, p) => s + p.shares * (livePrice[p.ticker] || p.ibClose || 0), 0) + (cashBalance || 0);
+  const scale   = totalFV > 0 && totalNetAssets > 0 ? totalNetAssets / totalFV : 1;
+  const scaledPos = pos.map(p => {
+    const px  = livePrice[p.ticker] || p.ibClose || 0;
+    return { ticker:p.ticker, name:p.name||"", shares:p.shares, px, costBasis:p.costBasis||0, val:p.shares*px*scale };
+  });
+  const scaledCash       = (cashBalance || 0) * scale;
+  const totalInvestments = scaledPos.reduce((s, p) => s + p.val, 0);
+  const costBasisTotal   = scaledPos.reduce((s, p) => s + p.shares * p.costBasis, 0);
+  const unrealizedApp    = totalInvestments - costBasisTotal;
+
+  // Composition of net assets
+  const totalPaidIn = (deposits||[]).reduce((s,d) => s + (d.amount||0), 0);
+  const allTimeDivs = (transactions||[]).filter(t=>t.type==="dividend").reduce((s,t) => {
+    if (t.netAmount) return s + t.netAmount;
+    const p2 = pos.find(p => p.ticker === t.ticker);
+    return s + (t.price||0) * (p2?.shares||0);
+  }, 0);
+  const cumulativeRealized = totalNetAssets - totalPaidIn - unrealizedApp - allTimeDivs;
+
+  // PDF setup
+  const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+  const W=210, H=297, ML=14, MR=14, CW=W-ML-MR;
+  const C = {
+    dark:[13,43,30], accent:[0,202,109], light:[244,247,245], white:[255,255,255],
+    tDark:[15,31,23], tMed:[74,99,88], tLight:[138,163,150],
+    pos:[0,151,71], neg:[192,57,43], border:[220,230,224], dimText:[180,200,190],
+  };
+  const AMT_X = W - MR - 3;
+  const RULE_X = AMT_X - 42;
+  const autoTbl = opts => doc.autoTable({ margin:{left:ML,right:MR,bottom:22}, ...opts });
+  let y = 0;
+
+  const fmtA = (v, dash=false) => {
+    if (v === 0 || v == null) return dash ? "—" : "—";
+    const abs = Math.round(Math.abs(v)).toLocaleString("en-US");
+    return v < 0 ? `(${abs})` : `$${abs}`;
+  };
+  const needPg = (n) => { if (y + n > H - 20) { doc.addPage(); y = 22; } };
+
+  const drawSection = (lbl) => {
+    needPg(12);
+    doc.setFillColor(...C.dark); doc.rect(ML, y, CW, 8.5, "F");
+    doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(7.5);
+    doc.text(lbl, ML+3, y+5.8); y += 11;
+  };
+  const drawSubSection = (lbl) => {
+    needPg(10);
+    doc.setFillColor(...C.light); doc.rect(ML, y, CW, 7.5, "F");
+    doc.setTextColor(...C.tMed); doc.setFont("helvetica","bold"); doc.setFontSize(8);
+    doc.text(lbl, ML+3, y+5); y += 9.5;
+  };
+  const drawLine = (lbl, val, { indent=0, bold=false, dash=false, sub=null, amtStr=null }={}) => {
+    needPg(sub ? 13 : 7);
+    doc.setFont("helvetica", bold?"bold":"normal"); doc.setFontSize(8.5); doc.setTextColor(...C.tDark);
+    doc.text(lbl, ML + indent*6, y);
+    if (val !== undefined || amtStr !== null) {
+      const s = amtStr !== null ? amtStr : fmtA(val, dash);
+      doc.setTextColor(...(typeof val==="number" && val<0 ? C.neg : C.tDark));
+      doc.setFont("helvetica", bold?"bold":"normal");
+      doc.text(s, AMT_X, y, {align:"right"});
+    }
+    if (sub) {
+      doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...C.tLight);
+      doc.text(sub, ML + indent*6 + 2, y+4.5); y += 4.5;
+    }
+    y += 6.5;
+  };
+  const drawRule = () => {
+    doc.setDrawColor(...C.border); doc.setLineWidth(0.25);
+    doc.line(RULE_X, y, AMT_X, y); y += 2.5;
+  };
+  const drawSubtotal = (lbl, val, { indent=0, dash=false, amtStr=null }={}) => {
+    needPg(13);
+    doc.setDrawColor(...C.tMed); doc.setLineWidth(0.4); doc.line(RULE_X, y, AMT_X, y); y += 3.5;
+    doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...C.tDark);
+    doc.text(lbl, ML + indent*6, y);
+    const s = amtStr !== null ? amtStr : fmtA(val, dash);
+    doc.text(s, AMT_X, y, {align:"right"}); y += 9;
+  };
+  const drawTotal = (lbl, val, { dash=false, amtStr=null }={}) => {
+    needPg(17);
+    doc.setDrawColor(...C.tDark); doc.setLineWidth(0.5); doc.line(RULE_X, y, AMT_X, y); y += 3.5;
+    doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(...C.tDark);
+    doc.text(lbl, ML, y);
+    const s = amtStr !== null ? amtStr : fmtA(val, dash);
+    doc.text(s, AMT_X, y, {align:"right"}); y += 5;
+    doc.setDrawColor(...C.tDark); doc.setLineWidth(0.5);
+    doc.line(RULE_X, y, AMT_X, y); y += 1.5; doc.line(RULE_X, y, AMT_X, y); y += 7;
+  };
+  const drawGrand = (lbl, val) => {
+    needPg(14);
+    doc.setFillColor(...C.dark); doc.rect(ML, y, CW, 11, "F");
+    doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(10.5);
+    doc.text(lbl, ML+3, y+7.5);
+    doc.text("$"+Math.round(Math.abs(val)).toLocaleString("en-US"), AMT_X, y+7.5, {align:"right"});
+    y += 15;
+  };
+  const drawBlank = (h=4) => { y += h; };
+
+  // ── HEADER ──
+  doc.setFillColor(...C.dark); doc.rect(0, 0, W, 40, "F");
+  doc.setFillColor(...C.accent); doc.rect(0, 40, W, 1.5, "F");
+  doc.setFillColor(...C.accent); doc.circle(ML+6, 20, 6, "F");
+  doc.setTextColor(...C.dark); doc.setFont("helvetica","bold"); doc.setFontSize(7.5);
+  doc.text("RRS", ML+6, 20.8, {align:"center", baseline:"middle"});
+  doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(16);
+  doc.text("Red Road Securities", ML+16, 17);
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...C.dimText);
+  doc.text(t("pdf_net_assets_stmt"), ML+16, 25);
+  doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(13);
+  doc.text(monthLabel, W-MR, 17, {align:"right"});
+  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...C.dimText);
+  doc.text(`${t("pdf_as_of_prefix")} ${asOfDate}`, W-MR, 25, {align:"right"});
+  y = 52;
+
+  // ── ASSETS ──
+  drawSection(t("pdf_assets"));
+  drawSubSection(t("pdf_inv_fair_value"));
+  drawLine(t("pdf_equity_securities"), { bold:true, indent:1 });
+  for (const p of scaledPos) {
+    drawLine(`${p.ticker}  —  ${p.name}`, p.val, {
+      indent:2,
+      sub:`${p.shares.toLocaleString("en-US",{maximumFractionDigits:2})}${t("pdf_shares_sub_prefix")}${(p.val/p.shares).toFixed(2)}${t("pdf_shares_sub_cost")}${Math.round(p.shares*p.costBasis).toLocaleString("en-US")}`
+    });
+  }
+  drawRule();
+  drawLine(t("pdf_total_equity_securities"), totalInvestments, { indent:1, bold:true });
+  drawLine(t("pdf_fixed_income"), 0, { indent:1, dash:true });
+  drawLine(t("pdf_other_investments"), 0, { indent:1, dash:true });
+  drawRule();
+  drawSubtotal(t("pdf_total_inv_cost_prefix")+Math.round(costBasisTotal).toLocaleString("en-US")+")", totalInvestments);
+  drawBlank(3);
+  drawLine(t("pdf_cash_equiv"), scaledCash);
+  drawLine(t("pdf_divs_receivable"), 0, { dash:true });
+  drawLine(t("pdf_rec_inv_sold"), 0, { dash:true });
+  drawLine(t("pdf_sub_receivable"), 0, { dash:true });
+  drawLine(t("pdf_prepaid"), 0, { dash:true });
+  drawTotal(t("pdf_total_assets"), totalNetAssets);
+  drawBlank(5);
+
+  // ── LIABILITIES ──
+  drawSection(t("pdf_liabilities"));
+  drawLine(t("pdf_mgmt_fees_payable"), 0, { dash:true });
+  drawLine(t("pdf_perf_fees_payable"), 0, { dash:true });
+  drawLine(t("pdf_payable_inv_purchased"), 0, { dash:true });
+  drawLine(t("pdf_redemptions_payable"), 0, { dash:true });
+  drawLine(t("pdf_accrued_admin"), 0, { dash:true });
+  drawLine(t("pdf_accrued_audit"), 0, { dash:true });
+  drawLine(t("pdf_accrued_custodial"), 0, { dash:true });
+  drawLine(t("pdf_due_to_broker"), 0, { dash:true });
+  drawLine(t("pdf_other_liabilities"), 0, { dash:true });
+  drawTotal(t("pdf_total_liabilities"), 0, { dash:true });
+  drawBlank(5);
+
+  // ── NET ASSETS ──
+  drawGrand(t("pdf_net_assets"), totalNetAssets);
+  drawBlank(4);
+
+  // ── COMPOSITION OF NET ASSETS ──
+  drawSection(t("pdf_composition_net_assets"));
+  drawLine(t("pdf_paid_in_capital"), totalPaidIn);
+  drawLine(t("pdf_undistributed_nii"), Math.max(0, allTimeDivs));
+  drawLine(t("pdf_accumulated_realized"), cumulativeRealized < 0 ? 0 : cumulativeRealized, { dash: cumulativeRealized === 0 });
+  drawLine(t("pdf_net_unrealized"), unrealizedApp);
+  drawTotal(t("pdf_net_assets_total"), totalNetAssets);
+  drawBlank(5);
+
+  // ── NET ASSET VALUE ──
+  drawSection(t("pdf_nav_per_unit_section"));
+  drawLine(t("pdf_net_assets_total"), totalNetAssets);
+  drawLine(t("pdf_total_units_outstanding"), undefined, { amtStr: totalUnits.toFixed(4) });
+  drawLine(t("pdf_nav_per_unit_line"), undefined, { amtStr: "$"+navPerUnit.toFixed(4), bold:true });
+  drawBlank(5);
+
+  // ── INVESTOR OWNERSHIP ──
+  const bsUnitMap = calcUnits();
+  drawSection(t("pdf_investor_ownership_section"));
+  const bsInvRows = (investors||[]).map(inv => {
+    const invU = bsUnitMap[inv.id] || 0;
+    const pct  = totalUnits > 0 ? invU / totalUnits : 0;
+    return [
+      `${inv.firstName} ${inv.lastName}`,
+      invU.toFixed(4),
+      (pct*100).toFixed(2)+"%",
+      "$"+Math.round(totalNetAssets*pct).toLocaleString(),
+      unrealizedApp > 0 ? "$"+Math.round(unrealizedApp*pct).toLocaleString() : "—",
+    ];
+  });
+  bsInvRows.push([
+    {content:t("pdf_total"),styles:{fontStyle:"bold"}},
+    {content:totalUnits.toFixed(4),styles:{fontStyle:"bold"}},
+    {content:"100.00%",styles:{fontStyle:"bold"}},
+    {content:"$"+Math.round(totalNetAssets).toLocaleString("en-US"),styles:{fontStyle:"bold"}},
+    {content:unrealizedApp>0?"$"+Math.round(unrealizedApp).toLocaleString():"—",styles:{fontStyle:"bold"}},
+  ]);
+  autoTbl({ startY:y,
+    head:[[t("pdf_col_investor"),t("pdf_col_units_held"),t("pdf_col_ownership_pct"),t("pdf_col_account_value"),t("pdf_col_unrealized_gl")]],
+    body: bsInvRows,
+    styles:{ fontSize:8.5, cellPadding:3.5, textColor:C.tDark },
+    headStyles:{ fillColor:C.dark, textColor:255, fontStyle:"bold", fontSize:7.5 },
+    alternateRowStyles:{ fillColor:C.light },
+    columnStyles:{ 1:{halign:"right"}, 2:{halign:"right"}, 3:{halign:"right",fontStyle:"bold"}, 4:{halign:"right",textColor:C.pos} },
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // ── SCHEDULE OF INVESTMENTS ──
+  if (y > H - 60) { doc.addPage(); y = 22; }
+  drawSection(t("pdf_schedule_investments"));
+  const schedRows = scaledPos.map(p => {
+    const historicalPx = p.shares > 0 ? p.val / p.shares : 0;
+    const costTotal    = p.shares * p.costBasis;
+    const unrealized   = p.val - costTotal;
+    return [
+      p.ticker,
+      p.name,
+      p.shares.toLocaleString("en-US",{maximumFractionDigits:2}),
+      "$"+p.costBasis.toFixed(2),
+      "$"+Math.round(costTotal).toLocaleString("en-US"),
+      "$"+historicalPx.toFixed(2),
+      "$"+Math.round(p.val).toLocaleString("en-US"),
+      (totalNetAssets>0?((p.val/totalNetAssets)*100).toFixed(1)+"%":"—"),
+      { content: unrealized>=0 ? "$"+Math.round(unrealized).toLocaleString() : "("+Math.round(Math.abs(unrealized)).toLocaleString()+")",
+        styles:{ textColor: unrealized>=0 ? C.pos : C.neg } },
+    ];
+  });
+  autoTbl({ startY:y,
+    head:[[t("pdf_col_ticker"),t("pdf_col_security_name"),t("pdf_col_shares"),t("pdf_col_cost_share"),t("pdf_col_total_cost"),t("pdf_col_market_price"),t("pdf_col_market_value"),t("pdf_col_pct_net_assets"),t("pdf_col_unrealized_gl2")]],
+    body: schedRows,
+    styles:{ fontSize:7.5, cellPadding:2.5, textColor:C.tDark },
+    headStyles:{ fillColor:C.dark, textColor:255, fontStyle:"bold", fontSize:7 },
+    alternateRowStyles:{ fillColor:C.light },
+    columnStyles:{
+      0:{fontStyle:"bold",cellWidth:14},1:{cellWidth:48},2:{halign:"right",cellWidth:18},
+      3:{halign:"right",cellWidth:18},4:{halign:"right",cellWidth:22},5:{halign:"right",cellWidth:20},
+      6:{halign:"right",fontStyle:"bold",cellWidth:22},7:{halign:"right",cellWidth:17},8:{halign:"right",cellWidth:22},
+    },
+  });
+  y = doc.lastAutoTable.finalY + 4;
+  doc.setFont("helvetica","italic"); doc.setFontSize(7.5); doc.setTextColor(...C.tLight);
+  doc.text(t("pdf_schedule_note"), ML, y);
+
+  // ── FOOTER ──
+  const total = doc.getNumberOfPages();
+  const genDate = new Date().toLocaleDateString(currentLang==="es"?"es-CO":"en-US",{month:"short",day:"numeric",year:"numeric"});
+  for (let p = 1; p <= total; p++) {
+    doc.setPage(p);
+    doc.setFillColor(...C.dark); doc.rect(0, H-16, W, 16, "F");
+    doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(8);
+    doc.text("Red Road Securities", ML, H-9);
+    doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(...C.dimText);
+    doc.text(t("pdf_managed_by"), ML, H-4);
+    doc.text(`${t("pdf_generated")} ${genDate}  ·  ${t("pdf_page")} ${p} ${t("pdf_of")} ${total}`, W-MR, H-4, {align:"right"});
+  }
+
+  doc.save(`RRS_BalanceSheet_${periodMonth}.pdf`);
+}
+
+// ── INCOME STATEMENT ─────────────────────────────────────────────────────────
+
+async function downloadIncomeStatement() {
+  const btn    = document.getElementById("stmt-is-btn");
+  const status = document.getElementById("stmt-is-status");
+  const month  = document.getElementById("stmt-month").value;
+  if (!month) { status.textContent = t("err_select_period"); status.style.color = "var(--red)"; status.style.display = "inline"; return; }
+  btn.disabled = true;
+  btn.innerHTML = `<i class="ti ti-loader spin" style="font-size:15px;"></i> ${t("status_generating")}`;
+  status.style.display = "none";
+  try {
+    await _generateIncomeStatementPDF(month);
+    status.textContent = t("status_downloaded"); status.style.color = "var(--green)"; status.style.display = "inline";
+    setTimeout(() => { status.style.display = "none"; }, 4000);
+  } catch (e) {
+    status.textContent = "✗ " + e.message; status.style.color = "var(--red)"; status.style.display = "inline";
+  }
+  btn.disabled = false;
+  btn.innerHTML = `<i class="ti ti-download" style="font-size:15px;"></i><span id="stmt-is-btn-lbl">${t("stmt_download_pdf")}</span>`;
+}
+
+async function _generateIncomeStatementPDF(periodMonth) {
+  if (!window.jspdf) throw new Error("PDF library not loaded");
+  const { jsPDF } = window.jspdf;
+
+  const series = navHist?.series || [];
+  if (!series.length) throw new Error("NAV history not loaded — please wait and try again");
+
+  const [yr, mo] = periodMonth.split("-");
+  const mStart   = `${yr}-${mo}-01`;
+  const mEnd     = new Date(+yr, +mo, 1).toISOString().slice(0, 10);
+
+  const navEnd     = series.filter(p => p.date < mEnd).slice(-1)[0];
+  const navStart   = series.filter(p => p.date < mStart).slice(-1)[0];
+  const navYrStart = series.filter(p => p.date < `${yr}-01-01`).slice(-1)[0];
+
+  const totalEnd   = navEnd?.totalValue   || 0;
+  const totalStart = navStart?.totalValue || 0;
+  const mtd        = navStart && navEnd ? (navEnd.nav / navStart.nav - 1) * 100 : null;
+  const ytd        = navYrStart && navEnd ? (navEnd.nav / navYrStart.nav - 1) * 100 : null;
+  const sinceInc   = navEnd ? (navEnd.nav / (inceptionNav || 1) - 1) * 100 : null;
+  const bmMonth    = (_benchmarkMonths || []).find(b => b.key === periodMonth);
+  const spxtrMTD   = bmMonth?.spxtr ?? null;
+  const monthLabel = new Date(`${periodMonth}-15`).toLocaleDateString("en-US", { month:"long", year:"numeric" });
+
+  const periodDeps    = (deposits||[]).filter(d => d.date?.startsWith(periodMonth));
+  const totalContribs = periodDeps.reduce((s, d) => s + (d.fernando||0) + (d.dario||0), 0);
+  const investmentReturn = totalEnd - totalStart - totalContribs;
+
+  // Dividend income by ticker
+  const divTx = (transactions||[]).filter(t => t.type==="dividend" && t.date?.startsWith(periodMonth));
+  const divByTicker = {};
+  divTx.forEach(t => {
+    const pos = (positions||[]).find(p => p.ticker === t.ticker);
+    const amt = t.netAmount || (t.price * (pos?.shares || 0));
+    divByTicker[t.ticker] = (divByTicker[t.ticker] || 0) + amt;
+  });
+  const totalDiv = Object.values(divByTicker).reduce((s, v) => s + v, 0);
+
+  // Realized gains from sells in period
+  const sellTx = (transactions||[]).filter(t => t.type==="sell" && t.date?.startsWith(periodMonth));
+  const totalProceeds  = sellTx.reduce((s, t) => s + (t.netAmount || t.shares * t.price), 0);
+  const totalCostSold  = sellTx.reduce((s, t) => {
+    const pos = (positions||[]).find(p => p.ticker === t.ticker);
+    return s + t.shares * (pos?.costBasis || 0);
+  }, 0);
+  const realizedGain   = totalProceeds - totalCostSold;
+  const changeUnrealized = investmentReturn - totalDiv - realizedGain;
+  const netFromOps     = investmentReturn; // = totalDiv + realizedGain + changeUnrealized
+
+  // Portfolio turnover
+  const avgAssets     = (totalStart + totalEnd) / 2;
+  const turnoverRate  = avgAssets > 0 ? (totalProceeds / avgAssets * 100) : 0;
+
+  // Investor attribution
+  const isUnitMap = calcUnits();
+  const { totalUnits } = isUnitMap;
+  const isInvList = investors || [];
+
+  // PDF setup
+  const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+  const W=210, H=297, ML=14, MR=14, CW=W-ML-MR;
+  const C = {
+    dark:[13,43,30], accent:[0,202,109], light:[244,247,245], white:[255,255,255],
+    tDark:[15,31,23], tMed:[74,99,88], tLight:[138,163,150],
+    pos:[0,151,71], neg:[192,57,43], border:[220,230,224], dimText:[180,200,190],
+  };
+  const AMT_X = W - MR - 3;
+  const RULE_X = AMT_X - 42;
+  const Pct = n => n == null ? "—" : (n>=0?"+":"")+n.toFixed(2)+"%";
+  const autoTbl = opts => doc.autoTable({ margin:{left:ML,right:MR,bottom:22}, ...opts });
+  let y = 0;
+
+  const fmtA = (v, dash=false) => {
+    if (v === 0 || v == null) return dash ? "—" : "—";
+    const abs = Math.round(Math.abs(v)).toLocaleString("en-US");
+    return v < 0 ? `(${abs})` : `$${abs}`;
+  };
+  const needPg = (n) => { if (y + n > H - 20) { doc.addPage(); y = 22; } };
+
+  const drawSection = (lbl) => {
+    needPg(12);
+    doc.setFillColor(...C.dark); doc.rect(ML, y, CW, 8.5, "F");
+    doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(7.5);
+    doc.text(lbl, ML+3, y+5.8); y += 11;
+  };
+  const drawLine = (lbl, val, { indent=0, bold=false, dash=false, col=null, amtStr=null }={}) => {
+    needPg(7);
+    doc.setFont("helvetica", bold?"bold":"normal"); doc.setFontSize(8.5);
+    doc.setTextColor(...(col || C.tDark));
+    doc.text(lbl, ML + indent*6, y);
+    if (val !== undefined || amtStr !== null) {
+      const s = amtStr !== null ? amtStr : fmtA(val, dash);
+      const tc = amtStr !== null ? (col || C.tDark) : (typeof val==="number" && val<0 ? C.neg : (col || C.tDark));
+      doc.setTextColor(...tc);
+      doc.setFont("helvetica", bold?"bold":"normal");
+      doc.text(s, AMT_X, y, {align:"right"});
+    }
+    y += 6.5;
+  };
+  const drawRule = () => {
+    doc.setDrawColor(...C.border); doc.setLineWidth(0.25);
+    doc.line(RULE_X, y, AMT_X, y); y += 2.5;
+  };
+  const drawSubtotal = (lbl, val, { indent=0, dash=false, amtStr=null, col=null }={}) => {
+    needPg(13);
+    doc.setDrawColor(...C.tMed); doc.setLineWidth(0.4); doc.line(RULE_X, y, AMT_X, y); y += 3.5;
+    doc.setFont("helvetica","bold"); doc.setFontSize(9);
+    doc.setTextColor(...(col || C.tDark));
+    doc.text(lbl, ML + indent*6, y);
+    const s = amtStr !== null ? amtStr : fmtA(val, dash);
+    doc.setTextColor(...(col || (typeof val==="number" && val<0 ? C.neg : C.tDark)));
+    doc.text(s, AMT_X, y, {align:"right"}); y += 9;
+  };
+  const drawTotal = (lbl, val, { dash=false, col=null, amtStr=null }={}) => {
+    needPg(17);
+    doc.setDrawColor(...C.tDark); doc.setLineWidth(0.5); doc.line(RULE_X, y, AMT_X, y); y += 3.5;
+    doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
+    doc.setTextColor(...(col || C.tDark));
+    doc.text(lbl, ML, y);
+    const s = amtStr !== null ? amtStr : fmtA(val, dash);
+    doc.setTextColor(...(col || (typeof val==="number" && val<0 ? C.neg : C.tDark)));
+    doc.text(s, AMT_X, y, {align:"right"}); y += 5;
+    doc.setDrawColor(...C.tDark); doc.setLineWidth(0.5);
+    doc.line(RULE_X, y, AMT_X, y); y += 1.5; doc.line(RULE_X, y, AMT_X, y); y += 7;
+  };
+  const drawGrand = (lbl, val) => {
+    needPg(14);
+    doc.setFillColor(...C.dark); doc.rect(ML, y, CW, 11, "F");
+    doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(10.5);
+    doc.text(lbl, ML+3, y+7.5);
+    const s = (val < 0 ? "(" : "$") + Math.round(Math.abs(val)).toLocaleString("en-US") + (val < 0 ? ")" : "");
+    doc.text(s, AMT_X, y+7.5, {align:"right"}); y += 15;
+  };
+  const drawBlank = (h=4) => { y += h; };
+
+  // ── HEADER ──
+  doc.setFillColor(...C.dark); doc.rect(0, 0, W, 40, "F");
+  doc.setFillColor(...C.accent); doc.rect(0, 40, W, 1.5, "F");
+  doc.setFillColor(...C.accent); doc.circle(ML+6, 20, 6, "F");
+  doc.setTextColor(...C.dark); doc.setFont("helvetica","bold"); doc.setFontSize(7.5);
+  doc.text("RRS", ML+6, 20.8, {align:"center", baseline:"middle"});
+  doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(16);
+  doc.text("Red Road Securities", ML+16, 17);
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...C.dimText);
+  doc.text(t("pdf_operations_stmt"), ML+16, 25);
+  doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(13);
+  doc.text(monthLabel, W-MR, 17, {align:"right"});
+  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...C.dimText);
+  doc.text(t("pdf_for_period_ended") + (navEnd?.date || periodMonth), W-MR, 25, {align:"right"});
+  y = 52;
+
+  // ── RETURN METRICS BOXES ──
+  const retBoxW = (CW-12)/4;
+  [
+    { lbl:t("pdf_mtd_return"),      val:Pct(mtd),      n:mtd      },
+    { lbl:t("pdf_ytd_return"),      val:Pct(ytd),      n:ytd      },
+    { lbl:t("pdf_since_inception"), val:Pct(sinceInc), n:sinceInc },
+    { lbl:t("pdf_sp500_mtd"),       val:Pct(spxtrMTD), n:spxtrMTD, dim:true },
+  ].forEach((r, i) => {
+    const bx = ML + i*(retBoxW+4);
+    doc.setDrawColor(...C.border); doc.setFillColor(...(r.dim ? C.light : C.white)); doc.setLineWidth(0.3);
+    doc.roundedRect(bx, y, retBoxW, 20, 2.5, 2.5, "FD");
+    doc.setFillColor(...C.accent); if (!r.dim) doc.rect(bx, y, retBoxW, 1.2, "F");
+    doc.setFontSize(6.5); doc.setFont("helvetica","bold"); doc.setTextColor(...C.tLight);
+    doc.text(r.lbl, bx+retBoxW/2, y+6, {align:"center"});
+    doc.setFontSize(13); doc.setFont("helvetica","bold");
+    doc.setTextColor(...(r.n==null ? C.tMed : r.n>=0 ? C.pos : C.neg));
+    doc.text(r.val, bx+retBoxW/2, y+15, {align:"center"});
+  });
+  y += 28;
+
+  // ── INVESTMENT INCOME ──
+  drawSection(t("pdf_investment_income"));
+  drawLine(t("pdf_dividend_income"), { bold:true });
+  if (Object.keys(divByTicker).length === 0) {
+    drawLine(t("pdf_no_dividends"), undefined, { indent:1, col:C.tLight });
+  } else {
+    for (const [ticker, amt] of Object.entries(divByTicker)) {
+      const pos = (positions||[]).find(p => p.ticker === ticker);
+      drawLine(`${ticker}  —  ${pos?.name || ticker}`, amt, { indent:1 });
+    }
+  }
+  drawLine(t("pdf_interest_income"), 0, { dash:true });
+  drawLine(t("pdf_withholding_taxes"), 0, { dash:true });
+  drawSubtotal(t("pdf_total_investment_income"), totalDiv);
+  drawBlank(4);
+
+  // ── OPERATING EXPENSES ──
+  drawSection(t("pdf_operating_expenses"));
+  drawLine(t("pdf_mgmt_fees_rate"), 0, { dash:true });
+  drawLine(t("pdf_perf_fees"), 0, { dash:true });
+  drawLine(t("pdf_admin_fees"), 0, { dash:true });
+  drawLine(t("pdf_custodial_fees"), 0, { dash:true });
+  drawLine(t("pdf_audit_fees"), 0, { dash:true });
+  drawLine(t("pdf_legal_fees"), 0, { dash:true });
+  drawLine(t("pdf_transfer_agent"), 0, { dash:true });
+  drawLine(t("pdf_reg_fees"), 0, { dash:true });
+  drawLine(t("pdf_other_expenses"), 0, { dash:true });
+  drawSubtotal(t("pdf_total_expenses"), 0, { dash:true });
+  drawBlank(2);
+  drawTotal(t("pdf_net_investment_income"), totalDiv,
+    { col: totalDiv >= 0 ? C.tDark : C.neg });
+  drawBlank(4);
+
+  // ── REALIZED AND UNREALIZED GAINS ──
+  drawSection(t("pdf_realized_unrealized_section"));
+  drawLine(t("pdf_net_realized_gain_lbl"), { bold:true });
+  if (sellTx.length > 0) {
+    drawLine(t("pdf_proceeds_disposition"), totalProceeds, { indent:1 });
+    drawLine(t("pdf_cost_investments_sold"), -totalCostSold, { indent:1 });
+  } else {
+    drawLine(t("pdf_no_securities_sold"), undefined, { indent:1, col:C.tLight });
+  }
+  drawSubtotal(t("pdf_net_realized"), realizedGain);
+  drawBlank(3);
+  drawLine(t("pdf_net_change_unrealized_lbl"), { bold:true });
+  drawLine(t("pdf_beginning_unrealized"), undefined, { indent:1, col:C.tLight, amtStr:"N/A" });
+  drawLine(t("pdf_ending_unrealized"), undefined, { indent:1, col:C.tLight, amtStr:"N/A" });
+  drawLine(t("pdf_net_change_unrealized_line"), changeUnrealized, { indent:1,
+    col: changeUnrealized >= 0 ? C.pos : C.neg });
+  drawSubtotal(t("pdf_net_realized_unrealized"), netFromOps - totalDiv,
+    { col: (netFromOps - totalDiv) >= 0 ? C.tDark : C.neg });
+  drawBlank(2);
+  drawGrand(t("pdf_net_increase_from_ops"), netFromOps);
+  drawBlank(5);
+
+  // ── CHANGES IN NET ASSETS ──
+  drawSection(t("pdf_changes_net_assets"));
+  drawLine(t("pdf_net_increase_ops"), netFromOps, { col: netFromOps>=0 ? C.tDark : C.neg });
+  drawLine(t("pdf_capital_contributions"), totalContribs);
+  drawLine(t("pdf_capital_withdrawals"), 0, { dash:true });
+  drawLine(t("pdf_distributions"), 0, { dash:true });
+  drawLine(t("pdf_distrib_reinvested"), 0, { dash:true });
+  drawRule();
+  drawLine(t("pdf_net_increase_net_assets"), totalEnd - totalStart, { bold:true });
+  drawLine(t("pdf_net_assets_beginning"), totalStart);
+  drawTotal(t("pdf_net_assets_end_period"), totalEnd);
+  drawBlank(5);
+
+  // ── CAPITAL ACTIVITY DETAIL ──
+  if (periodDeps.length > 0) {
+    drawSection(t("pdf_capital_activity_detail"));
+    const capHeadInvCols = isInvList.map(inv => `${inv.firstName} ${inv.lastName}`);
+    autoTbl({ startY:y,
+      head:[[t("pdf_col_date"), ...capHeadInvCols, t("pdf_col_nav_at_purchase"), t("pdf_col_total_contribution")]],
+      body: periodDeps.map(d => {
+        const invCols = isInvList.map(inv => {
+          const k = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+          return d[k] > 0 ? "$"+Math.round(d[k]).toLocaleString() : "—";
+        });
+        const total = isInvList.reduce((s, inv) => {
+          const k = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+          return s + (d[k]||0);
+        }, 0);
+        return [d.date||"—", ...invCols, d.nav ? "$"+d.nav.toFixed(4) : "—", "$"+total.toLocaleString("en-US",{maximumFractionDigits:0})];
+      }),
+      styles:{ fontSize:8.5, cellPadding:3.5, textColor:C.tDark },
+      headStyles:{ fillColor:C.dark, textColor:255, fontStyle:"bold", fontSize:7.5 },
+      alternateRowStyles:{ fillColor:C.light },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+  }
+
+  // ── INVESTOR ATTRIBUTION ──
+  drawSection(t("pdf_investor_attribution"));
+  const attrRows = isInvList.map(inv => {
+    const k    = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+    const pct  = totalUnits > 0 ? (isUnitMap[inv.id]||0) / totalUnits : 0;
+    const deps = periodDeps.reduce((s, d) => s + (d[k]||0), 0);
+    return [
+      `${inv.firstName} ${inv.lastName}`,
+      "$"+Math.round(totalStart*pct).toLocaleString(),
+      deps > 0 ? "$"+Math.round(deps).toLocaleString() : "—",
+      "$"+Math.round(totalEnd*pct).toLocaleString(),
+      { content:Pct(mtd), styles:{ textColor: mtd==null?C.tMed:mtd>=0?C.pos:C.neg, fontStyle:"bold" } },
+      { content:(investmentReturn*pct>=0?"$":"(")+Math.round(Math.abs(investmentReturn*pct)).toLocaleString("en-US")+(investmentReturn*pct<0?")":""),
+        styles:{ textColor: investmentReturn>=0?C.pos:C.neg, fontStyle:"bold" } },
+    ];
+  });
+  autoTbl({ startY:y,
+    head:[[t("pdf_col_investor"),t("pdf_col_beginning_value"),t("pdf_col_contributions"),t("pdf_col_ending_value"),t("pdf_col_return_pct"),t("pdf_col_investment_gain")]],
+    body: attrRows,
+    styles:{ fontSize:8.5, cellPadding:3.5, textColor:C.tDark },
+    headStyles:{ fillColor:C.dark, textColor:255, fontStyle:"bold", fontSize:7.5 },
+    alternateRowStyles:{ fillColor:C.light },
+    columnStyles:{ 1:{halign:"right"}, 2:{halign:"right"}, 3:{halign:"right"}, 4:{halign:"right"}, 5:{halign:"right"} },
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // ── SUPPLEMENTAL INFORMATION ──
+  if (y > H - 60) { doc.addPage(); y = 22; }
+  drawSection(t("pdf_supplemental"));
+  drawLine(t("pdf_expense_ratio"), undefined, { amtStr:"0.00%" });
+  drawLine(t("pdf_mgmt_fee_rate"), undefined, { amtStr:"0.00%" });
+  drawLine(t("pdf_portfolio_turnover"), undefined, { amtStr: turnoverRate > 0 ? turnoverRate.toFixed(2)+"%" : "—" });
+  drawLine(t("pdf_net_assets_beginning"), totalStart);
+  drawLine(t("pdf_net_assets_end_period"), totalEnd);
+  drawLine(t("pdf_units_beginning"), undefined, { amtStr: (navStart ? (totalStart / (navStart.nav||1)).toFixed(4) : "—") });
+  drawLine(t("pdf_units_end"), undefined, { amtStr: totalUnits.toFixed(4) });
+  drawLine(t("pdf_nav_beginning_period"), undefined, { amtStr: "$"+(navStart?.nav||0).toFixed(4) });
+  drawLine(t("pdf_nav_end_period_line"), undefined, { amtStr: "$"+(navEnd?.nav||0).toFixed(4) });
+  drawLine(t("pdf_sp500_total_return"), undefined, { amtStr: Pct(spxtrMTD) });
+
+  // ── FOOTER ──
+  const total = doc.getNumberOfPages();
+  const genDate = new Date().toLocaleDateString(currentLang==="es"?"es-CO":"en-US",{month:"short",day:"numeric",year:"numeric"});
+  for (let p = 1; p <= total; p++) {
+    doc.setPage(p);
+    doc.setFillColor(...C.dark); doc.rect(0, H-16, W, 16, "F");
+    doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(8);
+    doc.text("Red Road Securities", ML, H-9);
+    doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(...C.dimText);
+    doc.text(t("pdf_managed_by"), ML, H-4);
+    doc.text(`${t("pdf_generated")} ${genDate}  ·  ${t("pdf_page")} ${p} ${t("pdf_of")} ${total}`, W-MR, H-4, {align:"right"});
+  }
+
+  doc.save(`RRS_IncomeStatement_${periodMonth}.pdf`);
 }
 </script>
 </body>

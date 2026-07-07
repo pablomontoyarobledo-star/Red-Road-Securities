@@ -68,15 +68,18 @@ export default async function handler(req, res) {
   }
 
   // Append deposit to fund-data.deposits
+  // Use per-investor-key format so calcUnits() can sum across all investors
   const depositNav = nav || deposit.navAtDeposit || 1.0;
   const record = {
-    date:     deposit.date,
-    amount:   deposit.amount,
-    investor: resolvedKey,
-    nav:      depositNav,
-    source:   "ib-detected",
-    ibDesc:   deposit.description || "",
+    date:   deposit.date,
+    amount: deposit.amount,
+    source: `${investorsData.investors.find(i => i.id === resolvedKey)?.firstName || ""} ${investorsData.investors.find(i => i.id === resolvedKey)?.lastName || ""}`.trim() || resolvedKey,
+    nav:    depositNav,
+    ibDesc: deposit.description || "",
   };
+  // Deposit key: strip "inv_" prefix for legacy investors (inv_fernando → fernando), keep as-is otherwise
+  const depKey = resolvedKey.startsWith("inv_") ? resolvedKey.slice(4) : resolvedKey;
+  record[depKey] = deposit.amount;
 
   if (!fundData.deposits) fundData.deposits = [];
   fundData.deposits.push(record);

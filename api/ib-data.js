@@ -86,12 +86,21 @@ async function appendTrades({ trades, blobBase }) {
 // ---------------------------------------------------------------------------
 // Units outstanding — uses fund-data deposit records
 // ---------------------------------------------------------------------------
+const DEPOSIT_META_KEYS = new Set(["date","amount","source","nav","investor","ibDesc","currency","description","source"]);
 function computeTotalUnitsAtDate(deposits, dateStr) {
   return deposits
     .filter(d => d.date <= dateStr)
     .reduce((sum, d) => {
       const nav = d.nav > 0 ? d.nav : INCEPTION_NAV;
-      return sum + ((d.fernando || 0) + (d.dario || 0)) / nav;
+      if (d.investor) {
+        // New format: {investor: "key", amount: N}
+        return sum + (d.amount || 0) / nav;
+      }
+      // Old format: {fernando: N, dario: N, juana_robledo: N, ...}
+      const invTotal = Object.entries(d)
+        .filter(([k, v]) => !DEPOSIT_META_KEYS.has(k) && typeof v === "number" && v > 0)
+        .reduce((s, [, v]) => s + v, 0);
+      return sum + invTotal / nav;
     }, 0);
 }
 
@@ -206,24 +215,127 @@ function parseStatement(stmtXml) {
   if (cashRow2) cashBalance = parseFloat(cashRow2.endingCash || cashRow2.endingSettledCash || 0);
 
   // ------------------------------------------------------------------
-  // Cash deposits — CashTransactions with positive amount
+  // Cash transactions — deposits, dividends, interest, fees
   // ------------------------------------------------------------------
   let rawCashTx = stmt?.CashTransactions?.CashTransaction ?? [];
   if (!Array.isArray(rawCashTx)) rawCashTx = rawCashTx ? [rawCashTx] : [];
+
   const deposits = rawCashTx
     .filter(t => t && parseFloat(t.amount) > 0 &&
       (String(t.type || "").toLowerCase().includes("deposit") ||
        String(t.type || "").toLowerCase().includes("withdrawal") ||
        String(t.levelOfDetail || "").toLowerCase() === "currency"))
     .map(t => ({
-      id:          `${t.dateTime || t.reportDate}_${parseFloat(t.amount)}`,
+      id:          `${String(t.reportDate || t.dateTime || "").slice(0, 10)}_${parseFloat(t.amount)}`,
       date:        String(t.reportDate || t.dateTime || "").slice(0, 10),
       amount:      parseFloat(t.amount),
       currency:    t.currency || "USD",
       description: t.description || t.type || "",
     }));
 
-  return { positions, totalValue, cashBalance, trades, deposits };
+  // Dividend payments — store actual cash amounts from IB
+  const dividends = rawCashTx
+    .filter(t => t && String(t.type || "").toLowerCase().includes("dividend"))
+    .map(t => {
+      const date   = String(t.reportDate || t.dateTime || "").slice(0, 10);
+      const amount = parseFloat(t.amount);
+      const desc   = String(t.description || "");
+      // Extract ticker from description like "BND (VANGUARD...) CASH DIVIDEND USD 0.247259 PER SHARE"
+      const ticker = t.symbol || desc.match(/^([A-Z]+)\s/)?.[1] || "";
+      const rateMatch = desc.match(/([\d.]+)\s+PER\s+SHARE/i);
+      return {
+        date,
+        ticker,
+        type:      "dividend",
+        netAmount: amount,
+        price:     rateMatch ? parseFloat(rateMatch[1]) : 0,
+        notes:     "Cash dividend",
+      };
+    });
+
+  // Interest income
+  const interest = rawCashTx
+    .filter(t => t && String(t.type || "").toLowerCase().includes("interest"))
+    .map(t => ({
+      date:      String(t.reportDate || t.dateTime || "").slice(0, 10),
+      ticker:    null,
+      type:      "interest",
+      netAmount: parseFloat(t.amount),
+      notes:     String(t.description || t.type || ""),
+    }));
+
+  // Broker fees (negative amounts, type "Other Fees" etc.)
+  const fees = rawCashTx
+    .filter(t => t && parseFloat(t.amount) < 0 &&
+      !String(t.type || "").toLowerCase().includes("deposit") &&
+      !String(t.type || "").toLowerCase().includes("withdrawal") &&
+      !String(t.type || "").toLowerCase().includes("dividend") &&
+      !String(t.type || "").toLowerCase().includes("interest"))
+    .map(t => ({
+      date:      String(t.reportDate || t.dateTime || "").slice(0, 10),
+      ticker:    null,
+      type:      "fee",
+      netAmount: parseFloat(t.amount),
+      notes:     String(t.description || t.type || ""),
+    }));
+
+  return { positions, totalValue, cashBalance, trades, deposits, dividends, interest, fees };
+}
+
+// ---------------------------------------------------------------------------
+// Income transactions — merge dividends/interest/fees into fund-data.transactions
+// Deduplication key: date + type + ticker (or date + type for non-ticker)
+// ---------------------------------------------------------------------------
+async function appendIncomeTx({ dividends, interest, fees, blobBase }) {
+  const incoming = [...dividends, ...interest, ...fees].filter(t => t.date);
+  if (!incoming.length) return;
+
+  const fdUrl = `${blobBase}fund-data.json`;
+  let fd;
+  try {
+    const r = await fetch(`${fdUrl}?t=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) return;
+    fd = await r.json();
+  } catch { return; }
+
+  if (!fd.transactions) fd.transactions = [];
+
+  // Build dedup key set from existing transactions that already have netAmount
+  const existingKeys = new Set(
+    fd.transactions
+      .filter(t => t.netAmount != null)
+      .map(t => `${t.date}|${t.type}|${t.ticker || ""}`)
+  );
+
+  let added = 0;
+  for (const tx of incoming) {
+    if (!tx.date) continue;
+    const key = `${tx.date}|${tx.type}|${tx.ticker || ""}`;
+
+    // Update existing record if it exists without netAmount
+    const existing = fd.transactions.find(
+      t => t.date === tx.date && t.type === tx.type && (t.ticker || "") === (tx.ticker || "")
+    );
+    if (existing) {
+      if (existing.netAmount == null) {
+        existing.netAmount = tx.netAmount;
+        added++;
+      }
+      continue;
+    }
+
+    if (existingKeys.has(key)) continue;
+    fd.transactions.push(tx);
+    existingKeys.add(key);
+    added++;
+  }
+
+  if (added === 0) return;
+
+  fd.transactions.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  await put("fund-data.json", JSON.stringify(fd), {
+    access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -239,17 +351,31 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
     (fd.deposits || []).forEach(d => allocatedIds.add(`${d.date}_${d.amount}`));
   } catch {}
 
-  // Load already-pending deposits
+  // Load already-pending deposits — normalize any old datetime-format IDs to date_amount
   let pending = { deposits: [] };
+  let pendingNeedsWrite = false;
   try {
     const r = await fetch(`${blobBase}pending-deposits.json?t=${Date.now()}`, { cache: "no-store" });
     if (r.ok) pending = await r.json();
   } catch {}
+  pending.deposits = (pending.deposits || []).map(d => {
+    const canonical = `${String(d.date || "").slice(0, 10)}_${d.amount}`;
+    if (d.id !== canonical) { pendingNeedsWrite = true; return { ...d, id: canonical }; }
+    return d;
+  });
   const pendingIds = new Set(pending.deposits.map(d => d.id));
 
   // Find truly new ones
   const newDeposits = deposits.filter(d => !allocatedIds.has(d.id) && !pendingIds.has(d.id));
-  if (!newDeposits.length) return;
+  if (!newDeposits.length) {
+    // Still write back if we normalized any IDs
+    if (pendingNeedsWrite) {
+      await put("pending-deposits.json", JSON.stringify(pending), {
+        access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
+      });
+    }
+    return;
+  }
 
   // Save to pending-deposits.json
   pending.deposits.push(...newDeposits);
@@ -407,6 +533,16 @@ export default async function handler(req, res) {
   // Append new trades to trades-history.json
   try {
     await appendTrades({ trades: parsed.trades, blobBase });
+  } catch {}
+
+  // Merge dividend/interest/fee transactions into fund-data.transactions
+  try {
+    await appendIncomeTx({
+      dividends: parsed.dividends || [],
+      interest:  parsed.interest  || [],
+      fees:      parsed.fees      || [],
+      blobBase,
+    });
   } catch {}
 
   // Detect new deposits and notify
