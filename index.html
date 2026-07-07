@@ -2054,7 +2054,7 @@ function renderMetrics() {
       <div class="metric-card"><div class="metric-label">${t("metric_twr")}</div><div class="metric-value ${twr>=0?'pos':'neg'}" style="font-size:20px;">${fmtPct(twr)}</div><div class="metric-sub" style="color:var(--text3);">${t("metric_twrSub")}</div></div>
     `;
     const navEl = document.getElementById("nav-unit-value");
-    if (navEl) navEl.textContent = fmt(navPerUnit);
+    if (navEl) navEl.textContent = "$" + navPerUnit.toFixed(4);
     const unitsFormatted = totalUnits.toLocaleString("en-US", {maximumFractionDigits:0});
     const subEl = document.querySelector("#nav-unit-card .metric-sub");
     const unitsLabel = currentLang==="es"
@@ -3130,7 +3130,7 @@ function renderDeposits() {
       <td data-date="${d.date}">${dateLabel}</td>
       <td>${fmtDep(d.amount)}</td>
       <td><span class="${srcCls}">${displaySource}</span></td>
-      <td>${fmt(d.nav)}</td>
+      <td>${d.nav ? "$" + d.nav.toFixed(4) : "—"}</td>
       ${invCols}
     </tr>`;
   }).join("");
@@ -3316,7 +3316,7 @@ function renderNavTable(series, inceptionNav) {
     const monthName = new Date(parseInt(year), parseInt(mon) - 1, 1)
       .toLocaleString("en-US", { month: "long", year: "numeric" });
 
-    const fmtNav = v => "$" + v.toFixed(6);
+    const fmtNav = v => "$" + v.toFixed(4);
     const fmtRet = v => (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
     const retCls = ret >= 0 ? "color:var(--green-text)" : "color:#e74c3c";
 
