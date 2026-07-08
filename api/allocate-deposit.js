@@ -160,21 +160,27 @@ export default async function handler(req, res) {
   // Append deposit to fund-data.deposits
   // Use per-investor-key format so calcUnits() can sum across all investors
   //
-  // Price the deposit at the fair pre-money NAV: the latest nav-history
-  // totalValue already includes this wire's cash (the same IB pull that
-  // detected the deposit reported it), but its units aren't minted yet —
-  // so (V − amount) / existing units is the honest price. Falls back to
-  // the client-supplied nav only if nav-history is unavailable.
+  // Price the deposit at the NAV that exists the moment before its cash is
+  // counted — the last known NAV strictly before the deposit date. A deposit
+  // is struck at the current NAV and must never move it; the prior point's
+  // NAV is exactly that price. Falls back to the client-supplied nav (or the
+  // latest point) only if no earlier point exists.
   let depositNav = nav || deposit.navAtDeposit || 1.0;
   try {
     const navHist = await readJson("nav-history.json");
-    const latest  = navHist?.series?.[navHist.series.length - 1];
-    if (latest?.totalValue > 0) {
-      const unitsBefore = computeTotalUnitsAtDate(fundData.deposits || [], latest.date);
-      if (unitsBefore > 0 && latest.totalValue > deposit.amount) {
-        depositNav = Math.round(((latest.totalValue - deposit.amount) / unitsBefore) * 1e8) / 1e8;
-      }
+    const series  = navHist?.series || [];
+    let priorNav = null;
+    for (const pt of series) {
+      if (pt.date < deposit.date && pt.nav > 0) priorNav = pt.nav;
+      else if (pt.date >= deposit.date) break;
     }
+    // If the deposit dates to today (no strictly-earlier point on the same
+    // day), fall back to the most recent available NAV.
+    if (!priorNav && series.length) {
+      const last = series[series.length - 1];
+      if (last?.nav > 0) priorNav = last.nav;
+    }
+    if (priorNav > 0) depositNav = Math.round(priorNav * 1e8) / 1e8;
   } catch {}
   const invMatch   = findInvestor(investorsData.investors, resolvedKey);
   const record = {
