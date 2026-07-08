@@ -1945,11 +1945,14 @@ async function fetchPrices() {
 }
 
 function getTotalValue() {
-  const computed = positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||p.costBasis), 0) + cashBalance;
-  // Show live total only when prices fully succeeded; otherwise use IB snapshot to avoid stale costBasis
-  if (_priceStatusState === "ok") return computed;
+  // nav-history's latest entry is the IB-reported total (EquitySummaryInBase),
+  // refreshed automatically by the nightly cron pull — always authoritative.
+  // A locally computed (positions × live price + cached cashBalance) total
+  // goes stale the instant a deposit lands or IB settles a trade, since
+  // cashBalance here only updates on the next pull. Only fall back to the
+  // live computation if no nav-history snapshot has ever loaded at all.
   if (navSnapshotValue > 0) return navSnapshotValue;
-  return computed;
+  return positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||p.costBasis), 0) + cashBalance;
 }
 
 // Expense ratios for ETFs held (annual %, as decimal).
