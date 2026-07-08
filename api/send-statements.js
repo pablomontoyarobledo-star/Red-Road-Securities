@@ -2,6 +2,7 @@
 // Schedule: "0 13 28-31 * *" (1 pm UTC). Also callable manually via POST.
 
 import { burl } from "../lib/store.js";
+import { isAdminRequest } from "../lib/auth.js";
 
 function isLastDayOfMonth() {
   const now      = new Date();
@@ -364,14 +365,11 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
-// Manual (POST) triggers require x-sync-secret. Cron (GET) requires Bearer
-// CRON_SECRET once that env var is set; until then GETs are still gated by the
-// last-day-of-month check only.
+// Manual (POST) triggers require an admin session token or the sync secret.
+// Cron (GET) requires Bearer CRON_SECRET.
 function isAuthorized(req) {
-  const syncSecret = process.env.SYNC_SECRET;
+  if (req.method === "POST") return isAdminRequest(req);
   const cronSecret = process.env.CRON_SECRET;
-  if (syncSecret && req.headers["x-sync-secret"] === syncSecret) return true;
-  if (req.method === "POST") return false; // manual triggers always need the secret
   if (cronSecret) return req.headers["authorization"] === `Bearer ${cronSecret}`;
   return true; // cron fallback until CRON_SECRET is configured
 }

@@ -1,21 +1,14 @@
 ﻿// Lists available investor backups (GET) or restores one (POST ?backup=<url>)
 import { list, put } from "@vercel/blob";
 import { BLOB_BASE, bname, bprefix } from "../lib/store.js";
-
-function isAuthorized(req) {
-  const syncSecret = process.env.SYNC_SECRET;
-  const cronSecret = process.env.CRON_SECRET;
-  if (syncSecret && req.headers["x-sync-secret"] === syncSecret) return true;
-  if (cronSecret && req.headers["authorization"] === `Bearer ${cronSecret}`) return true;
-  return false;
-}
+import { isAdminRequest } from "../lib/auth.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-sync-secret");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-sync-secret, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
 
   if (req.method === "GET") {
     const { blobs } = await list({ prefix: `${bprefix("backups/")}investors-`, limit: 100 });

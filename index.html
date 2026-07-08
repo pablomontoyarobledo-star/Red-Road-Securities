@@ -2407,14 +2407,9 @@ function toggleInvestorEdit(i) {
   btn.textContent = open ? "Cancel" : "Edit";
 }
 
-// Shared secret sent on all admin API calls — same secret used by cloud sync
+// Admin API calls authenticate with the session token from login — no prompts.
 function adminSecretHeader() {
-  let secret = localStorage.getItem("mff_sync_secret");
-  if (!secret) {
-    secret = prompt("Enter your sync secret:");
-    if (secret) localStorage.setItem("mff_sync_secret", secret);
-  }
-  return secret ? { "x-sync-secret": secret } : {};
+  return _sessionToken ? { "Authorization": `Bearer ${_sessionToken}` } : {};
 }
 
 async function persistInvestors() {
@@ -2536,13 +2531,12 @@ function _setCloudStatus(icon, text, color) {
 }
 
 async function triggerAutoSync() {
-  const secret = localStorage.getItem("mff_sync_secret");
-  if (!secret) return; // no secret stored yet — user must do a manual sync first
+  if (!_sessionToken) return; // not logged in yet
   _setCloudStatus("ti-cloud-upload", "Saving…", "var(--text2)");
   try {
     const res = await fetch("/api/sync-data", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-sync-secret": secret },
+      headers: { "Content-Type": "application/json", ...adminSecretHeader() },
       body: JSON.stringify(buildSyncPayload()),
     });
     if (res.ok) {
@@ -2620,9 +2614,6 @@ async function loadFromCloud() {
 async function syncToCloud() {
   const btn = document.getElementById("atab-sync");
   const label = document.getElementById("sync-btn-label");
-  const storedSecret = localStorage.getItem("mff_sync_secret");
-  const secret = prompt("Enter your sync secret:", storedSecret || "");
-  if (!secret) return;
 
   btn.disabled = true;
   label.textContent = "Syncing…";
@@ -2630,11 +2621,10 @@ async function syncToCloud() {
   try {
     const res = await fetch("/api/sync-data", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-sync-secret": secret },
+      headers: { "Content-Type": "application/json", ...adminSecretHeader() },
       body: JSON.stringify(buildSyncPayload()),
     });
     if (!res.ok) throw new Error(await res.text());
-    localStorage.setItem("mff_sync_secret", secret);
     label.textContent = "✓ Synced!";
     btn.style.background = "var(--green-bg)";
     btn.style.borderColor = "var(--green)";
@@ -2928,14 +2918,12 @@ async function loadIBPulls() {
 }
 
 async function seedNavHistory() {
-  const secret = localStorage.getItem("mff_sync_secret") || prompt("Enter your sync secret:");
-  if (!secret) return;
   const btn = document.getElementById("atab-seed-nav");
   if (btn) { btn.disabled = true; btn.textContent = "Seeding…"; }
   try {
     const res = await fetch("/api/seed-nav", {
       method: "POST",
-      headers: { "x-sync-secret": secret },
+      headers: adminSecretHeader(),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(JSON.stringify(data));

@@ -1,6 +1,7 @@
 ﻿import { XMLParser } from "fast-xml-parser";
 import { put } from "@vercel/blob";
 import { burl, bname, bprefix } from "../lib/store.js";
+import { isAdminRequest } from "../lib/auth.js";
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" });
 
 function parseStatement(stmtXml) {
@@ -124,20 +125,12 @@ const SEED_TRADES = [
   {"date":"2025-12-23","ticker":"VTI","type":"buy","shares":2.5,       "price":338.788},
 ];
 
-function isAuthorized(req) {
-  const syncSecret = process.env.SYNC_SECRET;
-  const cronSecret = process.env.CRON_SECRET;
-  if (syncSecret && req.headers["x-sync-secret"] === syncSecret) return true;
-  if (cronSecret && req.headers["authorization"] === `Bearer ${cronSecret}`) return true;
-  return false;
-}
-
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-sync-secret");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-sync-secret, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
 
   // GET ?seed=1 — migrate historical hardcoded trades into fund-data.json
   if (req.method === "GET" && req.query?.seed === "1") {

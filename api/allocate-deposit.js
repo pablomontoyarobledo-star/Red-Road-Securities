@@ -1,14 +1,6 @@
 ﻿import { put } from "@vercel/blob";
 import { burl, bname, bprefix } from "../lib/store.js";
-
-// Mutating endpoint — requires the shared sync secret
-function isAuthorized(req) {
-  const syncSecret = process.env.SYNC_SECRET;
-  const cronSecret = process.env.CRON_SECRET;
-  if (syncSecret && req.headers["x-sync-secret"] === syncSecret) return true;
-  if (cronSecret && req.headers["authorization"] === `Bearer ${cronSecret}`) return true;
-  return false;
-}
+import { isAdminRequest } from "../lib/auth.js";
 
 async function readJson(name) {
   const r = await fetch(`${burl(name)}?t=${Date.now()}`, { cache: "no-store" });
@@ -32,10 +24,10 @@ async function backupAndWrite(name, data) {
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-sync-secret");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-sync-secret, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
-  if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
 
   const { depositId, investorKey, newInvestor, nav } = req.body || {};
   if (!depositId) return res.status(400).json({ error: "depositId required" });

@@ -5,6 +5,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { put }       from "@vercel/blob";
 import { burl, bname } from "../lib/store.js";
+import { isAdminRequest } from "../lib/auth.js";
 
 const BASE           = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService";
 const INCEPTION_DATE = "2025-12-18";
@@ -87,16 +88,8 @@ function matchSettlements(ibDaily, depositGroups, tolerance = 0.10) {
 // Bearer CRON_SECRET automatically once that env var is set. Until CRON_SECRET
 // exists we cannot distinguish cron traffic, so unauthenticated GETs are allowed
 // as a temporary fallback — set CRON_SECRET to close this.
-function isAuthorized(req) {
-  const syncSecret = process.env.SYNC_SECRET;
-  const cronSecret = process.env.CRON_SECRET;
-  if (syncSecret && req.headers["x-sync-secret"] === syncSecret) return true;
-  if (cronSecret) return req.headers["authorization"] === `Bearer ${cronSecret}`;
-  return true; // fallback until CRON_SECRET is configured
-}
-
 export default async function handler(req, res) {
-  if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
   const token     = process.env.IB_FLEX_TOKEN;
   const navQueryId = process.env.IB_NAV_QUERY_ID;
   if (!token || !navQueryId) {

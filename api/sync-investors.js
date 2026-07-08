@@ -1,18 +1,11 @@
 import { put } from "@vercel/blob";
 import { burl, bname, bprefix } from "../lib/store.js";
-
-function isAuthorized(req) {
-  const syncSecret = process.env.SYNC_SECRET;
-  const cronSecret = process.env.CRON_SECRET;
-  if (syncSecret && req.headers["x-sync-secret"] === syncSecret) return true;
-  if (cronSecret && req.headers["authorization"] === `Bearer ${cronSecret}`) return true;
-  return false;
-}
+import { isAdminRequest } from "../lib/auth.js";
 
 export default async function handler(req, res) {
   if (req.method === "GET") {
     // Return investors from blob — PII, so secret required (clients use /api/data)
-    if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
     const blobUrl = process.env.FUND_DATA_BLOB_URL;
     if (!blobUrl) return res.status(500).json({ error: "FUND_DATA_BLOB_URL not set" });
     const blobBase = blobUrl.replace("fund-data.json", "");
@@ -26,7 +19,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
     const blobUrl = process.env.FUND_DATA_BLOB_URL;
     if (!blobUrl) return res.status(500).json({ error: "FUND_DATA_BLOB_URL not set" });
 

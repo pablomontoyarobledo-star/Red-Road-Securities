@@ -1,13 +1,13 @@
 import { put } from "@vercel/blob";
 import { bname } from "../lib/store.js";
+import { isAdminRequest } from "../lib/auth.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const auth = req.headers["x-sync-secret"];
-  if (auth !== process.env.SYNC_SECRET) {
+  if (!isAdminRequest(req)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
