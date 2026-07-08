@@ -886,6 +886,9 @@
           <button class="tab-btn" onclick="loadIBPulls()" id="atab-pulls" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);">
             <i class="ti ti-database" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Load pull history
           </button>
+          <button class="tab-btn" onclick="repairDeposits()" id="atab-repair-deposits" style="background:var(--orange-bg,#fdf1e6);border-color:#c77b1f;color:#c77b1f;">
+            <i class="ti ti-tool" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Repair deposit records
+          </button>
         </div>
         <div id="ib-run-status" style="font-size:12px;color:var(--text2);margin-bottom:0.75rem;display:none;"></div>
         <div id="ib-pulls-container" style="display:none;">
@@ -2872,6 +2875,38 @@ async function runIBPull() {
   btn.innerHTML = '<i class="ti ti-refresh" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Run IB pull now';
   await loadFromCloud();
   await loadIBPulls();
+}
+
+// One-off maintenance: fixes any deposit records with malformed dates or
+// mis-resolved source names (bugs from before the underlying causes were
+// patched). Safe to click more than once — it's a no-op on clean records.
+async function repairDeposits() {
+  const btn = document.getElementById("atab-repair-deposits");
+  const status = document.getElementById("ib-run-status");
+  btn.disabled = true;
+  btn.textContent = "Repairing…";
+  status.style.display = "block";
+  status.style.color = "var(--text2)";
+  status.textContent = "Checking deposit records…";
+  try {
+    const r = await fetch("/api/allocate-deposit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...adminSecretHeader() },
+      body: JSON.stringify({ action: "repair" }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.statusText);
+    status.style.color = "var(--green-text)";
+    status.textContent = d.fixed > 0
+      ? `✓ Fixed ${d.fixed} deposit record(s): ${d.changes.map(c => `${c.before.date}/"${c.before.source}" → ${c.after.date}/"${c.after.source}"`).join("; ")}`
+      : "✓ No malformed deposit records found.";
+    if (d.fixed > 0) await loadFromCloud();
+  } catch (e) {
+    status.style.color = "var(--red-text, #e74c3c)";
+    status.textContent = "Repair failed: " + e.message;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-tool" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Repair deposit records';
 }
 
 async function loadIBPulls() {

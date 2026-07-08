@@ -5,6 +5,17 @@ import { burl, bname, bprefix } from "../lib/store.js";
 const INCEPTION_NAV  = 1.0;
 const INCEPTION_DATE = "2025-12-18";
 
+// IB Flex fields are inconsistent — reportDate/dateTime sometimes arrive as
+// "2026-07-06" (dashed) and sometimes as raw "20260706" or "20260706;095512"
+// (no dashes). A naive .slice(0,10) is a no-op on the 8-char form and leaves
+// a malformed date behind. Always normalize to YYYY-MM-DD.
+function normDate(raw) {
+  const s = String(raw || "");
+  const digits = s.replace(/\D/g, "").slice(0, 8); // YYYYMMDD
+  if (digits.length !== 8) return s.slice(0, 10);  // unknown format — best effort
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+}
+
 // ---------------------------------------------------------------------------
 // NAV point — appends one entry to nav-history.json and computes daily P&L
 // ---------------------------------------------------------------------------
@@ -227,8 +238,8 @@ function parseStatement(stmtXml) {
        String(t.type || "").toLowerCase().includes("withdrawal") ||
        String(t.levelOfDetail || "").toLowerCase() === "currency"))
     .map(t => ({
-      id:          `${String(t.reportDate || t.dateTime || "").slice(0, 10)}_${parseFloat(t.amount)}`,
-      date:        String(t.reportDate || t.dateTime || "").slice(0, 10),
+      id:          `${normDate(t.reportDate || t.dateTime)}_${parseFloat(t.amount)}`,
+      date:        normDate(t.reportDate || t.dateTime),
       amount:      parseFloat(t.amount),
       currency:    t.currency || "USD",
       description: t.description || t.type || "",
@@ -238,7 +249,7 @@ function parseStatement(stmtXml) {
   const dividends = rawCashTx
     .filter(t => t && String(t.type || "").toLowerCase().includes("dividend"))
     .map(t => {
-      const date   = String(t.reportDate || t.dateTime || "").slice(0, 10);
+      const date   = normDate(t.reportDate || t.dateTime);
       const amount = parseFloat(t.amount);
       const desc   = String(t.description || "");
       // Extract ticker from description like "BND (VANGUARD...) CASH DIVIDEND USD 0.247259 PER SHARE"
@@ -258,7 +269,7 @@ function parseStatement(stmtXml) {
   const interest = rawCashTx
     .filter(t => t && String(t.type || "").toLowerCase().includes("interest"))
     .map(t => ({
-      date:      String(t.reportDate || t.dateTime || "").slice(0, 10),
+      date:      normDate(t.reportDate || t.dateTime),
       ticker:    null,
       type:      "interest",
       netAmount: parseFloat(t.amount),
@@ -273,7 +284,7 @@ function parseStatement(stmtXml) {
       !String(t.type || "").toLowerCase().includes("dividend") &&
       !String(t.type || "").toLowerCase().includes("interest"))
     .map(t => ({
-      date:      String(t.reportDate || t.dateTime || "").slice(0, 10),
+      date:      normDate(t.reportDate || t.dateTime),
       ticker:    null,
       type:      "fee",
       netAmount: parseFloat(t.amount),
@@ -534,6 +545,24 @@ export default async function handler(req, res) {
   // Append new trades to trades-history.json
   try {
     await appendTrades({ trades: parsed.trades, blobBase });
+  } catch {}
+
+  // Keep fund-data.json's positions/cashBalance current — the dashboard's
+  // total-value calculation reads these directly, and previously only a
+  // manual "Sync to cloud" click ever refreshed them. Without this, new
+  // deposits and daily price/share moves silently vanished from the
+  // displayed total until someone happened to click sync.
+  try {
+    const fdRes = await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" });
+    if (fdRes.ok) {
+      const fd = await fdRes.json();
+      if (parsed.positions?.length) fd.positions = parsed.positions;
+      if (cashBalance != null) fd.cashBalance = cashBalance;
+      fd.ibSyncedAt = now.toISOString();
+      await put(bname("fund-data.json"), JSON.stringify(fd), {
+        access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
+      });
+    }
   } catch {}
 
   // Merge dividend/interest/fee transactions into fund-data.transactions

@@ -2,6 +2,12 @@
 import { burl, bname, bprefix } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
 
+// Email deep-links pass bare keys ("dario") but investor.id is "inv_dario".
+// Match either form — same flexible lookup the client uses in calcUnits().
+function findInvestor(investors, key) {
+  return investors.find(i => i.id === key || (i.id.startsWith("inv_") ? i.id.slice(4) : i.id) === key);
+}
+
 async function readJson(name) {
   const r = await fetch(`${burl(name)}?t=${Date.now()}`, { cache: "no-store" });
   if (!r.ok) return null;
@@ -21,6 +27,63 @@ async function backupAndWrite(name, data) {
   });
 }
 
+// Normalize a raw-digit IB date ("20260706") to ISO ("2026-07-06").
+// Leaves already-correct dates untouched.
+function normDate(raw) {
+  const s = String(raw || "");
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const digits = s.replace(/\D/g, "").slice(0, 8);
+  if (digits.length !== 8) return s;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+}
+
+// One-off maintenance action: fixes malformed dates and mis-resolved source
+// names on deposits already saved before the underlying bugs were patched.
+// Safe to re-run — it's a no-op on records that are already correct.
+async function repairDeposits() {
+  const fundData = await readJson("fund-data.json");
+  if (!fundData) throw new Error("Could not load fund-data.json");
+  const investorsData = await readJson("investors.json");
+  if (!investorsData || !Array.isArray(investorsData.investors)) {
+    throw new Error("Could not load investors.json");
+  }
+
+  const META = new Set(["date", "amount", "source", "nav", "investor", "ibDesc", "currency", "description"]);
+  let fixed = 0;
+  const changes = [];
+
+  for (const d of fundData.deposits || []) {
+    const before = { date: d.date, source: d.source };
+
+    const fixedDate = normDate(d.date);
+    if (fixedDate !== d.date) d.date = fixedDate;
+
+    // Figure out which investor this deposit belongs to
+    let key = d.investor;
+    if (!key) {
+      const entry = Object.entries(d).find(([k, v]) => !META.has(k) && typeof v === "number" && v > 0);
+      key = entry?.[0];
+    }
+    const inv = key ? findInvestor(investorsData.investors, key) : null;
+    if (inv) {
+      const fullName = `${inv.firstName} ${inv.lastName}`.trim();
+      if (fullName && d.source !== fullName) d.source = fullName;
+    }
+
+    if (before.date !== d.date || before.source !== d.source) {
+      fixed++;
+      changes.push({ before, after: { date: d.date, source: d.source } });
+    }
+  }
+
+  if (fixed > 0) {
+    fundData.deposits.sort((a, b) => a.date.localeCompare(b.date));
+    await backupAndWrite("fund-data.json", fundData);
+  }
+
+  return { fixed, changes };
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -28,6 +91,15 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
   if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
+
+  if (req.body?.action === "repair") {
+    try {
+      const report = await repairDeposits();
+      return res.status(200).json({ ok: true, ...report });
+    } catch (err) {
+      return res.status(502).json({ error: err.message });
+    }
+  }
 
   const { depositId, investorKey, newInvestor, nav } = req.body || {};
   if (!depositId) return res.status(400).json({ error: "depositId required" });
@@ -70,15 +142,18 @@ export default async function handler(req, res) {
   // Append deposit to fund-data.deposits
   // Use per-investor-key format so calcUnits() can sum across all investors
   const depositNav = nav || deposit.navAtDeposit || 1.0;
+  const invMatch   = findInvestor(investorsData.investors, resolvedKey);
   const record = {
     date:   deposit.date,
     amount: deposit.amount,
-    source: `${investorsData.investors.find(i => i.id === resolvedKey)?.firstName || ""} ${investorsData.investors.find(i => i.id === resolvedKey)?.lastName || ""}`.trim() || resolvedKey,
+    source: invMatch ? `${invMatch.firstName} ${invMatch.lastName}`.trim() : resolvedKey,
     nav:    depositNav,
     ibDesc: deposit.description || "",
   };
-  // Deposit key: strip "inv_" prefix for legacy investors (inv_fernando â†’ fernando), keep as-is otherwise
-  const depKey = resolvedKey.startsWith("inv_") ? resolvedKey.slice(4) : resolvedKey;
+  // Deposit key: strip "inv_" prefix for legacy investors (inv_fernando -> fernando), keep as-is otherwise
+  const depKey = invMatch
+    ? (invMatch.id.startsWith("inv_") ? invMatch.id.slice(4) : invMatch.id)
+    : (resolvedKey.startsWith("inv_") ? resolvedKey.slice(4) : resolvedKey);
   record[depKey] = deposit.amount;
 
   if (!fundData.deposits) fundData.deposits = [];
