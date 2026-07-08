@@ -55,6 +55,27 @@ async function appendNavPoint({ totalValue, dateStr, blobBase, deposits }) {
     navHistory.series.sort((a, b) => a.date.localeCompare(b.date));
   }
 
+  // Self-heal: recompute totalUnits/nav/twr for every existing point using
+  // the CURRENT deposits array. A deposit can be excluded from a day's unit
+  // count at the time that point was first written (e.g. its date was still
+  // malformed, or it hadn't been allocated yet) and never get corrected
+  // afterward, silently inflating NAV for every investor. Since this runs on
+  // every automated pull, any such drift self-corrects with no manual step.
+  const inceptionNav = navHistory.inception?.nav || INCEPTION_NAV;
+  for (const pt of navHistory.series) {
+    const correctUnits = computeTotalUnitsAtDate(deposits, pt.date);
+    if (correctUnits > 0 && Math.abs(correctUnits - pt.totalUnits) > 0.01) {
+      pt.totalUnits = Math.round(correctUnits * 1e4) / 1e4;
+      pt.nav        = Math.round((pt.totalValue / correctUnits) * 1e8) / 1e8;
+      pt.twr        = Math.round((pt.nav / inceptionNav) * 100 * 1e4) / 1e4;
+    }
+  }
+  for (let i = 1; i < navHistory.series.length; i++) {
+    const p = navHistory.series[i - 1], c = navHistory.series[i];
+    c.dailyReturnPct = Math.round(((c.nav / p.nav) - 1) * 100 * 1e4) / 1e4;
+    c.dailyPnlUsd    = Math.round((c.nav - p.nav) * c.totalUnits * 1e2) / 1e2;
+  }
+
   await put(bname("nav-history.json"), JSON.stringify(navHistory), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
