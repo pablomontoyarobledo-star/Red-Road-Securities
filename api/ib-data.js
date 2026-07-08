@@ -1,6 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { put } from "@vercel/blob";
 import { burl, bname, bprefix } from "../lib/store.js";
+import { computeTotalUnitsAtDate, recomputeNavSeries } from "../lib/nav.js";
 
 const INCEPTION_NAV  = 1.0;
 const INCEPTION_DATE = "2025-12-18";
@@ -61,20 +62,7 @@ async function appendNavPoint({ totalValue, dateStr, blobBase, deposits }) {
   // malformed, or it hadn't been allocated yet) and never get corrected
   // afterward, silently inflating NAV for every investor. Since this runs on
   // every automated pull, any such drift self-corrects with no manual step.
-  const inceptionNav = navHistory.inception?.nav || INCEPTION_NAV;
-  for (const pt of navHistory.series) {
-    const correctUnits = computeTotalUnitsAtDate(deposits, pt.date);
-    if (correctUnits > 0 && Math.abs(correctUnits - pt.totalUnits) > 0.01) {
-      pt.totalUnits = Math.round(correctUnits * 1e4) / 1e4;
-      pt.nav        = Math.round((pt.totalValue / correctUnits) * 1e8) / 1e8;
-      pt.twr        = Math.round((pt.nav / inceptionNav) * 100 * 1e4) / 1e4;
-    }
-  }
-  for (let i = 1; i < navHistory.series.length; i++) {
-    const p = navHistory.series[i - 1], c = navHistory.series[i];
-    c.dailyReturnPct = Math.round(((c.nav / p.nav) - 1) * 100 * 1e4) / 1e4;
-    c.dailyPnlUsd    = Math.round((c.nav - p.nav) * c.totalUnits * 1e2) / 1e2;
-  }
+  recomputeNavSeries(navHistory.series, deposits, navHistory.inception?.nav || INCEPTION_NAV);
 
   await put(bname("nav-history.json"), JSON.stringify(navHistory), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
@@ -114,27 +102,6 @@ async function appendTrades({ trades, blobBase }) {
   await put(bname("trades-history.json"), JSON.stringify(history), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
-}
-
-// ---------------------------------------------------------------------------
-// Units outstanding — uses fund-data deposit records
-// ---------------------------------------------------------------------------
-const DEPOSIT_META_KEYS = new Set(["date","amount","source","nav","investor","ibDesc","currency","description","source"]);
-function computeTotalUnitsAtDate(deposits, dateStr) {
-  return deposits
-    .filter(d => d.date <= dateStr)
-    .reduce((sum, d) => {
-      const nav = d.nav > 0 ? d.nav : INCEPTION_NAV;
-      if (d.investor) {
-        // New format: {investor: "key", amount: N}
-        return sum + (d.amount || 0) / nav;
-      }
-      // Old format: {fernando: N, dario: N, juana_robledo: N, ...}
-      const invTotal = Object.entries(d)
-        .filter(([k, v]) => !DEPOSIT_META_KEYS.has(k) && typeof v === "number" && v > 0)
-        .reduce((s, [, v]) => s + v, 0);
-      return sum + invTotal / nav;
-    }, 0);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 ﻿import { put } from "@vercel/blob";
 import { burl, bname, bprefix } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
+import { recomputeNavSeries, INCEPTION_NAV } from "../lib/nav.js";
 
 // Email deep-links pass bare keys ("dario") but investor.id is "inv_dario".
 // Match either form — same flexible lookup the client uses in calcUnits().
@@ -81,7 +82,19 @@ async function repairDeposits() {
     await backupAndWrite("fund-data.json", fundData);
   }
 
-  return { fixed, changes };
+  // Recompute NAV history from the (now-correct) deposit ledger. A deposit
+  // that was excluded from a day's unit count when its nav-history point was
+  // first written (bad date, not yet allocated, etc.) never self-corrects
+  // once that point is stale — this catches it up without any IB call, so
+  // it's safe to run any time, including while IB is rate-limiting us.
+  let navFixed = 0;
+  const navHistory = await readJson("nav-history.json");
+  if (navHistory?.series?.length) {
+    navFixed = recomputeNavSeries(navHistory.series, fundData.deposits, navHistory.inception?.nav || INCEPTION_NAV);
+    if (navFixed > 0) await backupAndWrite("nav-history.json", navHistory);
+  }
+
+  return { fixed, changes, navFixed };
 }
 
 export default async function handler(req, res) {
