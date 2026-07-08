@@ -1,7 +1,7 @@
 ﻿import { put } from "@vercel/blob";
 import { burl, bname, bprefix } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
-import { recomputeNavSeries, INCEPTION_NAV } from "../lib/nav.js";
+import { recomputeNavSeries, fixIbDepositNavs, computeTotalUnitsAtDate, INCEPTION_NAV } from "../lib/nav.js";
 
 // Email deep-links pass bare keys ("dario") but investor.id is "inv_dario".
 // Match either form — same flexible lookup the client uses in calcUnits().
@@ -77,24 +77,29 @@ async function repairDeposits() {
     }
   }
 
-  if (fixed > 0) {
+  // Re-price IB-detected deposits at their fair pre-money NAV, then recompute
+  // NAV history from the corrected ledger. A deposit priced at the inflated
+  // post-cash NAV mints too few units for the depositor; a deposit excluded
+  // from a day's unit count when its nav-history point was first written
+  // never self-corrects once that point is stale. Both fixes are pure math
+  // over data we already have — no IB call, safe to run mid-rate-limit.
+  let navFixed = 0;
+  const navHistory = await readJson("nav-history.json");
+  const navsRepriced = navHistory?.series?.length
+    ? fixIbDepositNavs(fundData.deposits, navHistory.series)
+    : 0;
+
+  if (fixed > 0 || navsRepriced > 0) {
     fundData.deposits.sort((a, b) => a.date.localeCompare(b.date));
     await backupAndWrite("fund-data.json", fundData);
   }
 
-  // Recompute NAV history from the (now-correct) deposit ledger. A deposit
-  // that was excluded from a day's unit count when its nav-history point was
-  // first written (bad date, not yet allocated, etc.) never self-corrects
-  // once that point is stale — this catches it up without any IB call, so
-  // it's safe to run any time, including while IB is rate-limiting us.
-  let navFixed = 0;
-  const navHistory = await readJson("nav-history.json");
   if (navHistory?.series?.length) {
     navFixed = recomputeNavSeries(navHistory.series, fundData.deposits, navHistory.inception?.nav || INCEPTION_NAV);
     if (navFixed > 0) await backupAndWrite("nav-history.json", navHistory);
   }
 
-  return { fixed, changes, navFixed };
+  return { fixed, changes, navsRepriced, navFixed };
 }
 
 export default async function handler(req, res) {
@@ -154,7 +159,23 @@ export default async function handler(req, res) {
 
   // Append deposit to fund-data.deposits
   // Use per-investor-key format so calcUnits() can sum across all investors
-  const depositNav = nav || deposit.navAtDeposit || 1.0;
+  //
+  // Price the deposit at the fair pre-money NAV: the latest nav-history
+  // totalValue already includes this wire's cash (the same IB pull that
+  // detected the deposit reported it), but its units aren't minted yet —
+  // so (V − amount) / existing units is the honest price. Falls back to
+  // the client-supplied nav only if nav-history is unavailable.
+  let depositNav = nav || deposit.navAtDeposit || 1.0;
+  try {
+    const navHist = await readJson("nav-history.json");
+    const latest  = navHist?.series?.[navHist.series.length - 1];
+    if (latest?.totalValue > 0) {
+      const unitsBefore = computeTotalUnitsAtDate(fundData.deposits || [], latest.date);
+      if (unitsBefore > 0 && latest.totalValue > deposit.amount) {
+        depositNav = Math.round(((latest.totalValue - deposit.amount) / unitsBefore) * 1e8) / 1e8;
+      }
+    }
+  } catch {}
   const invMatch   = findInvestor(investorsData.investors, resolvedKey);
   const record = {
     date:   deposit.date,

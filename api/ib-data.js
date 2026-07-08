@@ -1,7 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { put } from "@vercel/blob";
 import { burl, bname, bprefix } from "../lib/store.js";
-import { computeTotalUnitsAtDate, recomputeNavSeries } from "../lib/nav.js";
+import { computeTotalUnitsAtDate, recomputeNavSeries, fixIbDepositNavs } from "../lib/nav.js";
 
 const INCEPTION_NAV  = 1.0;
 const INCEPTION_DATE = "2025-12-18";
@@ -56,19 +56,21 @@ async function appendNavPoint({ totalValue, dateStr, blobBase, deposits }) {
     navHistory.series.sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  // Self-heal: recompute totalUnits/nav/twr for every existing point using
-  // the CURRENT deposits array. A deposit can be excluded from a day's unit
-  // count at the time that point was first written (e.g. its date was still
-  // malformed, or it hadn't been allocated yet) and never get corrected
-  // afterward, silently inflating NAV for every investor. Since this runs on
-  // every automated pull, any such drift self-corrects with no manual step.
+  // Self-heal on every automated pull, no manual step:
+  //  1. Re-price IB-detected deposits at fair pre-money NAV (a wire priced at
+  //     the post-cash NAV mints too few units for the depositor).
+  //  2. Recompute totalUnits/nav/twr for every point from the current ledger
+  //     (a deposit excluded from a day's unit count when that point was first
+  //     written — malformed date, late allocation — never self-corrects
+  //     otherwise, silently inflating NAV for every investor).
+  const depositsChanged = fixIbDepositNavs(deposits, navHistory.series) > 0;
   recomputeNavSeries(navHistory.series, deposits, navHistory.inception?.nav || INCEPTION_NAV);
 
   await put(bname("nav-history.json"), JSON.stringify(navHistory), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
 
-  return point;
+  return { point, depositsChanged };
 }
 
 // ---------------------------------------------------------------------------
@@ -492,13 +494,21 @@ export default async function handler(req, res) {
   // Append today's NAV point first so we can include nav/twr in the archive
   let navPoint = null;
   try {
-    let deposits = [];
+    let fd = null;
     try {
       const fdRes = await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" });
-      if (fdRes.ok) { const fd = await fdRes.json(); deposits = fd.deposits || []; }
+      if (fdRes.ok) fd = await fdRes.json();
     } catch {}
+    const deposits = fd?.deposits || [];
     const dateStr = now.toISOString().slice(0, 10);
-    navPoint = await appendNavPoint({ totalValue: parsed.totalValue, dateStr, blobBase, deposits });
+    const appended = await appendNavPoint({ totalValue: parsed.totalValue, dateStr, blobBase, deposits });
+    navPoint = appended?.point ?? null;
+    // Persist any deposit re-pricing done by the self-heal pass
+    if (appended?.depositsChanged && fd) {
+      await put(bname("fund-data.json"), JSON.stringify(fd), {
+        access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
+      });
+    }
   } catch {}
 
   // Cash balance — from CashReport if available, else from fund-data

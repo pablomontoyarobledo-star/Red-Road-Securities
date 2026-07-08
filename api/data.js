@@ -15,8 +15,10 @@ import { put, del, list } from "@vercel/blob";
 import { BLOB_BASE, bname, bprefix } from "../lib/store.js";
 import { USERS, issueToken, verifyToken } from "../lib/auth.js";
 
-// Files any logged-in investor may read; admin additionally gets pending-deposits
-const READABLE       = new Set(["fund-data.json", "investors.json", "nav-history.json", "trades-history.json"]);
+// Files any logged-in investor may read; admin additionally gets pending-deposits.
+// ib-cache.json is the latest raw IB snapshot (positions + close prices +
+// account total) — the dashboard uses it to live-adjust the fund value.
+const READABLE       = new Set(["fund-data.json", "investors.json", "nav-history.json", "trades-history.json", "ib-cache.json"]);
 const READABLE_ADMIN = new Set([...READABLE, "pending-deposits.json"]);
 
 function hasSyncSecret(req) {

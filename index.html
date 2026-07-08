@@ -1944,13 +1944,24 @@ async function fetchPrices() {
   renderOwnership();
 }
 
+let _ibSnap = null; // latest raw IB snapshot (positions + close prices + total)
+
 function getTotalValue() {
-  // nav-history's latest entry is the IB-reported total (EquitySummaryInBase),
-  // refreshed automatically by the nightly cron pull — always authoritative.
-  // A locally computed (positions × live price + cached cashBalance) total
-  // goes stale the instant a deposit lands or IB settles a trade, since
-  // cashBalance here only updates on the next pull. Only fall back to the
-  // live computation if no nav-history snapshot has ever loaded at all.
+  // Base: IB's own reported account total (authoritative — includes cash,
+  // accruals, everything), from the last pull. Live adjustment: shift that
+  // base by how far each position's live price has drifted from the close
+  // price captured in the SAME snapshot. Cash doesn't move with prices, so
+  // this stays correct even when a fresh wire hasn't been re-pulled yet.
+  if (_ibSnap?.totalValue > 0) {
+    let v = _ibSnap.totalValue;
+    if (_priceStatusState === "ok") {
+      for (const p of (_ibSnap.positions || [])) {
+        const live = livePrice[p.ticker];
+        if (live > 0 && p.ibClose > 0) v += p.shares * (live - p.ibClose);
+      }
+    }
+    return v;
+  }
   if (navSnapshotValue > 0) return navSnapshotValue;
   return positions.reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||p.costBasis), 0) + cashBalance;
 }
@@ -2557,12 +2568,25 @@ async function triggerAutoSync() {
 }
 
 async function loadFromCloud() {
-  // Kick off all three fetches simultaneously — don't let any one block the others
-  const [fundProm, invProm, navProm] = [
+  // Kick off all fetches simultaneously — don't let any one block the others
+  const [fundProm, invProm, navProm, snapProm] = [
     dataFetch("fund-data.json"),
     dataFetch("investors.json"),
     dataFetch("nav-history.json"),
+    dataFetch("ib-cache.json"),
   ];
+
+  // Latest raw IB snapshot — getTotalValue() live-adjusts from this base
+  snapProm.then(async r => {
+    if (!r.ok) return;
+    try {
+      const snap = await r.json();
+      if (snap?.totalValue > 0) {
+        _ibSnap = snap;
+        renderMetrics(); renderIncome(); renderOwnership();
+      }
+    } catch {}
+  }).catch(() => {});
 
   // Apply fund-data as soon as it arrives — positions, deposits, cash
   fundProm.then(async r => {

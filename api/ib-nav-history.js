@@ -6,6 +6,7 @@ import { XMLParser } from "fast-xml-parser";
 import { put }       from "@vercel/blob";
 import { burl, bname } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
+import { buildUnitSchedule, fixIbDepositNavs } from "../lib/nav.js";
 
 const BASE           = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService";
 const INCEPTION_DATE = "2025-12-18";
@@ -53,36 +54,10 @@ function parseNavXml(xml) {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function groupDeposits(deposits) {
-  const groups = {};
-  for (const d of deposits) {
-    if (!groups[d.date]) groups[d.date] = { cash: 0, units: 0 };
-    const cash = (d.fernando || 0) + (d.dario || 0);
-    const nav  = d.nav > 0 ? d.nav : INCEPTION_NAV;
-    groups[d.date].cash  += cash;
-    groups[d.date].units += cash / nav;
-  }
-  return groups;
-}
-
-function matchSettlements(ibDaily, depositGroups, tolerance = 0.10) {
-  const jumps = [];
-  for (let i = 1; i < ibDaily.length; i++) {
-    const change = ibDaily[i].totalValue - ibDaily[i - 1].totalValue;
-    if (change > 500) jumps.push({ date: ibDaily[i].date, amount: change, matched: false });
-  }
-  const settlement = {};
-  for (const [depDate, info] of Object.entries(depositGroups).sort()) {
-    const jump = jumps.find(j =>
-      !j.matched && j.date >= depDate &&
-      Math.abs(j.amount - info.cash) / info.cash < tolerance
-    );
-    const effectiveDate = jump ? jump.date : depDate;
-    if (jump) jump.matched = true;
-    settlement[effectiveDate] = (settlement[effectiveDate] || 0) + info.units;
-  }
-  return settlement;
-}
+// Deposit grouping + settlement matching live in lib/nav.js (buildUnitSchedule)
+// so this rebuild, the daily pull, and the repair action all mint units
+// identically. The old local version hardcoded fernando/dario keys, silently
+// dropping every other investor's units from the rebuilt series.
 
 // Cron + admin endpoint. Admin calls carry x-sync-secret; Vercel cron carries
 // Bearer CRON_SECRET automatically once that env var is set. Until CRON_SECRET
@@ -95,10 +70,6 @@ export default async function handler(req, res) {
   if (!token || !navQueryId) {
     return res.status(500).json({ error: "IB_FLEX_TOKEN or IB_NAV_QUERY_ID not set" });
   }
-
-  const blobUrl  = process.env.FUND_DATA_BLOB_URL;
-  if (!blobUrl) return res.status(500).json({ error: "FUND_DATA_BLOB_URL not set" });
-  const blobBase = blobUrl.replace("fund-data.json", "");
 
   // Fetch NAV XML from IB
   let ibDaily, rawXml;
@@ -113,11 +84,13 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: "No NAV rows returned from IB", xmlSnippet: rawXml?.slice(0, 3000) });
   }
 
-  // Load deposits for unit calculation
+  // Load deposits for unit calculation (keep the full object so any deposit
+  // re-pricing done below can be persisted)
+  let fundData = null;
   let deposits = [];
   try {
-    const r = await fetch(`${blobUrl}?t=${Date.now()}`, { cache: "no-store" });
-    if (r.ok) { const fd = await r.json(); deposits = fd.deposits || []; }
+    const r = await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" });
+    if (r.ok) { fundData = await r.json(); deposits = fundData.deposits || []; }
   } catch {}
 
   // Load existing nav-history to merge with (preserve live IB-data points)
@@ -127,9 +100,14 @@ export default async function handler(req, res) {
     if (r.ok) existing = await r.json();
   } catch {}
 
-  // Build unit schedule using auto-detected settlement dates
-  const depositGroups  = groupDeposits(deposits);
-  const unitSettlement = matchSettlements(ibDaily, depositGroups);
+  // Re-price IB-detected deposits at fair pre-money NAV against IB's own
+  // daily series before minting units, so a wire priced at the inflated
+  // post-cash NAV self-corrects here too (persisted below if changed).
+  const depositsChanged = fixIbDepositNavs(deposits, ibDaily) > 0;
+
+  // Build unit schedule using auto-detected settlement dates — shared logic,
+  // covers every investor (not just fernando/dario like the old local code)
+  const unitSettlement = buildUnitSchedule(deposits, ibDaily);
 
   // Base NAV = inception day total / 1000 units
   const inceptionPoint = ibDaily.find(d => d.date === INCEPTION_DATE);
@@ -180,6 +158,13 @@ export default async function handler(req, res) {
   await put(bname("nav-history.json"), JSON.stringify(navHistory), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
+
+  // Persist any deposit re-pricing from the self-heal pass
+  if (depositsChanged && fundData) {
+    await put(bname("fund-data.json"), JSON.stringify(fundData), {
+      access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
+    });
+  }
 
   // Month-end summary for verification
   const monthEnds = ["2025-12-31","2026-01-30","2026-02-27","2026-03-31","2026-04-30","2026-05-29","2026-06-30"];
