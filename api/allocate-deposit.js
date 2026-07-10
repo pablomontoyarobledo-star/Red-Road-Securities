@@ -190,6 +190,8 @@ export default async function handler(req, res) {
     nav:    depositNav,
     ibDesc: deposit.description || "",
   };
+  // Carry IB's transactionID so deposit detection never re-flags this wire.
+  if (deposit.txId) record.txId = deposit.txId;
   // Deposit key: strip "inv_" prefix for legacy investors (inv_fernando -> fernando), keep as-is otherwise
   const depKey = invMatch
     ? (invMatch.id.startsWith("inv_") ? invMatch.id.slice(4) : invMatch.id)

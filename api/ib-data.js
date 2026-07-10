@@ -222,18 +222,33 @@ function parseStatement(stmtXml) {
   let rawCashTx = stmt?.CashTransactions?.CashTransaction ?? [];
   if (!Array.isArray(rawCashTx)) rawCashTx = rawCashTx ? [rawCashTx] : [];
 
-  const deposits = rawCashTx
-    .filter(t => t && parseFloat(t.amount) > 0 &&
-      (String(t.type || "").toLowerCase().includes("deposit") ||
-       String(t.type || "").toLowerCase().includes("withdrawal") ||
-       String(t.levelOfDetail || "").toLowerCase() === "currency"))
-    .map(t => ({
-      id:          `${normDate(t.reportDate || t.dateTime)}_${parseFloat(t.amount)}`,
-      date:        normDate(t.reportDate || t.dateTime),
-      amount:      parseFloat(t.amount),
+  // Deposits = any positive cash inflow that is NOT investment income or a fee.
+  // (The old filter only caught type "deposit/withdrawal" or currency-summary
+  // rows, so a wire IB labels differently — e.g. an EFT credit — slipped
+  // through undetected.) Exclude summary rows (levelOfDetail "Currency") when
+  // detail rows exist for the same money, and carry IB's transactionID so two
+  // same-day, same-amount wires stay distinct instead of collapsing to one id.
+  const INCOME_RE = /(dividend|interest|withhold|\btax\b|fee|commission|adjust)/i;
+  let rawDeposits = rawCashTx.filter(t =>
+    t && parseFloat(t.amount) > 0 && !INCOME_RE.test(String(t.type || "")));
+  // If both per-transaction "Detail" rows and a "Currency" summary exist, keep
+  // only the detail rows so the same wire isn't counted twice.
+  const hasDetail = rawDeposits.some(t => String(t.levelOfDetail || "").toLowerCase() === "detail");
+  if (hasDetail) rawDeposits = rawDeposits.filter(t => String(t.levelOfDetail || "").toLowerCase() !== "currency");
+
+  const deposits = rawDeposits.map(t => {
+    const date = normDate(t.reportDate || t.dateTime);
+    const amt  = parseFloat(t.amount);
+    const txId = String(t.transactionID || t.transactionId || "");
+    return {
+      id:          txId ? `tx_${txId}` : `${date}_${amt}`,
+      txId,
+      date,
+      amount:      amt,
       currency:    t.currency || "USD",
       description: t.description || t.type || "",
-    }));
+    };
+  });
 
   // Dividend payments — store actual cash amounts from IB
   const dividends = rawCashTx
@@ -346,40 +361,42 @@ async function appendIncomeTx({ dividends, interest, fees, blobBase }) {
 async function detectNewDeposits({ deposits, blobBase, resendKey }) {
   if (!deposits.length) return;
 
-  // Load already-allocated deposits
-  let allocatedIds = new Set();
+  // A deposit is already known if IB's transactionID has been seen, OR — for
+  // records stored before we tracked transactionIDs — if a same-date/same-amount
+  // entry is still "uncovered". Using a multiset count (not a plain set) means
+  // two $10k wires on the same day are two distinct deposits, not one.
+  const knownTxIds = new Set();
+  const knownCount = new Map();
+  const bump = k => knownCount.set(k, (knownCount.get(k) || 0) + 1);
+
   try {
     const fd = await (await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" })).json();
-    (fd.deposits || []).forEach(d => allocatedIds.add(`${d.date}_${d.amount}`));
+    (fd.deposits || []).forEach(d => { if (d.txId) knownTxIds.add(d.txId); bump(`${d.date}_${d.amount}`); });
   } catch {}
 
-  // Load already-pending deposits — normalize any old datetime-format IDs to date_amount
   let pending = { deposits: [] };
-  let pendingNeedsWrite = false;
   try {
     const r = await fetch(`${burl("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" });
     if (r.ok) pending = await r.json();
   } catch {}
-  pending.deposits = (pending.deposits || []).map(d => {
-    const canonical = `${String(d.date || "").slice(0, 10)}_${d.amount}`;
-    if (d.id !== canonical) { pendingNeedsWrite = true; return { ...d, id: canonical }; }
-    return d;
+  (pending.deposits || []).forEach(d => {
+    if (d.txId) knownTxIds.add(d.txId);
+    bump(`${String(d.date || "").slice(0, 10)}_${d.amount}`);
   });
-  const pendingIds = new Set(pending.deposits.map(d => d.id));
 
-  // Find truly new ones
-  const newDeposits = deposits.filter(d => !allocatedIds.has(d.id) && !pendingIds.has(d.id));
-  if (!newDeposits.length) {
-    // Still write back if we normalized any IDs
-    if (pendingNeedsWrite) {
-      await put(bname("pending-deposits.json"), JSON.stringify(pending), {
-        access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-      });
-    }
-    return;
+  // Find truly new ones, consuming the multiset as we go.
+  const newDeposits = [];
+  for (const d of deposits) {
+    if (d.txId && knownTxIds.has(d.txId)) continue;          // exact match — already known
+    const key = `${d.date}_${d.amount}`;
+    const left = knownCount.get(key) || 0;
+    if (left > 0) { knownCount.set(key, left - 1); continue; } // covered by a pre-txId record
+    newDeposits.push(d);
   }
+  if (!newDeposits.length) return;
 
   // Save to pending-deposits.json
+  pending.deposits = pending.deposits || [];
   pending.deposits.push(...newDeposits);
   await put(bname("pending-deposits.json"), JSON.stringify(pending), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
@@ -387,13 +404,22 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
 
   // Send email for each new deposit
   if (!resendKey) return;
+
+  // Offer a button for every current investor (not just Fernando/Dario), so a
+  // deposit from anyone can be allocated straight from the email.
+  let investors = [];
+  try {
+    const inv = await (await fetch(`${burl("investors.json")}?t=${Date.now()}`, { cache: "no-store" })).json();
+    investors = (inv.investors || []).map(i => ({
+      key:   i.id.startsWith("inv_") ? i.id.slice(4) : i.id,
+      label: `${i.firstName} ${i.lastName}`.trim() || i.id,
+    }));
+  } catch {}
+  if (!investors.length) investors = [{ key: "fernando", label: "Fernando" }, { key: "dario", label: "Dario" }];
+
   for (const dep of newDeposits) {
     const base  = "https://red-road-securities.vercel.app";
     const btnStyle = "display:inline-block;padding:10px 20px;border-radius:6px;font-weight:600;font-size:14px;text-decoration:none;margin:4px;";
-    const investors = [
-      { key: "fernando", label: "Fernando" },
-      { key: "dario",    label: "Dario"    },
-    ];
     const allocBtns = investors.map(inv =>
       `<a href="${base}/?allocate=${encodeURIComponent(dep.id)}&investor=${inv.key}" style="${btnStyle}background:#1a6b3c;color:#fff;">Allocate to ${inv.label}</a>`
     ).join("\n");
