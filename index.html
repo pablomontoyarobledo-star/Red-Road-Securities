@@ -199,6 +199,16 @@
   .income-label { font-size: 11px; color: var(--text3); font-weight: 500; }
   .income-value { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
 
+  /* TAXES */
+  .tax-rates-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .tax-rate-field { display: flex; flex-direction: column; gap: 4px; }
+  .tax-rate-field label { font-size: 11px; color: var(--text3); font-weight: 500; }
+  .tax-rate-field input { padding: 8px 10px; border-radius: 8px; border: 0.5px solid var(--border); background: var(--bg2); color: var(--text); font-size: 14px; }
+  .tax-table th { padding: 8px 12px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); }
+  .tax-table td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); }
+  .tax-table tr:last-child td { border-bottom: none; }
+  .tax-table .tax-total-row td { font-weight: 700; border-top: 1.5px solid var(--border); border-bottom: none; }
+
   /* BENCHMARK TABLE */
   .bench-table { min-width: 500px; }
   .bench-table td, .bench-table th { text-align: right; }
@@ -336,6 +346,7 @@
       <button class="page-tab" onclick="showPage('ownership',this)" id="ptab-ownership">Ownership</button>
       <button class="page-tab" onclick="showPage('transactions',this)" id="ptab-transactions">Transactions</button>
       <button class="page-tab" onclick="showPage('nav',this)" id="ptab-nav">NAV</button>
+      <button class="page-tab" onclick="showPage('taxes',this);renderTaxes();" id="ptab-taxes">Taxes</button>
       <button class="page-tab" onclick="showPage('statements',this);populateStatementMonths();" id="ptab-statements">Statements</button>
     </nav>
   </div>
@@ -609,6 +620,59 @@
           <tbody id="nav-table-body">
             <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text3);font-size:12px;">Loading NAV history…</td></tr>
           </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Taxes -->
+  <div id="page-taxes" class="page">
+    <div class="section">
+      <p class="section-label">Estimated tax — potential liability</p>
+      <div class="metric-card" style="background:var(--yellow-bg,#fff8e6);border:0.5px solid var(--border);font-size:12px;color:var(--text2);line-height:1.5;">
+        <b>Estimate only — not tax advice.</b> Figures are computed from IB transaction and price data using the rate assumptions below.
+        Enter the rates that apply to the fund's tax jurisdiction. Realized gains and income are taxable events that have occurred;
+        unrealized gains are only taxed if positions are sold. Cost-basis matching uses the average cost per holding.
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-label">Rate assumptions</p>
+      <div class="tax-rates-grid" id="tax-rates">
+        <div class="tax-rate-field"><label>Short-term capital gains %</label><input type="number" step="0.1" id="tax-rate-stcg" /></div>
+        <div class="tax-rate-field"><label>Long-term capital gains %</label><input type="number" step="0.1" id="tax-rate-ltcg" /></div>
+        <div class="tax-rate-field"><label>Qualified dividends %</label><input type="number" step="0.1" id="tax-rate-qdiv" /></div>
+        <div class="tax-rate-field"><label>Ordinary income % (interest, bond distr.)</label><input type="number" step="0.1" id="tax-rate-ord" /></div>
+        <div class="tax-rate-field"><label>Long-term holding period (months)</label><input type="number" step="1" id="tax-ltmonths" /></div>
+      </div>
+    </div>
+
+    <div class="section" id="tax-summary-section">
+      <div class="metrics-grid" id="tax-summary"></div>
+    </div>
+
+    <div class="section">
+      <p class="section-label">Taxable now — realized gains &amp; income</p>
+      <div style="overflow-x:auto;">
+        <table class="tax-table" style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:1.5px solid var(--border);">
+            <th style="text-align:left;">Item</th><th style="text-align:right;">Taxable amount</th>
+            <th style="text-align:right;">Rate</th><th style="text-align:right;">Est. tax</th>
+          </tr></thead>
+          <tbody id="tax-realized-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-label">Unrealized — potential tax if sold today</p>
+      <div style="overflow-x:auto;">
+        <table class="tax-table" style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:1.5px solid var(--border);">
+            <th style="text-align:left;">Holding</th><th style="text-align:right;">Unrealized gain</th>
+            <th style="text-align:right;">Term</th><th style="text-align:right;">Rate</th><th style="text-align:right;">Est. tax</th>
+          </tr></thead>
+          <tbody id="tax-unrealized-body"></tbody>
         </table>
       </div>
     </div>
@@ -1061,7 +1125,7 @@ const TR = {
     alert_tx_required: "Date and price are required.",
     alert_perf_invalid: "Invalid JSON. Check the format.",
     // NAV tab
-    tab_nav: "NAV", lbl_nav: "NAV History",
+    tab_nav: "NAV", tab_taxes: "Taxes", lbl_nav: "NAV History",
     // Statements page UI
     lbl_statements: "Statements",
     stmt_download_heading: "Download Statement",
@@ -1337,7 +1401,7 @@ const TR = {
     alert_tx_required: "La fecha y el precio son obligatorios.",
     alert_perf_invalid: "JSON inválido. Revise el formato.",
     // NAV tab
-    tab_nav: "NAV", lbl_nav: "Historial de NAV",
+    tab_nav: "NAV", tab_taxes: "Impuestos", lbl_nav: "Historial de NAV",
     // Statements page UI
     lbl_statements: "Extractos",
     stmt_download_heading: "Descargar Extracto",
@@ -1611,7 +1675,7 @@ function setLang(lang) {
     "tx-hint": "tx_hint",
     "ptab-overview": "tab_overview", "ptab-performance": "tab_performance",
     "ptab-positions": "tab_positions", "ptab-ownership": "tab_ownership",
-    "ptab-transactions": "tab_transactions", "ptab-nav": "tab_nav", "ptab-statements": "lbl_statements",
+    "ptab-transactions": "tab_transactions", "ptab-nav": "tab_nav", "ptab-taxes": "tab_taxes", "ptab-statements": "lbl_statements",
     "lbl-statements": "lbl_statements",
     "stmt-download-heading": "stmt_download_heading",
     "stmt-investor-label": "stmt_investor_label", "stmt-period-label": "stmt_period_label",
@@ -3383,6 +3447,150 @@ function saveDeposit() {
 }
 
 // ── PAGE NAVIGATION ──
+// ── TAXES ──
+// Bond-fund (BND) distributions are ordinary income; broad stock ETF (VTI)
+// dividends are treated as qualified. Adjust the ticker map if holdings change.
+const QUALIFIED_DIV_TICKERS = new Set(["VTI"]);
+const TAX_RATE_DEFAULTS = { stcg: 35, ltcg: 15, qdiv: 15, ord: 35, ltmonths: 12 };
+
+function _taxIsoDate(d) {
+  const s = String(d || "");
+  return /^\d{8}$/.test(s) ? `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}` : s;
+}
+function _monthsBetween(a, b) {
+  const d1 = new Date(a + "T12:00:00"), d2 = new Date(b + "T12:00:00");
+  return (d2 - d1) / (1000 * 60 * 60 * 24 * 30.4375);
+}
+
+function _taxRates() {
+  const g = (id, def) => { const v = parseFloat(document.getElementById(id)?.value); return isFinite(v) ? v : def; };
+  return {
+    stcg: g("tax-rate-stcg", TAX_RATE_DEFAULTS.stcg),
+    ltcg: g("tax-rate-ltcg", TAX_RATE_DEFAULTS.ltcg),
+    qdiv: g("tax-rate-qdiv", TAX_RATE_DEFAULTS.qdiv),
+    ord:  g("tax-rate-ord",  TAX_RATE_DEFAULTS.ord),
+    ltmonths: g("tax-ltmonths", TAX_RATE_DEFAULTS.ltmonths),
+  };
+}
+
+let _taxRatesWired = false;
+function renderTaxes() {
+  try {
+    // Populate rate inputs from saved values, wire change handlers once.
+    const saved = load("mff_tax_rates", TAX_RATE_DEFAULTS);
+    [["tax-rate-stcg","stcg"],["tax-rate-ltcg","ltcg"],["tax-rate-qdiv","qdiv"],["tax-rate-ord","ord"],["tax-ltmonths","ltmonths"]]
+      .forEach(([id,k]) => { const el = document.getElementById(id); if (el && el.value === "") el.value = saved[k] ?? TAX_RATE_DEFAULTS[k]; });
+    if (!_taxRatesWired) {
+      ["tax-rate-stcg","tax-rate-ltcg","tax-rate-qdiv","tax-rate-ord","tax-ltmonths"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", () => {
+          const r = _taxRates();
+          save("mff_tax_rates", { stcg:r.stcg, ltcg:r.ltcg, qdiv:r.qdiv, ord:r.ord, ltmonths:r.ltmonths });
+          renderTaxes();
+        });
+      });
+      _taxRatesWired = true;
+    }
+
+    const r = _taxRates();
+    const todayIso = new Date().toISOString().slice(0, 10);
+
+    // ── Realized capital gains via average-cost replay (chronological) ──
+    const txs = [...transactions]
+      .filter(t => (t.type === "buy" || t.type === "sell") && t.shares != null && t.price != null)
+      .sort((a, b) => _taxIsoDate(a.date).localeCompare(_taxIsoDate(b.date)));
+    const lot = {}; // ticker -> { shares, cost, firstBuy }
+    let realizedST = 0, realizedLT = 0;
+    for (const t of txs) {
+      const tk = t.ticker;
+      if (!lot[tk]) lot[tk] = { shares: 0, cost: 0, firstBuy: _taxIsoDate(t.date) };
+      const L = lot[tk];
+      if (t.type === "buy") {
+        L.shares += t.shares; L.cost += t.shares * t.price;
+      } else { // sell
+        const avg = L.shares > 0 ? L.cost / L.shares : t.price;
+        const gain = t.shares * (t.price - avg);
+        const months = _monthsBetween(L.firstBuy, _taxIsoDate(t.date));
+        if (months >= r.ltmonths) realizedLT += gain; else realizedST += gain;
+        L.cost   -= t.shares * avg;
+        L.shares -= t.shares;
+      }
+    }
+
+    // ── Dividends & interest ──
+    let qDiv = 0, ordDiv = 0, interest = 0;
+    for (const t of transactions) {
+      if (t.type === "dividend") {
+        let amt = t.netAmount;
+        if (amt == null && t.price != null) { const p = positions.find(p => p.ticker === t.ticker); if (p) amt = t.price * p.shares; }
+        if (amt == null) continue;
+        if (QUALIFIED_DIV_TICKERS.has(t.ticker)) qDiv += amt; else ordDiv += amt;
+      } else if (t.type === "interest" && t.netAmount != null) {
+        interest += t.netAmount;
+      }
+    }
+
+    // ── Unrealized gains per position (term from earliest buy of each ticker) ──
+    const firstBuyOf = {};
+    for (const t of txs) if (t.type === "buy" && !firstBuyOf[t.ticker]) firstBuyOf[t.ticker] = _taxIsoDate(t.date);
+    const unreal = positions.filter(p => p.ticker !== "CASH").map(p => {
+      const price = livePrice[p.ticker] || p.ibClose || p.costBasis;
+      const gain  = (price - p.costBasis) * p.shares;
+      const months = firstBuyOf[p.ticker] ? _monthsBetween(firstBuyOf[p.ticker], todayIso) : 0;
+      const isLT = months >= r.ltmonths;
+      return { ticker: p.ticker, gain, isLT, rate: isLT ? r.ltcg : r.stcg };
+    });
+
+    const pct = v => (v >= 0 ? "" : "") + v.toFixed(1) + "%";
+    const taxOn = (amt, rate) => Math.max(0, amt) * rate / 100;
+
+    // ── Realized + income table ──
+    const realizedTaxST = taxOn(realizedST, r.stcg);
+    const realizedTaxLT = taxOn(realizedLT, r.ltcg);
+    const taxQDiv = taxOn(qDiv, r.qdiv);
+    const taxOrdDiv = taxOn(ordDiv, r.ord);
+    const taxInt = taxOn(interest, r.ord);
+    const taxNowTotal = realizedTaxST + realizedTaxLT + taxQDiv + taxOrdDiv + taxInt;
+
+    const row = (label, amt, rate, tax, cls="") =>
+      `<tr><td>${label}</td><td style="text-align:right;" class="${amt<0?'neg':''}">${fmt(amt)}</td>
+       <td style="text-align:right;color:var(--text3);">${rate==null?"—":pct(rate)}</td>
+       <td style="text-align:right;" class="${cls}">${tax==null?"—":fmt(tax)}</td></tr>`;
+
+    document.getElementById("tax-realized-body").innerHTML =
+      row(`Realized capital gains — short-term`, realizedST, r.stcg, realizedTaxST) +
+      row(`Realized capital gains — long-term`,  realizedLT, r.ltcg, realizedTaxLT) +
+      row(`Qualified dividends (VTI)`,           qDiv,       r.qdiv, taxQDiv) +
+      row(`Ordinary dividends (BND)`,            ordDiv,     r.ord,  taxOrdDiv) +
+      row(`Interest income`,                     interest,   r.ord,  taxInt) +
+      `<tr class="tax-total-row"><td>Estimated tax due on realized activity</td><td></td><td></td><td style="text-align:right;">${fmt(taxNowTotal)}</td></tr>`;
+
+    // ── Unrealized table ──
+    let unrealTaxTotal = 0, unrealGainTotal = 0;
+    const unrealRows = unreal.map(u => {
+      const tax = taxOn(u.gain, u.rate);
+      unrealTaxTotal += tax; unrealGainTotal += u.gain;
+      return `<tr><td><span class="ticker">${u.ticker}</span></td>
+        <td style="text-align:right;" class="${u.gain<0?'neg':'pos'}">${fmt(u.gain)}</td>
+        <td style="text-align:right;color:var(--text3);">${u.isLT?"Long":"Short"}</td>
+        <td style="text-align:right;color:var(--text3);">${pct(u.rate)}</td>
+        <td style="text-align:right;">${fmt(tax)}</td></tr>`;
+    }).join("");
+    document.getElementById("tax-unrealized-body").innerHTML = unrealRows +
+      `<tr class="tax-total-row"><td>Potential tax if fully liquidated today</td>
+        <td style="text-align:right;" class="${unrealGainTotal<0?'neg':'pos'}">${fmt(unrealGainTotal)}</td>
+        <td></td><td></td><td style="text-align:right;">${fmt(unrealTaxTotal)}</td></tr>`;
+
+    // ── Summary cards ──
+    document.getElementById("tax-summary").innerHTML = `
+      <div class="metric-card"><div class="metric-label">Tax due — realized &amp; income</div><div class="metric-value">${fmt(taxNowTotal)}</div><div class="metric-sub" style="color:var(--text3);">on gains/income already earned</div></div>
+      <div class="metric-card"><div class="metric-label">Potential tax — if sold today</div><div class="metric-value">${fmt(unrealTaxTotal)}</div><div class="metric-sub" style="color:var(--text3);">on unrealized gains</div></div>
+      <div class="metric-card"><div class="metric-label">Total potential tax</div><div class="metric-value">${fmt(taxNowTotal + unrealTaxTotal)}</div><div class="metric-sub" style="color:var(--text3);">realized + unrealized</div></div>
+      <div class="metric-card"><div class="metric-label">Unrealized gain</div><div class="metric-value ${unrealGainTotal>=0?'pos':'neg'}" style="font-size:20px;">${fmt(unrealGainTotal)}</div><div class="metric-sub" style="color:var(--text3);">not taxed until sold</div></div>
+    `;
+  } catch (e) { console.error("renderTaxes error:", e); }
+}
+
 function showPage(name, btn) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".page-tab").forEach(b => b.classList.remove("active"));
