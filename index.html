@@ -2211,42 +2211,58 @@ function renderTx() {
   const selMonth = monthSel ? monthSel.value.substring(0,2) : "";
   const selYear  = yearSel  ? yearSel.value : "";
 
+  // Normalize dates for filtering — IB trades arrive as "20260708", dividends
+  // as "2026-02-04". Compare on a dashed form so month/year filters work on both.
+  const isoDate = d => {
+    const s = String(d || "");
+    if (/^\d{8}$/.test(s)) return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
+    return s;
+  };
+
   let filtered = txFilter==="all" ? transactions : transactions.filter(tx=>tx.type===txFilter);
-  if (selMonth) filtered = filtered.filter(tx => tx.date.substring(5,7) === selMonth);
-  if (selYear)  filtered = filtered.filter(tx => tx.date.startsWith(selYear));
+  if (selMonth) filtered = filtered.filter(tx => isoDate(tx.date).substring(5,7) === selMonth);
+  if (selYear)  filtered = filtered.filter(tx => isoDate(tx.date).startsWith(selYear));
 
-  const isAdmin = currentUser && currentUser.admin;
+  const typeLabelOf = ty =>
+    ty==="dividend" ? t("type_dividend") :
+    ty==="buy"      ? t("type_buy")      :
+    ty==="sell"     ? t("type_sell")     :
+    ty==="interest" ? (currentLang==="es"?"Interés":"Interest") :
+    ty==="fee"      ? (currentLang==="es"?"Comisión":"Fee") :
+    (ty ? ty.charAt(0).toUpperCase()+ty.slice(1) : "—");
 
+  // Transactions are read-only — this is broker data imported from IB.
   document.getElementById("tx-body").innerHTML = filtered.map(tx => {
-    const masterIdx = transactions.indexOf(tx);
     const badgeCls  = tx.type==="buy"?"type-buy":tx.type==="sell"?"type-sell":"type-div";
-    const typeLabel = tx.type==="dividend" ? t("type_dividend") : tx.type==="buy" ? t("type_buy") : t("type_sell");
     const sharesStr = tx.shares!=null ? Number(tx.shares).toLocaleString() : "—";
-    const priceStr  = fmt(tx.price);
+    const priceStr  = tx.price!=null  ? fmt(tx.price) : "—";
     let amountStr = "—";
     if (tx.type === "dividend") {
-      const pos = positions.find(p => p.ticker === tx.ticker);
-      if (pos) amountStr = `<span class="pos">${fmt(tx.price * pos.shares)}</span>`;
-    } else if (tx.shares != null) {
+      // Prefer IB's actual cash amount; fall back to per-share rate × shares held.
+      let amt = tx.netAmount;
+      if (amt == null && tx.price != null) {
+        const pos = positions.find(p => p.ticker === tx.ticker);
+        if (pos) amt = tx.price * pos.shares;
+      }
+      if (amt != null) amountStr = `<span class="pos">${fmt(amt)}</span>`;
+    } else if (tx.type === "interest") {
+      if (tx.netAmount != null) amountStr = `<span class="pos">${fmt(tx.netAmount)}</span>`;
+    } else if (tx.type === "fee") {
+      if (tx.netAmount != null) amountStr = `<span class="neg">${fmt(-Math.abs(tx.netAmount))}</span>`;
+    } else if (tx.shares != null && tx.price != null) {
       const total = tx.shares * tx.price;
       amountStr = tx.type === "sell" ? `<span class="neg">${fmt(total)}</span>` : fmt(total);
     }
-    const adminCols = isAdmin ? `
-      <td style="width:64px;text-align:right;padding-right:10px;">
-        <button onclick="startEditTx(${masterIdx})" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:3px 5px;border-radius:4px;" title="Edit"><i class="ti ti-pencil" style="font-size:13px;"></i></button>
-        <button onclick="deleteTx(${masterIdx})" style="background:none;border:none;cursor:pointer;color:var(--red);padding:3px 5px;border-radius:4px;" title="Delete"><i class="ti ti-trash" style="font-size:13px;"></i></button>
-      </td>` : "";
-    return `<tr id="tx-row-${masterIdx}">
-      <td>${tx.date}</td>
-      <td><span class="ticker">${tx.ticker}</span></td>
-      <td><span class="type-badge ${badgeCls}">${typeLabel}</span></td>
+    return `<tr>
+      <td>${isoDate(tx.date)}</td>
+      <td>${tx.ticker ? `<span class="ticker">${tx.ticker}</span>` : "—"}</td>
+      <td><span class="type-badge ${badgeCls}">${typeLabelOf(tx.type)}</span></td>
       <td>${sharesStr}</td>
       <td>${priceStr}</td>
       <td>${amountStr}</td>
       <td class="notes-cell">${tx.notes||""}</td>
-      ${adminCols}
     </tr>`;
-  }).join("") || `<tr><td colspan="${isAdmin?8:7}" style="text-align:center;color:var(--text3);padding:1.5rem;">${t("tx_empty")}</td></tr>`;
+  }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:1.5rem;">${t("tx_empty")}</td></tr>`;
 }
 
 function startEditTx(idx) {
