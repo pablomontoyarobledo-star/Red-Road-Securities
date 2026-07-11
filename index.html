@@ -2222,6 +2222,8 @@ function renderTx() {
   let filtered = txFilter==="all" ? transactions : transactions.filter(tx=>tx.type===txFilter);
   if (selMonth) filtered = filtered.filter(tx => isoDate(tx.date).substring(5,7) === selMonth);
   if (selYear)  filtered = filtered.filter(tx => isoDate(tx.date).startsWith(selYear));
+  // Newest first (works across IB's mixed "20260708" and "2026-02-04" formats).
+  filtered = [...filtered].sort((a, b) => isoDate(b.date).localeCompare(isoDate(a.date)));
 
   const typeLabelOf = ty =>
     ty==="dividend" ? t("type_dividend") :
