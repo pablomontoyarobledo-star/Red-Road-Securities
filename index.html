@@ -3233,7 +3233,7 @@ function fmtDep(n) { return n ? "$"+Number(n).toLocaleString("en-US",{minimumFra
 function renderDeposits() {
   const selMonth = (document.getElementById("dep-filter-month").value || "").substring(0,2);
   const selYear  = document.getElementById("dep-filter-year").value || "";
-  const sorted   = [...deposits].sort((a,b) => a.date.localeCompare(b.date));
+  const sorted   = [...deposits].sort((a,b) => b.date.localeCompare(a.date)); // newest first
   const filtered = sorted.filter(d => {
     const mOk = !selMonth || d.date.substring(5,7) === selMonth;
     const yOk = !selYear  || d.date.startsWith(selYear);
