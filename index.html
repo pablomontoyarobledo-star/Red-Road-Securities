@@ -2694,6 +2694,12 @@ async function syncNavHistory() {
 
 // ── Pending Deposits ─────────────────────────────────────────────────────────
 
+// Ids of deposits allocated this session. Blob storage is read-after-write
+// eventually-consistent, so a re-fetch right after allocating can still return
+// the just-removed deposit; filtering these out keeps an allocated card from
+// reappearing until the storage layer catches up.
+const _allocatedDepositIds = new Set();
+
 async function loadPendingDeposits() {
   const section = document.getElementById("pending-deposits-section");
   const list    = document.getElementById("pending-deposits-list");
@@ -2702,7 +2708,7 @@ async function loadPendingDeposits() {
     const r = await dataFetch("pending-deposits.json");
     if (!r.ok) return;
     const data = await r.json();
-    const deps = data.deposits || [];
+    const deps = (data.deposits || []).filter(d => !_allocatedDepositIds.has(d.id));
     if (!deps.length) { section.style.display = "none"; return; }
     section.style.display = "block";
     list.innerHTML = deps.map(d => `
@@ -2788,9 +2794,14 @@ async function confirmAllocate(depositId, investorKey, isNew) {
     const r = await fetch("/api/allocate-deposit", { method: "POST", headers: { "Content-Type": "application/json", ...adminSecretHeader() }, body: JSON.stringify(body) });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Failed");
+    _allocatedDepositIds.add(depositId);
+    // Remove the card immediately, then re-fetch (filtered) to confirm.
+    document.querySelector(`[data-deposit-id="${CSS.escape(depositId)}"]`)?.remove();
     document.getElementById("allocate-modal").remove();
     await loadPendingDeposits();
     await loadFromCloud();
+    // Belt-and-suspenders: re-sync once storage has settled.
+    setTimeout(() => loadPendingDeposits().catch(() => {}), 2500);
   } catch(e) {
     err.textContent = e.message; err.style.display = "block";
     btn.disabled = false; btn.textContent = "Confirm";
