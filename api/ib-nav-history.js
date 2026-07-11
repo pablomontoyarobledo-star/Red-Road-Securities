@@ -6,7 +6,7 @@ import { XMLParser } from "fast-xml-parser";
 import { put }       from "@vercel/blob";
 import { burl, bname } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
-import { buildUnitSchedule, fixIbDepositNavs } from "../lib/nav.js";
+import { buildUnitSchedule, fixIbDepositNavs, applyPendingToLatest } from "../lib/nav.js";
 
 const BASE           = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService";
 const INCEPTION_DATE = "2025-12-18";
@@ -147,6 +147,15 @@ export default async function handler(req, res) {
     }
   }
   merged.sort((a, b) => a.date.localeCompare(b.date));
+
+  // Fold un-allocated pending-deposit cash into the latest point (neutral NAV),
+  // same as the daily pull, so this authoritative rebuild agrees with it.
+  let pendingCash = 0;
+  try {
+    const pr = await fetch(`${burl("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" });
+    if (pr.ok) { const pd = await pr.json(); pendingCash = (pd.deposits || []).reduce((s, d) => s + (d.amount || 0), 0); }
+  } catch {}
+  applyPendingToLatest(merged, pendingCash, Math.round(baseNav * 1e8) / 1e8);
 
   const navHistory = {
     inception:    { date: INCEPTION_DATE, nav: Math.round(baseNav * 1e8) / 1e8 },

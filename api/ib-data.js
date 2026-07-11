@@ -1,7 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { put } from "@vercel/blob";
 import { burl, bname, bprefix } from "../lib/store.js";
-import { computeTotalUnitsAtDate, recomputeNavSeries, fixIbDepositNavs } from "../lib/nav.js";
+import { computeTotalUnitsAtDate, recomputeNavSeries, fixIbDepositNavs, applyPendingToLatest } from "../lib/nav.js";
 
 const INCEPTION_NAV  = 1.0;
 const INCEPTION_DATE = "2025-12-18";
@@ -20,7 +20,7 @@ function normDate(raw) {
 // ---------------------------------------------------------------------------
 // NAV point — appends one entry to nav-history.json and computes daily P&L
 // ---------------------------------------------------------------------------
-async function appendNavPoint({ totalValue, dateStr, blobBase, deposits }) {
+async function appendNavPoint({ totalValue, dateStr, blobBase, deposits, pendingCash = 0 }) {
   const navHistUrl = burl("nav-history.json");
   let navHistory = { inception: { date: INCEPTION_DATE, nav: INCEPTION_NAV }, series: [] };
   try {
@@ -66,11 +66,15 @@ async function appendNavPoint({ totalValue, dateStr, blobBase, deposits }) {
   const depositsChanged = fixIbDepositNavs(deposits, navHistory.series) > 0;
   recomputeNavSeries(navHistory.series, deposits, navHistory.inception?.nav || INCEPTION_NAV);
 
+  // Fold un-allocated pending-deposit cash into the latest point (neutral NAV).
+  applyPendingToLatest(navHistory.series, pendingCash, navHistory.inception?.nav || INCEPTION_NAV);
+  const latest = navHistory.series[navHistory.series.length - 1];
+
   await put(bname("nav-history.json"), JSON.stringify(navHistory), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
 
-  return { point, depositsChanged };
+  return { point: latest || point, depositsChanged, pendingCash };
 }
 
 // ---------------------------------------------------------------------------
@@ -517,7 +521,25 @@ export default async function handler(req, res) {
 
   const now    = new Date();
 
-  // Append today's NAV point first so we can include nav/twr in the archive
+  // Detect new deposits FIRST so this pull's fresh wires are in the pending
+  // list before we price the NAV point (otherwise their cash would inflate
+  // today's NAV until the next pull).
+  try {
+    await detectNewDeposits({
+      deposits:  parsed.deposits || [],
+      blobBase,
+      resendKey: process.env.RESEND_API_KEY,
+    });
+  } catch {}
+
+  // Sum un-allocated pending-deposit cash — folded into the NAV as pending units.
+  let pendingCash = 0;
+  try {
+    const pr = await fetch(`${burl("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" });
+    if (pr.ok) { const pd = await pr.json(); pendingCash = (pd.deposits || []).reduce((s, d) => s + (d.amount || 0), 0); }
+  } catch {}
+
+  // Append today's NAV point (pending cash held neutral as pending units)
   let navPoint = null;
   try {
     let fd = null;
@@ -527,7 +549,7 @@ export default async function handler(req, res) {
     } catch {}
     const deposits = fd?.deposits || [];
     const dateStr = now.toISOString().slice(0, 10);
-    const appended = await appendNavPoint({ totalValue: parsed.totalValue, dateStr, blobBase, deposits });
+    const appended = await appendNavPoint({ totalValue: parsed.totalValue, dateStr, blobBase, deposits, pendingCash });
     navPoint = appended?.point ?? null;
     // Persist any deposit re-pricing done by the self-heal pass
     if (appended?.depositsChanged && fd) {
@@ -544,6 +566,7 @@ export default async function handler(req, res) {
     positions:   parsed.positions,
     totalValue:  parsed.totalValue,
     cashBalance,
+    pendingCash,
     nav:         navPoint?.nav         ?? null,
     twr:         navPoint?.twr         ?? null,
     trades:      parsed.trades,
@@ -596,15 +619,6 @@ export default async function handler(req, res) {
       interest:  parsed.interest  || [],
       fees:      parsed.fees      || [],
       blobBase,
-    });
-  } catch {}
-
-  // Detect new deposits and notify
-  try {
-    await detectNewDeposits({
-      deposits:  parsed.deposits || [],
-      blobBase,
-      resendKey: process.env.RESEND_API_KEY,
     });
   } catch {}
 

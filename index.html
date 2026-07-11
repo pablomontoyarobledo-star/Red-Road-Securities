@@ -2070,11 +2070,15 @@ function renderIncome() {
 function renderMetrics() {
   try {
     const totalValue     = getTotalValue();
-    const totalDeposited = deposits.reduce((s,d) => s + d.amount, 0);
+    const { totalUnits: allocatedUnits } = calcUnits();
+    // Fold un-allocated pending deposits in as pending units so the NAV stays
+    // neutral and their cash still counts toward the fund value.
+    const { pendingCash, pendingUnits, fairNav } = getPendingInfo(allocatedUnits, totalValue);
+    const totalUnits = allocatedUnits + pendingUnits;
+    const totalDeposited = deposits.reduce((s,d) => s + d.amount, 0) + pendingCash;
     const gl    = totalValue - totalDeposited;
     const glPct = totalDeposited > 0 ? (gl / totalDeposited) * 100 : 0;
-    const { totalUnits } = calcUnits();
-    const navPerUnit = totalUnits > 0 ? totalValue / totalUnits : 0;
+    const navPerUnit = fairNav;
     const twr = ((navPerUnit - INCEPTION_NAV) / INCEPTION_NAV) * 100;
     const grid = document.getElementById("metrics-grid");
     if (grid) grid.innerHTML = `
@@ -2097,7 +2101,9 @@ function renderMetrics() {
 function renderOwnership() {
   const totalValue = getTotalValue();
   const unitMap    = calcUnits();
-  const { totalUnits } = unitMap;
+  const allocatedUnits = unitMap.totalUnits;
+  const { pendingCash, pendingUnits } = getPendingInfo(allocatedUnits, totalValue);
+  const totalUnits = allocatedUnits + pendingUnits;
   const locale     = currentLang === "es" ? "es-ES" : "en-US";
   const fmtUnits   = n => Math.round(n).toLocaleString(locale);
   const fmtPctOwn  = n => n.toLocaleString(locale, {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -2131,7 +2137,29 @@ function renderOwnership() {
     </div>`;
   }).join("");
 
-  document.getElementById("ownership-cards").innerHTML = cards;
+  // Pending allocation card — cash that has arrived but isn't assigned to an
+  // investor yet. It holds units at the current NAV (so it never distorts
+  // anyone's price) and will be relabeled to the real investor when allocated.
+  let pendingCard = "";
+  if (pendingUnits > 0) {
+    const pct   = totalUnits > 0 ? (pendingUnits / totalUnits) * 100 : 0;
+    const value = totalUnits > 0 ? totalValue * (pendingUnits / totalUnits) : 0;
+    const pname = currentLang === "es" ? "Pendiente de asignar" : "Pending allocation";
+    pendingCard = `<div class="ownership-card" style="border:1px dashed var(--text3);">
+      <div class="ownership-card-header">
+        <div class="avatar" style="background:#8a8f98;">⏳</div>
+        <div>
+          <div class="ownership-name">${pname}</div>
+          <div class="ownership-pct">${fmtPctOwn(pct)}% ${ownLabel}${fmtUnits(pendingUnits)}${unitSuffix}</div>
+        </div>
+      </div>
+      <div class="ownership-value">${fmt(value)}</div>
+      <div class="ownership-deposited">${depLabel}: ${fmt(pendingCash)}</div>
+      <div class="ownership-bar-wrap"><div class="ownership-bar-bg"><div style="height:6px;background:#8a8f98;border-radius:3px;width:${pct.toFixed(2)}%"></div></div></div>
+    </div>`;
+  }
+
+  document.getElementById("ownership-cards").innerHTML = cards + pendingCard;
 }
 
 function renderPositions() {
@@ -2700,6 +2728,26 @@ async function syncNavHistory() {
 // reappearing until the storage layer catches up.
 const _allocatedDepositIds = new Set();
 
+// Deposits detected but not yet allocated to an investor. Their cash is already
+// in IB's total, so we mint "pending units" for them at the current NAV — that
+// keeps the NAV neutral (a deposit never moves the price per unit) and keeps
+// cash counted as fund value. Allocation later just relabels these units to the
+// real investor. Admin reads the live list; other viewers use the aggregate
+// pendingCash the server stores on the IB snapshot.
+let pendingDeposits = [];
+
+function getPendingInfo(allocatedUnits, totalValue) {
+  const pendingCash = (currentUser?.admin && pendingDeposits.length)
+    ? pendingDeposits.reduce((s, d) => s + (d.amount || 0), 0)
+    : (_ibSnap?.pendingCash || 0);
+  // Fair (post-money-neutral) NAV excludes the parked cash from the per-unit
+  // price; the pending units are then that cash valued at the same NAV.
+  const fairNav = allocatedUnits > 0 ? (totalValue - pendingCash) / allocatedUnits
+                                     : (totalValue > 0 ? INCEPTION_NAV : 0);
+  const pendingUnits = (pendingCash > 0 && fairNav > 0) ? pendingCash / fairNav : 0;
+  return { pendingCash, pendingUnits, fairNav };
+}
+
 async function loadPendingDeposits() {
   const section = document.getElementById("pending-deposits-section");
   const list    = document.getElementById("pending-deposits-list");
@@ -2709,6 +2757,9 @@ async function loadPendingDeposits() {
     if (!r.ok) return;
     const data = await r.json();
     const deps = (data.deposits || []).filter(d => !_allocatedDepositIds.has(d.id));
+    // Keep the pending list in sync so NAV / ownership can fold in pending units.
+    pendingDeposits = deps;
+    try { renderMetrics(); renderOwnership(); } catch {}
     if (!deps.length) { section.style.display = "none"; return; }
     section.style.display = "block";
     list.innerHTML = deps.map(d => `
