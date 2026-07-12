@@ -346,7 +346,7 @@
       <button class="page-tab" onclick="showPage('ownership',this)" id="ptab-ownership">Ownership</button>
       <button class="page-tab" onclick="showPage('transactions',this)" id="ptab-transactions">Transactions</button>
       <button class="page-tab" onclick="showPage('nav',this)" id="ptab-nav">NAV</button>
-      <button class="page-tab" onclick="showPage('taxes',this);renderTaxes();" id="ptab-taxes">Taxes</button>
+      <button class="page-tab" onclick="showPage('taxes',this);renderTaxes();" id="ptab-taxes" style="display:none;">Taxes</button>
       <button class="page-tab" onclick="showPage('statements',this);populateStatementMonths();" id="ptab-statements">Statements</button>
     </nav>
   </div>
@@ -1883,7 +1883,7 @@ function _launchApp(email, entry) {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
   document.getElementById("investor-badge").textContent = entry.name;
-  if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } renderDepositForm(); loadPendingDeposits(); checkAllocateUrlParam(); }
+  if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; const _tt = document.getElementById("ptab-taxes"); if (_tt) _tt.style.display = ""; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } renderDepositForm(); loadPendingDeposits(); checkAllocateUrlParam(); }
   fetchPrices();
   fetchFXRate();
   const _s = fn => { try { fn(); } catch(e) { console.error(fn.name, e); } };
