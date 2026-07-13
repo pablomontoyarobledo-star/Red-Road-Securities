@@ -26,26 +26,32 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-store");
 
-  // TEMP diagnostic: send a test email via Resend and return the raw response.
-  if (req.query.diag === "email") {
+  // TEMP: send the real allocation email for any pending deposit right now.
+  if (req.query.diag === "notify") {
     const key = process.env.RESEND_API_KEY;
     if (!key) return res.status(200).json({ ok: false, reason: "RESEND_API_KEY not set" });
-    try {
+    const SFX = process.env.BLOB_SUFFIX || "";
+    const suf = n => SFX ? n.replace(/\.json$/, `-${SFX}.json`) : n;
+    let pending = { deposits: [] }, investors = [];
+    try { pending = await (await fetch(`${BLOB_BASE}${suf("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" })).json(); } catch {}
+    try { const inv = await (await fetch(`${BLOB_BASE}${suf("investors.json")}?t=${Date.now()}`, { cache: "no-store" })).json();
+      investors = (inv.investors || []).map(i => ({ key: i.id.startsWith("inv_") ? i.id.slice(4) : i.id, label: `${i.firstName} ${i.lastName}`.trim() })); } catch {}
+    if (!investors.length) investors = [{ key: "fernando", label: "Fernando" }, { key: "dario", label: "Dario" }];
+    const sent = [];
+    for (const dep of (pending.deposits || [])) {
+      const base = "https://red-road-securities.vercel.app";
+      const bs = "display:inline-block;padding:10px 20px;border-radius:6px;font-weight:600;font-size:14px;text-decoration:none;margin:4px;";
+      const btns = investors.map(i => `<a href="${base}/?allocate=${encodeURIComponent(dep.id)}&investor=${i.key}" style="${bs}background:#1a6b3c;color:#fff;">Allocate to ${i.label}</a>`).join("") +
+        `<a href="${base}/?allocate=${encodeURIComponent(dep.id)}&investor=new" style="${bs}background:#1a3a6b;color:#fff;">New investor</a>`;
       const r = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: "Fund ONE <onboarding@resend.dev>",
-          to: ["pablomontoyarobledo@gmail.com"],
-          subject: "Test — deposit notification diagnostic",
-          html: "<p>If you received this, Resend delivery works.</p>",
-        }),
+        method: "POST", headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: "Fund ONE <onboarding@resend.dev>", to: ["pablomontoyarobledo@gmail.com"],
+          subject: `New deposit detected — $${dep.amount.toLocaleString("en-US")} on ${dep.date}`,
+          html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;"><h2 style="color:#1a6b3c;">New Deposit Detected</h2><p><b>$${dep.amount.toLocaleString("en-US",{minimumFractionDigits:2})}</b> on ${dep.date}<br>${dep.description||""}</p><p>Allocate to an investor:</p>${btns}</div>` }),
       });
-      const body = await r.json().catch(() => ({}));
-      return res.status(200).json({ ok: r.ok, status: r.status, resend: body });
-    } catch (e) {
-      return res.status(200).json({ ok: false, error: e.message });
+      sent.push({ id: dep.id, amount: dep.amount, ok: r.ok, status: r.status });
     }
+    return res.status(200).json({ ok: true, sent });
   }
 
   const tickersParam = req.query.tickers || "VTI,BND";

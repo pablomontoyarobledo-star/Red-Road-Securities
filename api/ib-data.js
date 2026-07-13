@@ -399,18 +399,33 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
   }
   if (!newDeposits.length) return;
 
-  // Save to pending-deposits.json
+  // Save to pending-deposits.json (notification handled separately, so a
+  // failed send is retried on the next pull instead of being lost).
   pending.deposits = pending.deposits || [];
   pending.deposits.push(...newDeposits);
   await put(bname("pending-deposits.json"), JSON.stringify(pending), {
     access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
   });
+}
 
-  // Send email for each new deposit
+// ---------------------------------------------------------------------------
+// Deposit notification — emails every pending deposit not yet acknowledged.
+// Decoupled from detection and idempotent (a `notified` flag per deposit), so
+// a send that fails — or a deposit detected before email worked — is retried
+// on the next pull until it succeeds, instead of being emailed once or never.
+// ---------------------------------------------------------------------------
+async function notifyPendingDeposits({ resendKey }) {
   if (!resendKey) return;
 
-  // Offer a button for every current investor (not just Fernando/Dario), so a
-  // deposit from anyone can be allocated straight from the email.
+  let pending = { deposits: [] };
+  try {
+    const r = await fetch(`${burl("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" });
+    if (r.ok) pending = await r.json();
+  } catch {}
+  const toNotify = (pending.deposits || []).filter(d => !d.notified);
+  if (!toNotify.length) return;
+
+  // Offer a button for every current investor (not just Fernando/Dario).
   let investors = [];
   try {
     const inv = await (await fetch(`${burl("investors.json")}?t=${Date.now()}`, { cache: "no-store" })).json();
@@ -421,7 +436,8 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
   } catch {}
   if (!investors.length) investors = [{ key: "fernando", label: "Fernando" }, { key: "dario", label: "Dario" }];
 
-  for (const dep of newDeposits) {
+  let changed = false;
+  for (const dep of toNotify) {
     const base  = "https://red-road-securities.vercel.app";
     const btnStyle = "display:inline-block;padding:10px 20px;border-radius:6px;font-weight:600;font-size:14px;text-decoration:none;margin:4px;";
     const allocBtns = investors.map(inv =>
@@ -429,30 +445,39 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
     ).join("\n");
     const newBtn = `<a href="${base}/?allocate=${encodeURIComponent(dep.id)}&investor=new" style="${btnStyle}background:#1a3a6b;color:#fff;">New investor</a>`;
 
-    await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from:    "Fund ONE <onboarding@resend.dev>",
-        to:      ["pablomontoyarobledo@gmail.com"],
-        subject: `New deposit detected — $${dep.amount.toLocaleString("en-US")} on ${dep.date}`,
-        html: `
-          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">
-            <h2 style="color:#1a6b3c;margin-bottom:4px;">New Deposit Detected</h2>
-            <p style="color:#666;margin-top:0;">Fund ONE · Red Road Securities</p>
-            <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
-              <tr><td style="padding:8px 0;color:#888;">Date</td><td style="padding:8px 0;font-weight:600;">${dep.date}</td></tr>
-              <tr><td style="padding:8px 0;color:#888;">Amount</td><td style="padding:8px 0;font-weight:600;color:#1a6b3c;">$${dep.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td></tr>
-              <tr><td style="padding:8px 0;color:#888;">Currency</td><td style="padding:8px 0;">${dep.currency}</td></tr>
-              <tr><td style="padding:8px 0;color:#888;">Description</td><td style="padding:8px 0;">${dep.description || "—"}</td></tr>
-            </table>
-            <p style="font-size:14px;margin-bottom:12px;">Allocate this deposit to an investor:</p>
-            ${allocBtns}
-            ${newBtn}
-            <p style="font-size:11px;color:#aaa;margin-top:24px;">This deposit was automatically detected from your IB account. Log in to the admin panel to review pending deposits.</p>
-          </div>
-        `,
-      }),
+    try {
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from:    "Fund ONE <onboarding@resend.dev>",
+          to:      ["pablomontoyarobledo@gmail.com"],
+          subject: `New deposit detected — $${dep.amount.toLocaleString("en-US")} on ${dep.date}`,
+          html: `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">
+              <h2 style="color:#1a6b3c;margin-bottom:4px;">New Deposit Detected</h2>
+              <p style="color:#666;margin-top:0;">Fund ONE · Red Road Securities</p>
+              <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+                <tr><td style="padding:8px 0;color:#888;">Date</td><td style="padding:8px 0;font-weight:600;">${dep.date}</td></tr>
+                <tr><td style="padding:8px 0;color:#888;">Amount</td><td style="padding:8px 0;font-weight:600;color:#1a6b3c;">$${dep.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td></tr>
+                <tr><td style="padding:8px 0;color:#888;">Currency</td><td style="padding:8px 0;">${dep.currency}</td></tr>
+                <tr><td style="padding:8px 0;color:#888;">Description</td><td style="padding:8px 0;">${dep.description || "—"}</td></tr>
+              </table>
+              <p style="font-size:14px;margin-bottom:12px;">Allocate this deposit to an investor:</p>
+              ${allocBtns}
+              ${newBtn}
+              <p style="font-size:11px;color:#aaa;margin-top:24px;">This deposit was automatically detected from your IB account. Log in to the admin panel to review pending deposits.</p>
+            </div>
+          `,
+        }),
+      });
+      if (r.ok) { dep.notified = true; changed = true; }
+    } catch {}
+  }
+
+  if (changed) {
+    await put(bname("pending-deposits.json"), JSON.stringify(pending), {
+      access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
     });
   }
 }
@@ -530,6 +555,11 @@ export default async function handler(req, res) {
       blobBase,
       resendKey: process.env.RESEND_API_KEY,
     });
+  } catch {}
+
+  // Email any pending deposit not yet acknowledged (retries until it sends).
+  try {
+    await notifyPendingDeposits({ resendKey: process.env.RESEND_API_KEY });
   } catch {}
 
   // Sum un-allocated pending-deposit cash — folded into the NAV as pending units.
