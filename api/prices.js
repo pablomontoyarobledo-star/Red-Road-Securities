@@ -26,6 +26,28 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-store");
 
+  // TEMP diagnostic: send a test email via Resend and return the raw response.
+  if (req.query.diag === "email") {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) return res.status(200).json({ ok: false, reason: "RESEND_API_KEY not set" });
+    try {
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Fund ONE <onboarding@resend.dev>",
+          to: ["pablomontoyarobledo@gmail.com"],
+          subject: "Test — deposit notification diagnostic",
+          html: "<p>If you received this, Resend delivery works.</p>",
+        }),
+      });
+      const body = await r.json().catch(() => ({}));
+      return res.status(200).json({ ok: r.ok, status: r.status, resend: body });
+    } catch (e) {
+      return res.status(200).json({ ok: false, error: e.message });
+    }
+  }
+
   const tickersParam = req.query.tickers || "VTI,BND";
   const tickers = tickersParam.split(",").map(t => t.trim().toUpperCase()).filter(Boolean);
 
