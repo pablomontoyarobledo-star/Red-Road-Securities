@@ -2936,13 +2936,24 @@ async function confirmAllocate(depositId, investorKey, isNew) {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Failed");
     _allocatedDepositIds.add(depositId);
-    // Remove the card immediately, then re-fetch (filtered) to confirm.
+    // Optimistically add the allocated deposit to the local ledger so ownership
+    // and the deposits table update instantly — don't wait on the storage layer
+    // (which is read-after-write eventual, so an immediate re-fetch can still
+    // return the pre-allocation state). loadFromCloud reconciles afterward.
+    if (d.record) {
+      deposits.push(d.record);
+      deposits.sort((a, b) => a.date.localeCompare(b.date));
+      save("mff_deposits", deposits);
+    }
+    if (isNew && d.record && Array.isArray(d.investors)) { investors = d.investors; save("mff_investors", investors); }
+    // Remove the pending card immediately, then re-render everything.
     document.querySelector(`[data-deposit-id="${CSS.escape(depositId)}"]`)?.remove();
     document.getElementById("allocate-modal").remove();
+    renderMetrics(); renderOwnership(); renderDeposits();
     await loadPendingDeposits();
     await loadFromCloud();
-    // Belt-and-suspenders: re-sync once storage has settled.
-    setTimeout(() => loadPendingDeposits().catch(() => {}), 2500);
+    // Belt-and-suspenders: reconcile once storage has settled.
+    setTimeout(() => { loadPendingDeposits().catch(() => {}); loadFromCloud().catch(() => {}); }, 2500);
   } catch(e) {
     err.textContent = e.message; err.style.display = "block";
     btn.disabled = false; btn.textContent = "Confirm";
