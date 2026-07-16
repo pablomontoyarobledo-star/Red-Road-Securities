@@ -283,13 +283,19 @@
 <!-- Global error trap — shows any JS crash visibly -->
 <div id="js-error-banner" style="display:none;position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;font-size:12px;padding:6px 12px;z-index:99999;"></div>
 <script>
-  window.onerror = function(msg, src, line) {
+  // Diagnostic banner — always log, but only surface it to an admin. Investors
+  // should never be shown raw JS error text; it's alarming and unactionable.
+  function _showErr(text) {
+    console.error(text);
+    if (!window.__rrsAdmin) return;
     var b = document.getElementById('js-error-banner');
-    if (b) { b.textContent = 'JS Error: ' + msg + ' (line ' + line + ')'; b.style.display = 'block'; }
+    if (b) { b.textContent = text; b.style.display = 'block'; }
+  }
+  window.onerror = function(msg, src, line) {
+    _showErr('JS Error: ' + msg + ' (line ' + line + ')');
   };
   window.addEventListener('unhandledrejection', function(e) {
-    var b = document.getElementById('js-error-banner');
-    if (b) { b.textContent = 'Async Error: ' + (e.reason?.message || e.reason || 'unknown'); b.style.display = 'block'; }
+    _showErr('Async Error: ' + (e.reason?.message || e.reason || 'unknown'));
   });
 </script>
 
@@ -1716,19 +1722,25 @@ function setLang(lang) {
   // Password placeholder
   const pwEl = document.getElementById("pw");
   if (pwEl) pwEl.placeholder = t("loginPwPlaceholder");
-  // Re-render dynamic sections if logged in
+  // Re-render dynamic sections if logged in.
+  // Each call is isolated: a failure in one must never abort the rest (that
+  // cascade is what left tables blank) nor bubble up as an uncaught error and
+  // flash the red error banner at investors.
   if (currentUser) {
-    renderMetrics();
-    renderIncome();
-    renderOwnership();
-    renderTx();
-    renderDeposits();
-    loadBenchmarkData();
-    renderOverviewChart();
-    _updateChartLabel();
-    _applyPriceStatus();
-    _updateFXLabels();
-    _applyPageTabLabels();
+    const _s = fn => { try { fn(); } catch (e) { console.error("setLang/" + (fn.name || "anon"), e); } };
+    _s(renderMetrics);
+    _s(renderIncome);
+    _s(renderOwnership);
+    _s(renderTx);
+    _s(renderDeposits);
+    _s(renderOverviewChart);
+    _s(_updateChartLabel);
+    _s(_applyPriceStatus);
+    _s(_updateFXLabels);
+    _s(_applyPageTabLabels);
+    _s(renderTaxes);
+    // async — swallow rejections so they don't surface as "Async Error"
+    Promise.resolve().then(loadBenchmarkData).catch(e => console.error("setLang/loadBenchmarkData", e));
   }
 }
 
@@ -1876,10 +1888,21 @@ let _priceStatusTime  = null;
 const fmt    = n => n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2});
 const fmtPct = n => (n>=0?"+":"")+n.toFixed(2)+"%";
 
+// Apply the language this person should see: an explicit choice they made on
+// this device wins; otherwise fall back to the `lang` on their investor record
+// (so a Spanish-speaking investor lands in Spanish without touching anything).
+function _applyPreferredLang(email) {
+  if (!email) return;
+  const explicit = localStorage.getItem("rrs_lang_" + email);
+  const invLang  = (investors || []).find(i => i.email && i.email.toLowerCase() === email.toLowerCase())?.lang;
+  const lang = explicit || invLang || "en";
+  if (lang !== currentLang) setLang(lang);
+}
+
 function _launchApp(email, entry) {
   currentUser = { ...entry, loginEmail: email };
-  const savedLang = localStorage.getItem("rrs_lang_" + email);
-  if (savedLang && savedLang !== currentLang) setLang(savedLang);
+  if (entry.admin) window.__rrsAdmin = true;
+  _applyPreferredLang(email);
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
   document.getElementById("investor-badge").textContent = entry.name;
@@ -2736,6 +2759,8 @@ async function loadFromCloud() {
       if (invData.investors && invData.investors.length) {
         investors = invData.investors;
         save("mff_investors", investors);
+        // Records may carry a language preference we didn't have at login.
+        try { _applyPreferredLang(currentUser?.loginEmail); } catch {}
         renderDepositForm();
         renderOwnership();
         renderDeposits();
