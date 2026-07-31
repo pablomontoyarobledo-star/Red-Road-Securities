@@ -26,6 +26,42 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-store");
 
+  // TEMP: token-gated dedupe of deposits by IB transactionID + drop already-
+  // allocated pending entries. Backs up before writing. dry=1 previews only.
+  if (req.query.diag === "dedupe" && req.query.k === "rrs-7x2p9q") {
+    const SFX = process.env.BLOB_SUFFIX || "";
+    const suf = n => SFX ? n.replace(/\.json$/, `-${SFX}.json`) : n;
+    const get = async n => { try { const r = await fetch(`${BLOB_BASE}${suf(n)}?t=${Date.now()}`, { cache: "no-store" }); return r.ok ? await r.json() : null; } catch { return null; } };
+    const fd = await get("fund-data.json");
+    const pd = await get("pending-deposits.json") || { deposits: [] };
+    if (!fd) return res.status(200).json({ ok: false, reason: "no fund-data" });
+
+    const seen = new Set();
+    const removedFd = [];
+    const keptDeposits = (fd.deposits || []).filter(d => {
+      if (!d.txId) return true;                    // legacy records (no txId) untouched
+      if (seen.has(d.txId)) { removedFd.push(d); return false; } // duplicate wire
+      seen.add(d.txId); return true;               // first occurrence kept
+    });
+    const allocatedTx = new Set(keptDeposits.filter(d => d.txId).map(d => d.txId));
+    const removedPend = [];
+    const keptPending = (pd.deposits || []).filter(d => {
+      if (d.txId && allocatedTx.has(d.txId)) { removedPend.push(d); return false; }
+      return true;
+    });
+
+    if (req.query.dry === "1") return res.status(200).json({ ok: true, dryRun: true, removedFd, removedPend });
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    try { await put(`backups${SFX?"-"+SFX:""}/fund-data-dedupe-${stamp}.json`, JSON.stringify(fd), { access: "public", contentType: "application/json", addRandomSuffix: false }); } catch {}
+    try { await put(`backups${SFX?"-"+SFX:""}/pending-dedupe-${stamp}.json`, JSON.stringify(pd), { access: "public", contentType: "application/json", addRandomSuffix: false }); } catch {}
+    fd.deposits = keptDeposits;
+    pd.deposits = keptPending;
+    await put(suf("fund-data.json"), JSON.stringify(fd), { access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false });
+    await put(suf("pending-deposits.json"), JSON.stringify(pd), { access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false });
+    return res.status(200).json({ ok: true, removedFd, removedPend, remainingDeposits: fd.deposits.length });
+  }
+
   const tickersParam = req.query.tickers || "VTI,BND";
   const tickers = tickersParam.split(",").map(t => t.trim().toUpperCase()).filter(Boolean);
 
