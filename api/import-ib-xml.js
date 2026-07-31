@@ -1,5 +1,5 @@
 ﻿import { XMLParser } from "fast-xml-parser";
-import { readDoc, writeDoc, writeSnapshot, backupAndWrite } from "../lib/store.js";
+import { readDoc, writeDoc, writeSnapshot, backupAndWrite, appendPendingDeposits } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" });
 
@@ -191,15 +191,16 @@ export default async function handler(req, res) {
   // Queue any new cash deposits as pending (don't auto-allocate)
   let pendingDepositsAdded = 0;
   if (parsed.cashDeposits.length) {
-    let pending = (await readDoc("pending-deposits.json")) || { deposits: [] };
+    const pending = (await readDoc("pending-deposits.json")) || { deposits: [] };
     const existingIds = new Set([
       ...(pending.deposits || []).map(d => d.id),
       ...(fundData.deposits || []).map(d => `${d.date}_${d.amount}`),
     ]);
     const newDeps = parsed.cashDeposits.filter(d => !existingIds.has(d.id));
     if (newDeps.length) {
-      pending.deposits.push(...newDeps);
-      await writeDoc("pending-deposits.json", pending);
+      // Append atomically — a concurrent IB pull or admin allocation won't
+      // get clobbered by this write.
+      await appendPendingDeposits(newDeps);
       pendingDepositsAdded = newDeps.length;
     }
   }

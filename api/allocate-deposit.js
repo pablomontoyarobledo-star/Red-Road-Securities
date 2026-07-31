@@ -1,4 +1,4 @@
-﻿import { readDoc, backupAndWrite } from "../lib/store.js";
+﻿import { readDoc, backupAndWrite, writeSnapshot, removePendingDeposit } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
 import { recomputeNavSeries, fixIbDepositNavs, computeTotalUnitsAtDate, INCEPTION_NAV } from "../lib/nav.js";
 
@@ -184,9 +184,11 @@ export default async function handler(req, res) {
 
   await backupAndWrite("fund-data.json", fundData);
 
-  // Remove from pending
-  pending.deposits = pending.deposits.filter(d => d.id !== depositId);
-  await backupAndWrite("pending-deposits.json", pending);
+  // Remove from pending — atomic, so a concurrent IB pull adding/notifying
+  // other deposits at the same moment can't silently resurrect this one.
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  try { await writeSnapshot("backups", `pending-deposits-${stamp}.json`, pending); } catch {}
+  await removePendingDeposit(depositId);
 
   return res.status(200).json({ ok: true, record });
 }

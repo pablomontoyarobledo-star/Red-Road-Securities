@@ -1,5 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import { readDoc, writeDoc, writeSnapshot } from "../lib/store.js";
+import { readDoc, writeDoc, writeSnapshot, appendPendingDeposits, markPendingDepositsNotified } from "../lib/store.js";
 import { computeTotalUnitsAtDate, recomputeNavSeries, fixIbDepositNavs, applyPendingToLatest } from "../lib/nav.js";
 
 const INCEPTION_NAV  = 1.0;
@@ -367,7 +367,7 @@ async function detectNewDeposits({ deposits }) {
     (fd.deposits || []).forEach(d => { if (d.txId) knownTxIds.add(d.txId); bump(`${d.date}_${d.amount}`); });
   } catch {}
 
-  let pending = (await readDoc("pending-deposits.json")) || { deposits: [] };
+  const pending = (await readDoc("pending-deposits.json")) || { deposits: [] };
   (pending.deposits || []).forEach(d => {
     if (d.txId) knownTxIds.add(d.txId);
     bump(`${String(d.date || "").slice(0, 10)}_${d.amount}`);
@@ -384,11 +384,9 @@ async function detectNewDeposits({ deposits }) {
   }
   if (!newDeposits.length) return;
 
-  // Save to pending-deposits.json (notification handled separately, so a
-  // failed send is retried on the next pull instead of being lost).
-  pending.deposits = pending.deposits || [];
-  pending.deposits.push(...newDeposits);
-  await writeDoc("pending-deposits.json", pending);
+  // Append atomically — an admin allocating (removing) a different pending
+  // deposit at the same moment won't get clobbered by this write.
+  await appendPendingDeposits(newDeposits);
 }
 
 // ---------------------------------------------------------------------------
@@ -400,7 +398,7 @@ async function detectNewDeposits({ deposits }) {
 async function notifyPendingDeposits({ resendKey }) {
   if (!resendKey) return;
 
-  let pending = (await readDoc("pending-deposits.json")) || { deposits: [] };
+  const pending = (await readDoc("pending-deposits.json")) || { deposits: [] };
   const toNotify = (pending.deposits || []).filter(d => !d.notified);
   if (!toNotify.length) return;
 
@@ -415,7 +413,7 @@ async function notifyPendingDeposits({ resendKey }) {
   } catch {}
   if (!investors.length) investors = [{ key: "fernando", label: "Fernando" }, { key: "dario", label: "Dario" }];
 
-  let changed = false;
+  const notifiedIds = [];
   for (const dep of toNotify) {
     const base  = "https://red-road-securities.vercel.app";
     const btnStyle = "display:inline-block;padding:10px 20px;border-radius:6px;font-weight:600;font-size:14px;text-decoration:none;margin:4px;";
@@ -450,12 +448,14 @@ async function notifyPendingDeposits({ resendKey }) {
           `,
         }),
       });
-      if (r.ok) { dep.notified = true; changed = true; }
+      if (r.ok) notifiedIds.push(dep.id);
     } catch {}
   }
 
-  if (changed) {
-    await writeDoc("pending-deposits.json", pending);
+  // Mark atomically — an admin allocating (removing) a different pending
+  // deposit at the same moment won't get clobbered by this write.
+  if (notifiedIds.length) {
+    await markPendingDepositsNotified(notifiedIds);
   }
 }
 
