@@ -1,18 +1,14 @@
-import { put } from "@vercel/blob";
-import { burl, bname, bprefix } from "../lib/store.js";
+import { readDoc, backupAndWrite } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
 
 export default async function handler(req, res) {
   if (req.method === "GET") {
-    // Return investors from blob — PII, so secret required (clients use /api/data)
+    // Return investors — PII, so secret required (clients use /api/data)
     if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
-    const blobUrl = process.env.FUND_DATA_BLOB_URL;
-    if (!blobUrl) return res.status(500).json({ error: "FUND_DATA_BLOB_URL not set" });
-    const blobBase = blobUrl.replace("fund-data.json", "");
     try {
-      const r = await fetch(`${burl("investors.json")}?t=${Date.now()}`, { cache: "no-store" });
-      if (!r.ok) return res.status(404).json({ investors: [] });
-      return res.status(200).json(await r.json());
+      const data = await readDoc("investors.json");
+      if (!data) return res.status(404).json({ investors: [] });
+      return res.status(200).json(data);
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -20,8 +16,6 @@ export default async function handler(req, res) {
 
   if (req.method === "POST") {
     if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
-    const blobUrl = process.env.FUND_DATA_BLOB_URL;
-    if (!blobUrl) return res.status(500).json({ error: "FUND_DATA_BLOB_URL not set" });
 
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     if (!Array.isArray(body?.investors)) {
@@ -33,20 +27,8 @@ export default async function handler(req, res) {
       updatedAt:  new Date().toISOString(),
     };
 
-    // Backup before overwrite
-    try {
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      await put(`${bprefix("backups/")}investors-${stamp}.json`, JSON.stringify(payload), {
-        access: "public", contentType: "application/json", addRandomSuffix: false,
-      });
-    } catch {}
-
-    await put(bname("investors.json"), JSON.stringify(payload), {
-      access: "public",
-      contentType: "application/json",
-      allowOverwrite: true,
-      addRandomSuffix: false,
-    });
+    // backupAndWrite snapshots the current investors doc before overwriting.
+    await backupAndWrite("investors.json", payload);
 
     return res.status(200).json({ ok: true, count: body.investors.length, updatedAt: payload.updatedAt });
   }

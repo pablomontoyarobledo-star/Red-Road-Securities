@@ -1,5 +1,4 @@
-﻿import { put } from "@vercel/blob";
-import { burl, bname, bprefix } from "../lib/store.js";
+﻿import { readDoc, backupAndWrite } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
 import { recomputeNavSeries, fixIbDepositNavs, computeTotalUnitsAtDate, INCEPTION_NAV } from "../lib/nav.js";
 
@@ -7,25 +6,6 @@ import { recomputeNavSeries, fixIbDepositNavs, computeTotalUnitsAtDate, INCEPTIO
 // Match either form — same flexible lookup the client uses in calcUnits().
 function findInvestor(investors, key) {
   return investors.find(i => i.id === key || (i.id.startsWith("inv_") ? i.id.slice(4) : i.id) === key);
-}
-
-async function readJson(name) {
-  const r = await fetch(`${burl(name)}?t=${Date.now()}`, { cache: "no-store" });
-  if (!r.ok) return null;
-  return r.json();
-}
-
-async function backupAndWrite(name, data) {
-  // Save timestamped backup before overwriting any critical blob
-  try {
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    await put(`${bprefix("backups/")}${name.replace(".json", "")}-${stamp}.json`, JSON.stringify(data), {
-      access: "public", contentType: "application/json", addRandomSuffix: false,
-    });
-  } catch {}
-  await put(bname(name), JSON.stringify(data), {
-    access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-  });
 }
 
 // Normalize a raw-digit IB date ("20260706") to ISO ("2026-07-06").
@@ -42,9 +22,9 @@ function normDate(raw) {
 // names on deposits already saved before the underlying bugs were patched.
 // Safe to re-run — it's a no-op on records that are already correct.
 async function repairDeposits() {
-  const fundData = await readJson("fund-data.json");
+  const fundData = await readDoc("fund-data.json");
   if (!fundData) throw new Error("Could not load fund-data.json");
-  const investorsData = await readJson("investors.json");
+  const investorsData = await readDoc("investors.json");
   if (!investorsData || !Array.isArray(investorsData.investors)) {
     throw new Error("Could not load investors.json");
   }
@@ -84,7 +64,7 @@ async function repairDeposits() {
   // never self-corrects once that point is stale. Both fixes are pure math
   // over data we already have — no IB call, safe to run mid-rate-limit.
   let navFixed = 0;
-  const navHistory = await readJson("nav-history.json");
+  const navHistory = await readDoc("nav-history.json");
   const navsRepriced = navHistory?.series?.length
     ? fixIbDepositNavs(fundData.deposits, navHistory.series)
     : 0;
@@ -124,16 +104,16 @@ export default async function handler(req, res) {
   if (!investorKey && !newInvestor) return res.status(400).json({ error: "investorKey or newInvestor required" });
 
   // Load pending deposits
-  const pending = await readJson("pending-deposits.json") || { deposits: [] };
+  const pending = await readDoc("pending-deposits.json") || { deposits: [] };
   const deposit = pending.deposits.find(d => d.id === depositId);
   if (!deposit) return res.status(404).json({ error: "Deposit not found in pending list" });
 
   // Load fund-data — hard fail if unavailable
-  const fundData = await readJson("fund-data.json");
+  const fundData = await readDoc("fund-data.json");
   if (!fundData) return res.status(502).json({ error: "Could not load fund-data.json" });
 
   // Load investors — hard fail if unavailable, never default to empty array
-  const investorsData = await readJson("investors.json");
+  const investorsData = await readDoc("investors.json");
   if (!investorsData || !Array.isArray(investorsData.investors)) {
     return res.status(502).json({ error: "Could not load investors.json — aborting to prevent data loss" });
   }
@@ -167,7 +147,7 @@ export default async function handler(req, res) {
   // latest point) only if no earlier point exists.
   let depositNav = nav || deposit.navAtDeposit || 1.0;
   try {
-    const navHist = await readJson("nav-history.json");
+    const navHist = await readDoc("nav-history.json");
     const series  = navHist?.series || [];
     let priorNav = null;
     for (const pt of series) {

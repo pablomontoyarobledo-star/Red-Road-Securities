@@ -1,10 +1,9 @@
 // Pulls the NAV Daily flex query from IB (last 205 days), computes daily NAV/TWR,
-// and merges results into nav-history.json in Vercel Blob.
+// and merges results into the nav-history document in Neon.
 // Called by the daily cron AND manually via GET /api/ib-nav-history?refresh=1
 
 import { XMLParser } from "fast-xml-parser";
-import { put }       from "@vercel/blob";
-import { burl, bname } from "../lib/store.js";
+import { readDoc, writeDoc } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
 import { buildUnitSchedule, fixIbDepositNavs, applyPendingToLatest } from "../lib/nav.js";
 
@@ -89,15 +88,15 @@ export default async function handler(req, res) {
   let fundData = null;
   let deposits = [];
   try {
-    const r = await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" });
-    if (r.ok) { fundData = await r.json(); deposits = fundData.deposits || []; }
+    fundData = await readDoc("fund-data.json");
+    if (fundData) deposits = fundData.deposits || [];
   } catch {}
 
   // Load existing nav-history to merge with (preserve live IB-data points)
   let existing = { inception: { date: INCEPTION_DATE, nav: INCEPTION_NAV }, series: [] };
   try {
-    const r = await fetch(`${burl("nav-history.json")}?t=${Date.now()}`, { cache: "no-store" });
-    if (r.ok) existing = await r.json();
+    const nh = await readDoc("nav-history.json");
+    if (nh) existing = nh;
   } catch {}
 
   // Re-price IB-detected deposits at fair pre-money NAV against IB's own
@@ -152,8 +151,8 @@ export default async function handler(req, res) {
   // same as the daily pull, so this authoritative rebuild agrees with it.
   let pendingCash = 0;
   try {
-    const pr = await fetch(`${burl("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" });
-    if (pr.ok) { const pd = await pr.json(); pendingCash = (pd.deposits || []).reduce((s, d) => s + (d.amount || 0), 0); }
+    const pd = await readDoc("pending-deposits.json");
+    if (pd) pendingCash = (pd.deposits || []).reduce((s, d) => s + (d.amount || 0), 0);
   } catch {}
   applyPendingToLatest(merged, pendingCash, Math.round(baseNav * 1e8) / 1e8);
 
@@ -164,15 +163,11 @@ export default async function handler(req, res) {
     ibPoints:     newSeries.length,
   };
 
-  await put(bname("nav-history.json"), JSON.stringify(navHistory), {
-    access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-  });
+  await writeDoc("nav-history.json", navHistory);
 
   // Persist any deposit re-pricing from the self-heal pass
   if (depositsChanged && fundData) {
-    await put(bname("fund-data.json"), JSON.stringify(fundData), {
-      access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-    });
+    await writeDoc("fund-data.json", fundData);
   }
 
   // Month-end summary for verification

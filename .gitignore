@@ -1,4 +1,5 @@
 .vercel
 .env*
+node_modules
 
 fund-data-init.json

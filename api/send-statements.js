@@ -1,7 +1,7 @@
 // Monthly investor statement — Vercel Cron fires on days 28-31, checks for last day of month.
 // Schedule: "0 13 28-31 * *" (1 pm UTC). Also callable manually via POST.
 
-import { burl } from "../lib/store.js";
+import { readDoc } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
 
 function isLastDayOfMonth() {
@@ -386,10 +386,6 @@ export default async function handler(req, res) {
   const body      = isManual ? (typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {}) : {};
   const asOfDate  = body.asOfDate || null; // e.g. "2026-06-30"
 
-  const blobUrl = process.env.FUND_DATA_BLOB_URL;
-  if (!blobUrl) return res.status(500).json({ error: "FUND_DATA_BLOB_URL not set" });
-  const blobBase = blobUrl.replace("fund-data.json", "");
-
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) return res.status(500).json({ error: "RESEND_API_KEY not set" });
 
@@ -397,10 +393,10 @@ export default async function handler(req, res) {
   let fundData, navHistory, invStore, tradesStore;
   try {
     [fundData, navHistory, invStore, tradesStore] = await Promise.all([
-      fetch(`${burl("fund-data.json")}?t=${Date.now()}`,      { cache: "no-store" }).then(r => r.ok ? r.json() : {}),
-      fetch(`${burl("nav-history.json")}?t=${Date.now()}`,    { cache: "no-store" }).then(r => r.ok ? r.json() : { series: [] }),
-      fetch(`${burl("investors.json")}?t=${Date.now()}`,      { cache: "no-store" }).then(r => r.ok ? r.json() : { investors: [] }),
-      fetch(`${burl("trades-history.json")}?t=${Date.now()}`, { cache: "no-store" }).then(r => r.ok ? r.json() : { trades: [] }),
+      readDoc("fund-data.json").then(d => d ?? {}),
+      readDoc("nav-history.json").then(d => d ?? { series: [] }),
+      readDoc("investors.json").then(d => d ?? { investors: [] }),
+      readDoc("trades-history.json").then(d => d ?? { trades: [] }),
     ]);
   } catch (err) {
     return res.status(500).json({ error: `Failed to load data: ${err.message}` });

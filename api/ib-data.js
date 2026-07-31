@@ -1,6 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import { put } from "@vercel/blob";
-import { burl, bname, bprefix } from "../lib/store.js";
+import { readDoc, writeDoc, writeSnapshot } from "../lib/store.js";
 import { computeTotalUnitsAtDate, recomputeNavSeries, fixIbDepositNavs, applyPendingToLatest } from "../lib/nav.js";
 
 const INCEPTION_NAV  = 1.0;
@@ -20,12 +19,11 @@ function normDate(raw) {
 // ---------------------------------------------------------------------------
 // NAV point — appends one entry to nav-history.json and computes daily P&L
 // ---------------------------------------------------------------------------
-async function appendNavPoint({ totalValue, dateStr, blobBase, deposits, pendingCash = 0 }) {
-  const navHistUrl = burl("nav-history.json");
+async function appendNavPoint({ totalValue, dateStr, deposits, pendingCash = 0 }) {
   let navHistory = { inception: { date: INCEPTION_DATE, nav: INCEPTION_NAV }, series: [] };
   try {
-    const r = await fetch(`${navHistUrl}?t=${Date.now()}`, { cache: "no-store" });
-    if (r.ok) navHistory = await r.json();
+    const nh = await readDoc("nav-history.json");
+    if (nh) navHistory = nh;
   } catch {}
 
   const totalUnits = computeTotalUnitsAtDate(deposits, dateStr);
@@ -70,9 +68,7 @@ async function appendNavPoint({ totalValue, dateStr, blobBase, deposits, pending
   applyPendingToLatest(navHistory.series, pendingCash, navHistory.inception?.nav || INCEPTION_NAV);
   const latest = navHistory.series[navHistory.series.length - 1];
 
-  await put(bname("nav-history.json"), JSON.stringify(navHistory), {
-    access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-  });
+  await writeDoc("nav-history.json", navHistory);
 
   return { point: latest || point, depositsChanged, pendingCash };
 }
@@ -81,14 +77,13 @@ async function appendNavPoint({ totalValue, dateStr, blobBase, deposits, pending
 // Trades library — merges today's trades into trades-history.json
 // Deduplication key: tradeID (IB's own unique identifier per execution)
 // ---------------------------------------------------------------------------
-async function appendTrades({ trades, blobBase }) {
+async function appendTrades({ trades }) {
   if (!trades.length) return;
 
-  const url = burl("trades-history.json");
   let history = { trades: [] };
   try {
-    const r = await fetch(`${url}?t=${Date.now()}`, { cache: "no-store" });
-    if (r.ok) history = await r.json();
+    const h = await readDoc("trades-history.json");
+    if (h) history = h;
   } catch {}
 
   const existingIds = new Set(history.trades.map(t => t.tradeId));
@@ -105,16 +100,14 @@ async function appendTrades({ trades, blobBase }) {
   history.trades.sort((a, b) => b.date.localeCompare(a.date) || b.tradeId?.localeCompare(a.tradeId));
   history.updatedAt = new Date().toISOString();
 
-  await put(bname("trades-history.json"), JSON.stringify(history), {
-    access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-  });
+  await writeDoc("trades-history.json", history);
 }
 
 // ---------------------------------------------------------------------------
 // IB Flex Web Service
 // ---------------------------------------------------------------------------
 const BASE      = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService";
-const CACHE_KEY = bname("ib-cache.json");
+const CACHE_KEY = "ib-cache.json";
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const parser    = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" });
 
@@ -307,16 +300,14 @@ function parseStatement(stmtXml) {
 // Income transactions — merge dividends/interest/fees into fund-data.transactions
 // Deduplication key: date + type + ticker (or date + type for non-ticker)
 // ---------------------------------------------------------------------------
-async function appendIncomeTx({ dividends, interest, fees, blobBase }) {
+async function appendIncomeTx({ dividends, interest, fees }) {
   const incoming = [...dividends, ...interest, ...fees].filter(t => t.date);
   if (!incoming.length) return;
 
-  const fdUrl = burl("fund-data.json");
   let fd;
   try {
-    const r = await fetch(`${fdUrl}?t=${Date.now()}`, { cache: "no-store" });
-    if (!r.ok) return;
-    fd = await r.json();
+    fd = await readDoc("fund-data.json");
+    if (!fd) return;
   } catch { return; }
 
   if (!fd.transactions) fd.transactions = [];
@@ -354,15 +345,13 @@ async function appendIncomeTx({ dividends, interest, fees, blobBase }) {
   if (added === 0) return;
 
   fd.transactions.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  await put(bname("fund-data.json"), JSON.stringify(fd), {
-    access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-  });
+  await writeDoc("fund-data.json", fd);
 }
 
 // ---------------------------------------------------------------------------
 // Deposit detection — find new deposits not yet allocated or pending
 // ---------------------------------------------------------------------------
-async function detectNewDeposits({ deposits, blobBase, resendKey }) {
+async function detectNewDeposits({ deposits }) {
   if (!deposits.length) return;
 
   // A deposit is already known if IB's transactionID has been seen, OR — for
@@ -374,15 +363,11 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
   const bump = k => knownCount.set(k, (knownCount.get(k) || 0) + 1);
 
   try {
-    const fd = await (await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" })).json();
+    const fd = (await readDoc("fund-data.json")) || {};
     (fd.deposits || []).forEach(d => { if (d.txId) knownTxIds.add(d.txId); bump(`${d.date}_${d.amount}`); });
   } catch {}
 
-  let pending = { deposits: [] };
-  try {
-    const r = await fetch(`${burl("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" });
-    if (r.ok) pending = await r.json();
-  } catch {}
+  let pending = (await readDoc("pending-deposits.json")) || { deposits: [] };
   (pending.deposits || []).forEach(d => {
     if (d.txId) knownTxIds.add(d.txId);
     bump(`${String(d.date || "").slice(0, 10)}_${d.amount}`);
@@ -403,9 +388,7 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
   // failed send is retried on the next pull instead of being lost).
   pending.deposits = pending.deposits || [];
   pending.deposits.push(...newDeposits);
-  await put(bname("pending-deposits.json"), JSON.stringify(pending), {
-    access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-  });
+  await writeDoc("pending-deposits.json", pending);
 }
 
 // ---------------------------------------------------------------------------
@@ -417,18 +400,14 @@ async function detectNewDeposits({ deposits, blobBase, resendKey }) {
 async function notifyPendingDeposits({ resendKey }) {
   if (!resendKey) return;
 
-  let pending = { deposits: [] };
-  try {
-    const r = await fetch(`${burl("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" });
-    if (r.ok) pending = await r.json();
-  } catch {}
+  let pending = (await readDoc("pending-deposits.json")) || { deposits: [] };
   const toNotify = (pending.deposits || []).filter(d => !d.notified);
   if (!toNotify.length) return;
 
   // Offer a button for every current investor (not just Fernando/Dario).
   let investors = [];
   try {
-    const inv = await (await fetch(`${burl("investors.json")}?t=${Date.now()}`, { cache: "no-store" })).json();
+    const inv = (await readDoc("investors.json")) || {};
     investors = (inv.investors || []).map(i => ({
       key:   i.id.startsWith("inv_") ? i.id.slice(4) : i.id,
       label: `${i.firstName} ${i.lastName}`.trim() || i.id,
@@ -476,9 +455,7 @@ async function notifyPendingDeposits({ resendKey }) {
   }
 
   if (changed) {
-    await put(bname("pending-deposits.json"), JSON.stringify(pending), {
-      access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-    });
+    await writeDoc("pending-deposits.json", pending);
   }
 }
 
@@ -496,14 +473,12 @@ export default async function handler(req, res) {
   const cronSecret  = process.env.CRON_SECRET;
   const isCron      = cronSecret && req.headers["authorization"] === `Bearer ${cronSecret}`;
   const forceRefresh = req.query?.refresh === "1" || isCron;
-  const blobBase    = process.env.FUND_DATA_BLOB_URL?.replace("fund-data.json", "") || "";
 
   // Serve cache if fresh enough
   if (!forceRefresh) {
     try {
-      const cacheRes = await fetch(`${blobBase}${CACHE_KEY}?t=${Date.now()}`, { cache: "no-store" });
-      if (cacheRes.ok) {
-        const cached = await cacheRes.json();
+      const cached = await readDoc(CACHE_KEY);
+      if (cached) {
         const age = Date.now() - new Date(cached.lastUpdated).getTime();
         if (age < CACHE_TTL_MS) {
           return res.status(200).json({ ...cached, fromCache: true, cacheAgeMinutes: Math.round(age / 60000) });
@@ -520,9 +495,8 @@ export default async function handler(req, res) {
     const is1001 = err.message.includes("1001");
     // Always try to serve cache on failure
     try {
-      const cacheRes = await fetch(`${blobBase}${CACHE_KEY}?t=${Date.now()}`, { cache: "no-store" });
-      if (cacheRes.ok) {
-        const cached = await cacheRes.json();
+      const cached = await readDoc(CACHE_KEY);
+      if (cached) {
         return res.status(200).json({
           ...cached,
           fromCache: true,
@@ -552,7 +526,6 @@ export default async function handler(req, res) {
   try {
     await detectNewDeposits({
       deposits:  parsed.deposits || [],
-      blobBase,
       resendKey: process.env.RESEND_API_KEY,
     });
   } catch {}
@@ -565,8 +538,8 @@ export default async function handler(req, res) {
   // Sum un-allocated pending-deposit cash — folded into the NAV as pending units.
   let pendingCash = 0;
   try {
-    const pr = await fetch(`${burl("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" });
-    if (pr.ok) { const pd = await pr.json(); pendingCash = (pd.deposits || []).reduce((s, d) => s + (d.amount || 0), 0); }
+    const pd = await readDoc("pending-deposits.json");
+    if (pd) pendingCash = (pd.deposits || []).reduce((s, d) => s + (d.amount || 0), 0);
   } catch {}
 
   // Append today's NAV point (pending cash held neutral as pending units)
@@ -574,18 +547,15 @@ export default async function handler(req, res) {
   try {
     let fd = null;
     try {
-      const fdRes = await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" });
-      if (fdRes.ok) fd = await fdRes.json();
+      fd = await readDoc("fund-data.json");
     } catch {}
     const deposits = fd?.deposits || [];
     const dateStr = now.toISOString().slice(0, 10);
-    const appended = await appendNavPoint({ totalValue: parsed.totalValue, dateStr, blobBase, deposits, pendingCash });
+    const appended = await appendNavPoint({ totalValue: parsed.totalValue, dateStr, deposits, pendingCash });
     navPoint = appended?.point ?? null;
     // Persist any deposit re-pricing done by the self-heal pass
     if (appended?.depositsChanged && fd) {
-      await put(bname("fund-data.json"), JSON.stringify(fd), {
-        access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-      });
+      await writeDoc("fund-data.json", fd);
     }
   } catch {}
 
@@ -606,22 +576,18 @@ export default async function handler(req, res) {
 
   // Rolling cache
   try {
-    await put(CACHE_KEY, JSON.stringify(result), {
-      access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-    });
+    await writeDoc(CACHE_KEY, result);
   } catch {}
 
   // Permanent archive — one snapshot per pull
   try {
     const stamp = now.toISOString().replace(/[:.]/g, "-");
-    await put(`${bprefix("ib-history/")}${stamp}.json`, JSON.stringify(result), {
-      access: "public", contentType: "application/json", addRandomSuffix: false,
-    });
+    await writeSnapshot("ib-history", `${stamp}.json`, result);
   } catch {}
 
   // Append new trades to trades-history.json
   try {
-    await appendTrades({ trades: parsed.trades, blobBase });
+    await appendTrades({ trades: parsed.trades });
   } catch {}
 
   // Keep fund-data.json's positions/cashBalance current — the dashboard's
@@ -630,15 +596,12 @@ export default async function handler(req, res) {
   // deposits and daily price/share moves silently vanished from the
   // displayed total until someone happened to click sync.
   try {
-    const fdRes = await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" });
-    if (fdRes.ok) {
-      const fd = await fdRes.json();
+    const fd = await readDoc("fund-data.json");
+    if (fd) {
       if (parsed.positions?.length) fd.positions = parsed.positions;
       if (cashBalance != null) fd.cashBalance = cashBalance;
       fd.ibSyncedAt = now.toISOString();
-      await put(bname("fund-data.json"), JSON.stringify(fd), {
-        access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-      });
+      await writeDoc("fund-data.json", fd);
     }
   } catch {}
 
@@ -648,7 +611,6 @@ export default async function handler(req, res) {
       dividends: parsed.dividends || [],
       interest:  parsed.interest  || [],
       fees:      parsed.fees      || [],
-      blobBase,
     });
   } catch {}
 

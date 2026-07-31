@@ -1,5 +1,4 @@
-import { put } from "@vercel/blob";
-import { bname } from "../lib/store.js";
+import { writeDoc } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
 
 export default async function handler(req, res) {
@@ -18,14 +17,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Invalid JSON" });
   }
 
-  const payload = JSON.stringify({ ...body, syncedAt: new Date().toISOString() });
+  const payload = { ...body, syncedAt: new Date().toISOString() };
+  await writeDoc("fund-data.json", payload);
 
-  const blob = await put(bname("fund-data.json"), payload, {
-    access: "public",
-    contentType: "application/json",
-    allowOverwrite: true,
-    addRandomSuffix: false,
-  });
-
-  return res.status(200).json({ ok: true, url: blob.url });
+  return res.status(200).json({ ok: true, syncedAt: payload.syncedAt });
 }

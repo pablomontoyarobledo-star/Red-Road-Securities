@@ -1,6 +1,5 @@
 ﻿import { XMLParser } from "fast-xml-parser";
-import { put } from "@vercel/blob";
-import { burl, bname, bprefix } from "../lib/store.js";
+import { readDoc, writeDoc, writeSnapshot, backupAndWrite } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" });
 
@@ -134,13 +133,12 @@ export default async function handler(req, res) {
 
   // GET ?seed=1 — migrate historical hardcoded trades into fund-data.json
   if (req.method === "GET" && req.query?.seed === "1") {
-    const r = await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" });
-    if (!r.ok) return res.status(502).json({ error: "Could not load fund-data.json" });
-    const fundData = await r.json();
+    const fundData = await readDoc("fund-data.json");
+    if (!fundData) return res.status(502).json({ error: "Could not load fund-data.json" });
     const existingKeys = new Set((fundData.transactions || []).map(t => `${t.date}_${t.ticker}_${t.shares}_${t.price}`));
     const toAdd = SEED_TRADES.filter(t => !existingKeys.has(`${t.date}_${t.ticker}_${t.shares}_${t.price}`));
     fundData.transactions = [...(fundData.transactions || []), ...toAdd].sort((a, b) => b.date.localeCompare(a.date));
-    await put(bname("fund-data.json"), JSON.stringify(fundData), { access:"public", contentType:"application/json", allowOverwrite:true, addRandomSuffix:false });
+    await writeDoc("fund-data.json", fundData);
     return res.status(200).json({ ok: true, added: toAdd.length, total: fundData.transactions.length });
   }
 
@@ -159,8 +157,7 @@ export default async function handler(req, res) {
   // Load existing fund-data to merge (never overwrite deposits/investors)
   let fundData = {};
   try {
-    const r = await fetch(`${burl("fund-data.json")}?t=${Date.now()}`, { cache: "no-store" });
-    if (r.ok) fundData = await r.json();
+    fundData = (await readDoc("fund-data.json")) || {};
   } catch {}
 
   // Merge trades — deduplicate by tradeId
@@ -175,39 +172,26 @@ export default async function handler(req, res) {
   fundData.transactions = mergedTrades;
   fundData.syncedAt     = new Date().toISOString();
 
-  // Backup then save
-  try {
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    await put(`${bprefix("backups/")}fund-data-${stamp}.json`, JSON.stringify(fundData), {
-      access: "public", contentType: "application/json", addRandomSuffix: false,
-    });
-  } catch {}
-
-  await put(bname("fund-data.json"), JSON.stringify(fundData), {
-    access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-  });
+  // Backup then save (backupAndWrite snapshots fund-data before overwriting)
+  await backupAndWrite("fund-data.json", fundData);
 
   // Also archive as ib-history snapshot
   try {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    await put(`${bprefix("ib-history/")}${stamp}.json`, JSON.stringify({
+    await writeSnapshot("ib-history", `${stamp}.json`, {
       positions:   parsed.positions,
       totalValue:  parsed.totalValue,
       cashBalance: parsed.cashBalance,
       trades:      parsed.trades,
       lastUpdated: new Date().toISOString(),
       source:      "manual-xml-import",
-    }), { access: "public", contentType: "application/json", addRandomSuffix: false });
+    });
   } catch {}
 
   // Queue any new cash deposits as pending (don't auto-allocate)
   let pendingDepositsAdded = 0;
   if (parsed.cashDeposits.length) {
-    let pending = { deposits: [] };
-    try {
-      const r = await fetch(`${burl("pending-deposits.json")}?t=${Date.now()}`, { cache: "no-store" });
-      if (r.ok) pending = await r.json();
-    } catch {}
+    let pending = (await readDoc("pending-deposits.json")) || { deposits: [] };
     const existingIds = new Set([
       ...(pending.deposits || []).map(d => d.id),
       ...(fundData.deposits || []).map(d => `${d.date}_${d.amount}`),
@@ -215,9 +199,7 @@ export default async function handler(req, res) {
     const newDeps = parsed.cashDeposits.filter(d => !existingIds.has(d.id));
     if (newDeps.length) {
       pending.deposits.push(...newDeps);
-      await put(bname("pending-deposits.json"), JSON.stringify(pending), {
-        access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-      });
+      await writeDoc("pending-deposits.json", pending);
       pendingDepositsAdded = newDeps.length;
     }
   }

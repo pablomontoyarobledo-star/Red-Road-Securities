@@ -1,6 +1,5 @@
-import { put } from "@vercel/blob";
+import { readDoc, writeDoc, writeSnapshot } from "../lib/store.js";
 
-const BLOB_BASE  = "https://yt6mbeqqdx5ifzj3.public.blob.vercel-storage.com/";
 const CACHE_FILE = "price-cache.json";
 const CACHE_TTL  = 3 * 60 * 1000; // 3 minutes
 
@@ -29,11 +28,8 @@ export default async function handler(req, res) {
   // TEMP: token-gated dedupe of deposits by IB transactionID + drop already-
   // allocated pending entries. Backs up before writing. dry=1 previews only.
   if (req.query.diag === "dedupe" && req.query.k === "rrs-7x2p9q") {
-    const SFX = process.env.BLOB_SUFFIX || "";
-    const suf = n => SFX ? n.replace(/\.json$/, `-${SFX}.json`) : n;
-    const get = async n => { try { const r = await fetch(`${BLOB_BASE}${suf(n)}?t=${Date.now()}`, { cache: "no-store" }); return r.ok ? await r.json() : null; } catch { return null; } };
-    const fd = await get("fund-data.json");
-    const pd = await get("pending-deposits.json") || { deposits: [] };
+    const fd = await readDoc("fund-data.json");
+    const pd = (await readDoc("pending-deposits.json")) || { deposits: [] };
     if (!fd) return res.status(200).json({ ok: false, reason: "no fund-data" });
 
     const seen = new Set();
@@ -53,23 +49,22 @@ export default async function handler(req, res) {
     if (req.query.dry === "1") return res.status(200).json({ ok: true, dryRun: true, removedFd, removedPend });
 
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    try { await put(`backups${SFX?"-"+SFX:""}/fund-data-dedupe-${stamp}.json`, JSON.stringify(fd), { access: "public", contentType: "application/json", addRandomSuffix: false }); } catch {}
-    try { await put(`backups${SFX?"-"+SFX:""}/pending-dedupe-${stamp}.json`, JSON.stringify(pd), { access: "public", contentType: "application/json", addRandomSuffix: false }); } catch {}
+    try { await writeSnapshot("backups", `fund-data-dedupe-${stamp}.json`, fd); } catch {}
+    try { await writeSnapshot("backups", `pending-dedupe-${stamp}.json`, pd); } catch {}
     fd.deposits = keptDeposits;
     pd.deposits = keptPending;
-    await put(suf("fund-data.json"), JSON.stringify(fd), { access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false });
-    await put(suf("pending-deposits.json"), JSON.stringify(pd), { access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false });
+    await writeDoc("fund-data.json", fd);
+    await writeDoc("pending-deposits.json", pd);
     return res.status(200).json({ ok: true, removedFd, removedPend, remainingDeposits: fd.deposits.length });
   }
 
   const tickersParam = req.query.tickers || "VTI,BND";
   const tickers = tickersParam.split(",").map(t => t.trim().toUpperCase()).filter(Boolean);
 
-  // Try blob cache first
+  // Try cache first
   try {
-    const cr = await fetch(`${BLOB_BASE}${CACHE_FILE}?t=${Date.now()}`, { cache: "no-store" });
-    if (cr.ok) {
-      const cached = await cr.json();
+    const cached = await readDoc(CACHE_FILE);
+    if (cached) {
       const age = Date.now() - new Date(cached.fetchedAt).getTime();
       if (age < CACHE_TTL && tickers.every(t => cached.prices[t] != null)) {
         return res.status(200).json({ prices: cached.prices, fromCache: true, ageSeconds: Math.round(age / 1000) });
@@ -103,11 +98,9 @@ export default async function handler(req, res) {
     } catch {}
   }));
 
-  // Cache result in blob
+  // Cache result
   try {
-    await put(CACHE_FILE, JSON.stringify({ prices, fetchedAt: new Date().toISOString() }), {
-      access: "public", contentType: "application/json", allowOverwrite: true, addRandomSuffix: false,
-    });
+    await writeDoc(CACHE_FILE, { prices, fetchedAt: new Date().toISOString() });
   } catch {}
 
   const missing = tickers.filter(t => !prices[t]);
