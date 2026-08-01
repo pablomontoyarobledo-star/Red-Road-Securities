@@ -1,6 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { readDoc, writeDoc, writeSnapshot, appendPendingDeposits, markPendingDepositsNotified } from "../lib/store.js";
-import { computeTotalUnitsAtDate, recomputeNavSeries, fixIbDepositNavs, applyPendingToLatest } from "../lib/nav.js";
+import { computeTotalUnitsAtDate, recomputeNavSeries, fixIbDepositNavs, applyPendingToLatest, depositCash, checkPlausibleTotalValue } from "../lib/nav.js";
 
 const INCEPTION_NAV  = 1.0;
 const INCEPTION_DATE = "2025-12-18";
@@ -35,6 +35,17 @@ async function appendNavPoint({ totalValue, dateStr, deposits, pendingCash = 0 }
   const dailyReturnPct = prior ? ((nav / prior.nav) - 1) * 100 : 0;
   const dailyPnlUsd    = prior ? (nav - prior.nav) * totalUnits : 0;
 
+  // Flag (don't block) an implausible day-over-day swing that today's net
+  // deposits don't explain — likely a garbled/partial IB response rather
+  // than real performance. See lib/nav.js#checkPlausibleTotalValue.
+  const netDepositsToday = (deposits || [])
+    .filter(d => d.date === dateStr)
+    .reduce((s, d) => s + depositCash(d), 0);
+  const plausibility = prior ? checkPlausibleTotalValue(totalValue, prior.totalValue, netDepositsToday) : { suspect: false };
+  if (plausibility.suspect) {
+    console.warn(`[ib-data] suspect NAV swing on ${dateStr}:`, plausibility);
+  }
+
   const point = {
     date: dateStr,
     nav:           Math.round(nav        * 1e8) / 1e8,
@@ -44,6 +55,7 @@ async function appendNavPoint({ totalValue, dateStr, deposits, pendingCash = 0 }
     dailyReturnPct: Math.round(dailyReturnPct * 1e4) / 1e4,
     dailyPnlUsd:   Math.round(dailyPnlUsd    * 1e2) / 1e2,
     source: "ib-live",
+    ...(plausibility.suspect ? { suspect: true, suspectDetail: plausibility } : {}),
   };
 
   const existing = navHistory.series.findIndex(e => e.date === dateStr);
