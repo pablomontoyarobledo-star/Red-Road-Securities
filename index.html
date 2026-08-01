@@ -1842,6 +1842,7 @@ function calcUnits() {
     }
   }
   for (const inv of investors) totalUnits += units[inv.id] || 0;
+  if (fundTotalUnitsOverride != null) totalUnits = fundTotalUnitsOverride;
   units.totalUnits    = totalUnits;
   units.fernandoUnits = units["inv_fernando"] || 0;
   units.darioUnits    = units["inv_dario"]    || 0;
@@ -1880,6 +1881,10 @@ let livePrice    = {};
 let navSnapshotValue = load("mff_nav_snapshot", 0);  // latest IB-computed total; persisted so it's ready on login
 let txFilter     = "all";
 let currentUser  = null;
+// Server-computed fund-wide total units — used when `deposits` has been
+// scoped down to just this investor's own records (non-admin sessions), so
+// ownership % still divides by the real fund total instead of just their own.
+let fundTotalUnitsOverride = load("mff_total_units_override", null);
 let perfChart    = null;
 let overviewChart = null;
 let _priceStatusState = null;
@@ -2199,7 +2204,12 @@ function renderOwnership() {
   const unitSuffix = currentLang==="es" ? " unidades" : " units";
   const palette    = ["var(--chime-accent)", "#7F77DD", "#E07B53", "#5B9BD5", "#70B77E"];
 
-  const cards = investors.map((inv, i) => {
+  // Non-admin investors see only their own ownership card — other investors'
+  // % ownership, value, and deposited total are not this investor's business.
+  const visibleInvestors = currentUser?.admin
+    ? investors
+    : investors.filter(inv => inv.email?.toLowerCase() === currentUser?.loginEmail?.toLowerCase());
+  const cards = visibleInvestors.map((inv, i) => {
     const key       = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
     const invUnits  = unitMap[inv.id] || 0;
     const pct       = totalUnits > 0 ? (invUnits / totalUnits) * 100 : 0;
@@ -2730,6 +2740,10 @@ async function loadFromCloud() {
       if (data.transactions && data.transactions.length) { transactions = data.transactions; save("mff_transactions", transactions); }
       if (data.perfData)     { perfData    = data.perfData;    save("mff_perf",    perfData); }
       if (data.deposits)     { deposits    = data.deposits;    save("mff_deposits", deposits); }
+      if (data.totalUnitsOutstanding != null) {
+        fundTotalUnitsOverride = data.totalUnitsOutstanding;
+        save("mff_total_units_override", fundTotalUnitsOverride);
+      }
       if (data.cashBalance != null) { cashBalance = data.cashBalance; save("mff_cash", cashBalance); }
       // Seed snapshot from IB close prices so metrics show immediately on next login
       if (data.positions?.length) {
@@ -3348,11 +3362,13 @@ function renderDeposits() {
     return mOk && yOk;
   });
 
-  // Build per-investor key list
-  const invKeys = investors.map(inv => ({
+  // Per-investor breakdown columns are only meaningful for admin: the server
+  // now scopes fund-data.json's deposits to just the caller's own records for
+  // non-admin sessions, so every other investor's column would just be dashes.
+  const invKeys = currentUser?.admin ? investors.map(inv => ({
     inv,
     key: inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id,
-  }));
+  })) : [];
 
   // Update thead dynamically — keep first 4 cols, replace investor cols
   const thead = document.querySelector(".deposits-table thead tr");
