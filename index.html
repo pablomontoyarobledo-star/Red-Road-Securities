@@ -3596,11 +3596,6 @@ function _taxIsoDate(d) {
   const s = String(d || "");
   return /^\d{8}$/.test(s) ? `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}` : s;
 }
-function _monthsBetween(a, b) {
-  const d1 = new Date(a + "T12:00:00"), d2 = new Date(b + "T12:00:00");
-  return (d2 - d1) / (1000 * 60 * 60 * 24 * 30.4375);
-}
-
 function _taxRates() {
   const g = (id, def) => { const v = parseFloat(document.getElementById(id)?.value); return isFinite(v) ? v : def; };
   return {
@@ -3638,21 +3633,36 @@ function renderTaxes() {
     const txs = [...transactions]
       .filter(t => (t.type === "buy" || t.type === "sell") && t.shares != null && t.price != null)
       .sort((a, b) => _taxIsoDate(a.date).localeCompare(_taxIsoDate(b.date)));
-    const lot = {}; // ticker -> { shares, cost, firstBuy }
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const dateMsOf = iso => new Date(iso + "T12:00:00").getTime();
+    const lot = {}; // ticker -> { shares, cost, avgDateMs }
     let realizedST = 0, realizedLT = 0;
     for (const t of txs) {
       const tk = t.ticker;
-      if (!lot[tk]) lot[tk] = { shares: 0, cost: 0, firstBuy: _taxIsoDate(t.date) };
+      const dateMs = dateMsOf(_taxIsoDate(t.date));
+      if (!lot[tk]) lot[tk] = { shares: 0, cost: 0, avgDateMs: dateMs };
       const L = lot[tk];
       if (t.type === "buy") {
-        L.shares += t.shares; L.cost += t.shares * t.price;
+        const newShares = L.shares + t.shares;
+        // Shares-weighted average acquisition date, blended the same way
+        // average cost per share already is. A single frozen "firstBuy"
+        // date understated tax for any position topped up after its
+        // original purchase — a top-up bought yesterday inherited a
+        // year-old holding period wholesale, letting a short-term gain on
+        // freshly-bought shares get classified (and taxed) as long-term.
+        L.avgDateMs = newShares > 0 ? (L.avgDateMs * L.shares + dateMs * t.shares) / newShares : dateMs;
+        L.shares = newShares;
+        L.cost  += t.shares * t.price;
       } else { // sell
         const avg = L.shares > 0 ? L.cost / L.shares : t.price;
         const gain = t.shares * (t.price - avg);
-        const months = _monthsBetween(L.firstBuy, _taxIsoDate(t.date));
+        const months = (dateMs - L.avgDateMs) / (DAY_MS * 30.4375);
         if (months >= r.ltmonths) realizedLT += gain; else realizedST += gain;
         L.cost   -= t.shares * avg;
         L.shares -= t.shares;
+        // avgDateMs is left unchanged on a sell — selling doesn't change the
+        // remaining shares' blended acquisition date, same as it doesn't
+        // change their average cost per share.
       }
     }
 
@@ -3669,13 +3679,14 @@ function renderTaxes() {
       }
     }
 
-    // ── Unrealized gains per position (term from earliest buy of each ticker) ──
-    const firstBuyOf = {};
-    for (const t of txs) if (t.type === "buy" && !firstBuyOf[t.ticker]) firstBuyOf[t.ticker] = _taxIsoDate(t.date);
+    // ── Unrealized gains per position (average acquisition date from the
+    // same average-cost lot replay above, not just the earliest buy) ──
+    const todayMs = dateMsOf(todayIso);
     const unreal = positions.filter(p => p.ticker !== "CASH").map(p => {
       const price = livePrice[p.ticker] || p.ibClose || p.costBasis;
       const gain  = (price - p.costBasis) * p.shares;
-      const months = firstBuyOf[p.ticker] ? _monthsBetween(firstBuyOf[p.ticker], todayIso) : 0;
+      const L = lot[p.ticker];
+      const months = L ? (todayMs - L.avgDateMs) / (DAY_MS * 30.4375) : 0;
       const isLT = months >= r.ltmonths;
       return { ticker: p.ticker, gain, isLT, rate: isLT ? r.ltcg : r.stcg };
     });
