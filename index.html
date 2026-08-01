@@ -4143,10 +4143,14 @@ async function fetchFXRate() {
 
   let rate = null;
   try {
-    // frankfurter.app is CORS-blocked from this origin and never succeeds here —
-    // dropped rather than left in as a permanently-failing fallback.
-    rate = await tryRate("https://open.er-api.com/v6/latest/USD", "rates.COP");
+    // fxapi.app refreshes every ~5min; open.er-api.com only once/24h, kept as fallback.
+    rate = await tryRate("https://fxapi.app/api/usd/cop.json", "rate");
   } catch {}
+  if (!rate) {
+    try {
+      rate = await tryRate("https://open.er-api.com/v6/latest/USD", "rates.COP");
+    } catch {}
+  }
 
   if (!rate) {
     if (!fxSnapshot?.rate) {
