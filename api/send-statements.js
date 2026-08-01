@@ -5,6 +5,14 @@ import { readDoc } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
 import { xirr } from "../lib/xirr.js";
 
+// Escape a value before interpolating it into the statement's HTML email.
+// Investor names and IB position/trade descriptions aren't attacker-
+// controlled today, but this email renders in the recipient's mail client —
+// don't rely on that staying true.
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
 function isLastDayOfMonth() {
   const now      = new Date();
   const tomorrow = new Date(now);
@@ -238,8 +246,8 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
       const val  = parseFloat(p.shares) * parseFloat(p.ibClose || p.costBasis || 0);
       const alloc = totalValue > 0 ? (val / totalValue) * 100 : 0;
       return `<tr>
-        <td style="padding:8px 10px;font-size:12px;color:#1a1a1a;border-bottom:1px solid #f5f3f0;font-weight:600;">${p.ticker}</td>
-        <td style="padding:8px 10px;font-size:12px;color:#4a4742;border-bottom:1px solid #f5f3f0;">${p.name || ""}</td>
+        <td style="padding:8px 10px;font-size:12px;color:#1a1a1a;border-bottom:1px solid #f5f3f0;font-weight:600;">${escapeHtml(p.ticker)}</td>
+        <td style="padding:8px 10px;font-size:12px;color:#4a4742;border-bottom:1px solid #f5f3f0;">${escapeHtml(p.name || "")}</td>
         <td style="padding:8px 10px;font-size:12px;color:#1a1a1a;border-bottom:1px solid #f5f3f0;text-align:right;">${fmt(val, 0)}</td>
         <td style="padding:8px 10px;font-size:12px;color:#4a4742;border-bottom:1px solid #f5f3f0;text-align:right;">${alloc.toFixed(1)}%</td>
       </tr>`;
@@ -258,7 +266,7 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   const tradeRows    = monthTrades.length
     ? monthTrades.map(tr => `<tr>
         <td style="padding:7px 10px;font-size:12px;color:#4a4742;border-bottom:1px solid #f5f3f0;">${tr.date}</td>
-        <td style="padding:7px 10px;font-size:12px;color:#1a1a1a;font-weight:600;border-bottom:1px solid #f5f3f0;">${tr.ticker}</td>
+        <td style="padding:7px 10px;font-size:12px;color:#1a1a1a;font-weight:600;border-bottom:1px solid #f5f3f0;">${escapeHtml(tr.ticker)}</td>
         <td style="padding:7px 10px;font-size:12px;border-bottom:1px solid #f5f3f0;color:${tr.type === "buy" ? "#2a7a4b" : "#c0392b"};">${tr.type === "buy" ? t.buy : t.sell}</td>
         <td style="padding:7px 10px;font-size:12px;color:#4a4742;border-bottom:1px solid #f5f3f0;text-align:right;">${tr.shares?.toLocaleString("en-US", { maximumFractionDigits: 2 })}</td>
         <td style="padding:7px 10px;font-size:12px;color:#4a4742;border-bottom:1px solid #f5f3f0;text-align:right;">${fmt(tr.price, 2)}</td>
@@ -291,7 +299,7 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   <!-- Prepared for -->
   <tr><td style="padding:20px 36px 0;">
     <div style="font-size:11px;color:#999;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">${t.preparedFor}</div>
-    <div style="font-size:17px;font-weight:600;color:#1a1a1a;">${fullName}</div>
+    <div style="font-size:17px;font-weight:600;color:#1a1a1a;">${escapeHtml(fullName)}</div>
     <div style="font-size:12px;color:#888;margin-top:2px;">${t.asOf} ${displayDate}</div>
   </td></tr>
 

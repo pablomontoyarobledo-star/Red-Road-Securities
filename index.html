@@ -105,7 +105,8 @@
 
   /* TABLES */
   .table-wrap { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
-  .table-scroll { overflow-x: auto; }
+  .table-scroll { overflow-x: auto; box-shadow: inset -10px 0 8px -8px rgba(0,0,0,0.10); }
+  .table-scroll:focus-visible { outline: 2px solid var(--chime-accent); outline-offset: -2px; }
   table { width: 100%; border-collapse: collapse; }
   th { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--border); background: var(--bg2); white-space: nowrap; }
   td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
@@ -487,7 +488,7 @@
 
     <div class="section">
       <div class="table-wrap">
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Monthly returns table, scrollable horizontally">
           <table class="bench-table">
             <thead><tr>
               <th id="bench-col-month">Month</th>
@@ -550,7 +551,7 @@
         <button onclick="clearDepFilters()" id="dep-clear-btn" style="padding:5px 12px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:none;color:var(--text3);cursor:pointer;">Clear</button>
       </div>
       <div class="table-wrap">
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Deposits table, scrollable horizontally">
           <table class="deposits-table">
             <thead>
               <tr>
@@ -595,7 +596,7 @@
         <button onclick="clearTxFilters()" id="tx-clear-btn" style="padding:5px 12px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:none;color:var(--text3);cursor:pointer;">Clear</button>
       </div>
       <div class="table-wrap">
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Transactions table, scrollable horizontally">
           <table class="tx-table">
             <thead><tr>
               <th id="tx-col-date">Date</th>
@@ -1948,6 +1949,14 @@ let overviewChart = null;
 let _priceStatusState = null;
 let _priceStatusTime  = null;
 
+// Escape a value before interpolating it into an HTML template string.
+// Fields sourced from investor input (name/phone/address) or IB transaction
+// text aren't attacker-controlled today, but nothing here defends against
+// that changing — apply this to any such field rendered via innerHTML.
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
 const fmt    = n => n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2});
 const fmtPct = n => (n>=0?"+":"")+n.toFixed(2)+"%";
 
@@ -2634,10 +2643,10 @@ function renderInvestors() {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:12px;color:var(--text2);" id="inv-summary-${i}">
         <span>📧 ${inv.email || "—"}</span>
-        <span>📞 ${inv.phone || "—"}</span>
-        <span>🌍 ${inv.nationality || "—"}</span>
+        <span>📞 ${escapeHtml(inv.phone || "—")}</span>
+        <span>🌍 ${escapeHtml(inv.nationality || "—")}</span>
         <span>🌐 ${inv.lang === "es" ? "Español" : "English"}</span>
-        ${inv.mailingAddress ? `<span style="grid-column:1/-1;">📬 ${inv.mailingAddress}</span>` : ""}
+        ${inv.mailingAddress ? `<span style="grid-column:1/-1;">📬 ${escapeHtml(inv.mailingAddress)}</span>` : ""}
       </div>
       <div id="inv-form-${i}" style="display:none;margin-top:0.75rem;border-top:0.5px solid var(--border);padding-top:0.75rem;">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
@@ -2647,10 +2656,10 @@ function renderInvestors() {
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
           <div class="form-group" style="margin:0;"><label style="font-size:11px;">Email</label><input id="inv-em-${i}" value="${inv.email}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
-          <div class="form-group" style="margin:0;"><label style="font-size:11px;">Phone</label><input id="inv-ph-${i}" value="${inv.phone || ""}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">Phone</label><input id="inv-ph-${i}" value="${escapeHtml(inv.phone || "")}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
-          <div class="form-group" style="margin:0;"><label style="font-size:11px;">Nationality</label><input id="inv-nat-${i}" value="${inv.nationality || ""}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">Nationality</label><input id="inv-nat-${i}" value="${escapeHtml(inv.nationality || "")}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
           <div class="form-group" style="margin:0;"><label style="font-size:11px;">Preferred language</label>
             <select id="inv-lang-${i}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;">
               <option value="en" ${inv.lang === "en" ? "selected" : ""}>English</option>
@@ -2658,7 +2667,7 @@ function renderInvestors() {
             </select>
           </div>
         </div>
-        <div class="form-group" style="margin:0 0 0.5rem;"><label style="font-size:11px;">Mailing address</label><input id="inv-addr-${i}" value="${inv.mailingAddress || ""}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
+        <div class="form-group" style="margin:0 0 0.5rem;"><label style="font-size:11px;">Mailing address</label><input id="inv-addr-${i}" value="${escapeHtml(inv.mailingAddress || "")}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
         <button id="inv-save-btn-${i}" onclick="saveInvestor(${i})" class="save-btn" style="font-size:12px;padding:6px 14px;">Save</button>
         <span id="inv-saved-${i}" style="font-size:12px;color:var(--green-text);margin-left:8px;display:none;">✓ Saved</span>
         <span id="inv-err-${i}" style="font-size:12px;color:#e74c3c;margin-left:8px;display:none;"></span>
@@ -3004,7 +3013,7 @@ async function loadPendingDeposits() {
           <div>
             <span style="font-size:16px;font-weight:700;color:var(--green-text);">$${(d.amount||0).toLocaleString("en-US",{minimumFractionDigits:2})}</span>
             <span style="font-size:12px;color:var(--text3);margin-left:8px;">${d.date} · ${d.currency}</span>
-            ${d.description ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">${d.description}</div>` : ""}
+            ${d.description ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">${escapeHtml(d.description)}</div>` : ""}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             ${invBtns(d)}
@@ -3510,7 +3519,7 @@ function renderDeposits() {
     return `<tr>
       <td data-date="${d.date}">${dateLabel}</td>
       <td>${fmtDep(d.amount)}</td>
-      <td><span class="${srcCls}">${displaySource}</span></td>
+      <td><span class="${srcCls}">${escapeHtml(displaySource)}</span></td>
       <td>${d.nav ? "$" + d.nav.toFixed(4) : "—"}</td>
       ${invCols}
     </tr>`;
