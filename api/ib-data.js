@@ -15,8 +15,13 @@ function normDate(raw) {
 
 // ---------------------------------------------------------------------------
 // Trades library — merges today's trades into trades-history.json
-// Deduplication key: tradeID (IB's own unique identifier per execution)
+// Deduplication key: tradeID (IB's own unique identifier per execution),
+// falling back to a composite key when IB omits one for a given execution.
 // ---------------------------------------------------------------------------
+function tradeCompositeKey(t) {
+  return `${t.date}_${t.ticker}_${t.shares}_${t.price}_${t.type}`;
+}
+
 async function appendTrades({ trades }) {
   if (!trades.length) return;
 
@@ -26,10 +31,24 @@ async function appendTrades({ trades }) {
     if (h) history = h;
   } catch {}
 
-  const existingIds = new Set(history.trades.map(t => t.tradeId));
+  // A trade with no tradeId previously bypassed dedup entirely — `t.tradeId
+  // && existingIds.has(...)` short-circuits to false on a falsy id, so every
+  // re-pull/re-import containing that execution appended another copy. Fall
+  // back to a composite key for id-less trades, same pattern
+  // detectNewDeposits() already uses for deposits missing a txId.
+  const existingIds        = new Set(history.trades.filter(t => t.tradeId).map(t => t.tradeId));
+  const existingComposites = new Set(history.trades.filter(t => !t.tradeId).map(tradeCompositeKey));
+
   let added = 0;
   for (const t of trades) {
-    if (t.tradeId && existingIds.has(t.tradeId)) continue; // already stored
+    if (t.tradeId) {
+      if (existingIds.has(t.tradeId)) continue; // already stored
+      existingIds.add(t.tradeId);
+    } else {
+      const key = tradeCompositeKey(t);
+      if (existingComposites.has(key)) continue; // already stored
+      existingComposites.add(key);
+    }
     history.trades.push(t);
     added++;
   }

@@ -161,9 +161,15 @@ export default async function handler(req, res) {
     fundData = (await readDoc("fund-data.json")) || {};
   } catch {}
 
-  // Merge trades — deduplicate by tradeId
-  const existingTradeIds = new Set((fundData.transactions || []).map(t => t.tradeId).filter(Boolean));
-  const newTrades = parsed.trades.filter(t => !t.tradeId || !existingTradeIds.has(t.tradeId));
+  // Merge trades — deduplicate by tradeId, falling back to a composite key
+  // (date+ticker+shares+price+type) for executions IB didn't send an ID for.
+  // The prior `!t.tradeId || ...` check treated every id-less trade as new
+  // unconditionally, duplicating it on every re-import that included it.
+  const tradeKey = t => `${t.date}_${t.ticker}_${t.shares}_${t.price}_${t.type}`;
+  const existingTradeIds        = new Set((fundData.transactions || []).filter(t => t.tradeId).map(t => t.tradeId));
+  const existingTradeComposites = new Set((fundData.transactions || []).filter(t => !t.tradeId).map(tradeKey));
+  const newTrades = parsed.trades.filter(t =>
+    t.tradeId ? !existingTradeIds.has(t.tradeId) : !existingTradeComposites.has(tradeKey(t)));
   const mergedTrades = [...(fundData.transactions || []), ...newTrades]
     .sort((a, b) => b.date.localeCompare(a.date));
 
