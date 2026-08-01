@@ -19,6 +19,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
   :root {
     --bg: #ffffff; --bg2: #F4F7F5; --bg3: #EBF0ED;
     --text: #0F1F17; --text2: #4A6358; --text3: #557567;
@@ -611,7 +612,7 @@
               <th id="tx-col-price">Price / sh</th>
               <th id="tx-col-amount">Amount</th>
               <th id="tx-col-notes">Notes</th>
-              <th id="tx-col-actions" style="width:64px;"></th>
+              <th id="tx-col-actions" style="width:64px;"><span class="sr-only">Actions</span></th>
             </tr></thead>
             <tbody id="tx-body"></tbody>
           </table>
