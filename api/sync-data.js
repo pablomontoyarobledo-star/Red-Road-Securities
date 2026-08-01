@@ -1,4 +1,4 @@
-import { writeDoc, writeAuditLog } from "../lib/store.js";
+import { backupAndWrite, writeAuditLog } from "../lib/store.js";
 import { isAdminRequest, identifyActor } from "../lib/auth.js";
 
 export default async function handler(req, res) {
@@ -17,8 +17,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Invalid JSON" });
   }
 
+  // backupAndWrite snapshots the current fund-data.json (deposit ledger,
+  // positions, transactions) before overwriting — this endpoint replaces the
+  // whole document from whatever the client currently holds, so a stale tab
+  // or a client-side bug must not be able to destroy history with no
+  // rollback trail (every other fund-data.json writer already does this).
   const payload = { ...body, syncedAt: new Date().toISOString() };
-  await writeDoc("fund-data.json", payload);
+  await backupAndWrite("fund-data.json", payload);
 
   await writeAuditLog({ actor: await identifyActor(req), action: "fund-data.sync" });
 
