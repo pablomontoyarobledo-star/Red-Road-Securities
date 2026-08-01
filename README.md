@@ -52,7 +52,8 @@ Requires a `.env` (or Vercel project env vars) with:
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | Neon Postgres connection string |
-| `SYNC_SECRET` | HMAC secret for admin session tokens / `x-sync-secret` header |
+| `SESSION_HMAC_SECRET` | HMAC secret for signing/verifying admin session tokens (falls back to `SYNC_SECRET` if unset — set this explicitly) |
+| `SYNC_SECRET` | Bypass secret for the `x-sync-secret` header (scripts/manual calls) |
 | `CRON_SECRET` | Bearer token Vercel cron uses to call protected endpoints |
 | `IB_FLEX_TOKEN`, `IB_FLEX_QUERY_ID`, `IB_NAV_QUERY_ID` | Interactive Brokers Flex Query credentials |
 | `RESEND_API_KEY` | Sending monthly statement emails |
