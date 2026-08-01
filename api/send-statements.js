@@ -3,6 +3,7 @@
 
 import { readDoc } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
+import { computeInvestorUnitsAtDate, depositedByInvestorAtDate, computeTotalUnitsAtDate, investorKeysFor, depositBelongsTo } from "../lib/nav.js";
 
 // Escape a value before interpolating it into the statement's HTML email.
 // Investor names and IB position/trade descriptions aren't attacker-
@@ -30,17 +31,13 @@ function fmtPct(n, showSign = true) {
   const sign = showSign && n >= 0 ? "+" : "";
   return sign + n.toFixed(2) + "%";
 }
-function depositKey(inv) { return inv.firstName.toLowerCase(); }
-
-function computeInvestorUnits(deposits, key) {
-  return deposits.reduce((sum, d) => {
-    const nav = parseFloat(d.nav) || 1;
-    return sum + (parseFloat(d[key]) || 0) / nav;
-  }, 0);
-}
-function computeTotalUnits(deposits, investors) {
-  return investors.reduce((sum, inv) => sum + computeInvestorUnits(deposits, depositKey(inv)), 0);
-}
+// Unit/deposit math delegates to lib/nav.js — the same functions
+// allocate-deposit.js, ib-data.js, and api/data.js use — so this statement
+// can't disagree with the dashboard. This file previously had its own
+// narrower reimplementation (keyed on a bare lowercased first name) that
+// missed any deposit stored in the {investor:"key"} shape and any investor
+// whose key wasn't simply their first name, silently zeroing that
+// investor's own figures on their own mailed statement.
 
 // NAV series helpers
 function lastNavOfMonth(series, year, month) {
@@ -183,7 +180,7 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   const { positions = [] } = fundData;
   // Only count deposits that existed on or before the as-of date
   const deposits   = (fundData.deposits || []).filter(d => !asOfStr || d.date <= asOfStr);
-  const key        = depositKey(investor);
+  const investorKeys = investorKeysFor(investor);
 
   // ── Compute values ──
   const latestNav  = navSeries[navSeries.length - 1] || {};
@@ -203,9 +200,9 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   const ytdReturn = ytdStart && curPt ? ((curPt.nav / ytdStart.nav) - 1) * 100 : null;
 
   // Investor-specific
-  const myUnits    = computeInvestorUnits(deposits, key);
-  const totalUnits = computeTotalUnits(deposits, allInvestors);
-  const myDeposited = deposits.reduce((s, d) => s + (parseFloat(d[key]) || 0), 0);
+  const myUnits    = computeInvestorUnitsAtDate(deposits, investor, asOfStr);
+  const totalUnits = computeTotalUnitsAtDate(deposits, asOfStr || "9999-12-31");
+  const myDeposited = depositedByInvestorAtDate(deposits, investor, asOfStr);
   const myValue    = myUnits * navPerUnit;
   const myGL       = myValue - myDeposited;
   const myPct      = totalUnits > 0 ? (myUnits / totalUnits) * 100 : 0;
@@ -252,7 +249,7 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
       .join("")
     : `<tr><td colspan="6" style="padding:12px 10px;font-size:12px;color:#999;">${t.noActivity}</td></tr>`;
 
-  const numDeposits = deposits.filter(d => (parseFloat(d[key]) || 0) > 0).length;
+  const numDeposits = deposits.filter(d => depositBelongsTo(d, investorKeys)).length;
   const fullName    = [investor.firstName, investor.middleName, investor.lastName].filter(Boolean).join(" ");
   const displayDate = new Date((asOfStr || new Date().toISOString().slice(0,10)) + "T12:00:00Z")
     .toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { year:"numeric", month:"long", day:"numeric", timeZone:"UTC" });

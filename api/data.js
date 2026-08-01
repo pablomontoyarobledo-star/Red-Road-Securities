@@ -11,7 +11,7 @@
 
 import { getUserCredentialOverride, setUserCredential, readDoc, recordLoginFailure, resetLoginFailures, getLoginFailureState } from "../lib/store.js";
 import { USERS, issueToken, verifyToken, verifyPassword, newScryptCredential } from "../lib/auth.js";
-import { computeTotalUnitsAtDate } from "../lib/nav.js";
+import { computeTotalUnitsAtDate, investorKeysFor, depositBelongsTo } from "../lib/nav.js";
 
 // After this many consecutive failures for an email, lock out further
 // attempts (regardless of whether the password submitted is correct) for
@@ -30,25 +30,6 @@ function hasSyncSecret(req) {
   if (s && req.headers["x-sync-secret"] === s) return true;
   const c = process.env.CRON_SECRET;
   return !!(c && req.headers["authorization"] === `Bearer ${c}`);
-}
-
-// A deposit record's "owning" keys — every string a deposit might use to
-// identify this investor (full id, id with "inv_" stripped, lowercase first
-// name — the three conventions used across allocate-deposit.js and
-// send-statements.js history).
-function investorKeysFor(inv) {
-  const keys = new Set();
-  if (inv.id) {
-    keys.add(inv.id);
-    if (inv.id.startsWith("inv_")) keys.add(inv.id.slice(4));
-  }
-  if (inv.firstName) keys.add(inv.firstName.toLowerCase());
-  return keys;
-}
-
-function depositBelongsTo(d, keys) {
-  if (d.investor) return keys.has(d.investor);
-  return Object.keys(d).some(k => keys.has(k) && typeof d[k] === "number" && d[k] > 0);
 }
 
 // A non-admin investor may see fund-wide figures (positions, NAV, cash) but

@@ -17,6 +17,10 @@ import {
   applyPendingToLatest,
   recomputeNavSeries,
   checkPlausibleTotalValue,
+  investorKeysFor,
+  depositBelongsTo,
+  computeInvestorUnitsAtDate,
+  depositedByInvestorAtDate,
   INCEPTION_NAV,
 } from "../lib/nav.js";
 
@@ -166,6 +170,62 @@ describe("recomputeNavSeries", () => {
     const series = [{ date: "2026-01-01", totalValue: 500, nav: 42, totalUnits: 7 }];
     recomputeNavSeries(series, deposits, 1.0);
     assert.equal(series[0].nav, 42); // untouched — no units have settled yet
+  });
+});
+
+// Regression coverage for the bug found in api/send-statements.js: its
+// private depositKey()/computeInvestorUnits() read only d[firstName.toLowerCase()],
+// which silently returned 0 for (a) deposits stored in the legacy
+// {investor:"key"} shape, and (b) any investor whose key isn't simply their
+// first name — e.g. a compound "firstname_lastname" id minted by
+// allocate-deposit.js's newInvestor path. These tests pin the shared
+// lib/nav.js helpers send-statements.js now uses instead.
+describe("investor-scoped deposit helpers", () => {
+  const compoundInvestor = { id: "juana_robledo", firstName: "Juana", lastName: "Robledo" };
+  const legacyKeyInvestor = { id: "inv_dario", firstName: "Dario", lastName: "Montoya" };
+
+  test("investorKeysFor includes id, inv_-stripped id, and lowercased first name", () => {
+    const keys = investorKeysFor(legacyKeyInvestor);
+    assert.ok(keys.has("inv_dario"));
+    assert.ok(keys.has("dario"));
+  });
+
+  test("computeInvestorUnitsAtDate credits a legacy {investor:\"key\"} deposit — the shape the buggy version ignored entirely", () => {
+    const deposits = [{ investor: "juana_robledo", amount: 4490, date: "2026-01-01", nav: 1.0 }];
+    const units = computeInvestorUnitsAtDate(deposits, compoundInvestor, "2026-01-10");
+    assert.equal(units, 4490 / 1.0);
+  });
+
+  test("computeInvestorUnitsAtDate credits a compound-key deposit that a bare-firstName key would miss", () => {
+    // The buggy version read d["juana"] (firstName.toLowerCase()); the real
+    // key allocate-deposit.js mints for a new investor is "firstname_lastname".
+    const deposits = [{ juana_robledo: 4490, date: "2026-01-01", nav: 1.0 }];
+    const units = computeInvestorUnitsAtDate(deposits, compoundInvestor, "2026-01-10");
+    assert.equal(units, 4490 / 1.0);
+    assert.equal(depositedByInvestorAtDate(deposits, compoundInvestor, "2026-01-10"), 4490);
+  });
+
+  test("computeInvestorUnitsAtDate does not attribute another investor's deposit", () => {
+    const deposits = [{ dario: 1000, date: "2026-01-01", nav: 1.0 }];
+    assert.equal(computeInvestorUnitsAtDate(deposits, compoundInvestor, "2026-01-10"), 0);
+    assert.equal(depositedByInvestorAtDate(deposits, compoundInvestor, "2026-01-10"), 0);
+  });
+
+  test("per-investor units sum to the fund total across mixed deposit shapes", () => {
+    const deposits = [
+      { investor: "juana_robledo", amount: 4490, date: "2026-01-01", nav: 1.0 },
+      { dario: 1000, date: "2026-01-02", nav: 1.0 },
+    ];
+    const total = computeTotalUnitsAtDate(deposits, "2026-01-10");
+    const juana = computeInvestorUnitsAtDate(deposits, compoundInvestor, "2026-01-10");
+    const dario = computeInvestorUnitsAtDate(deposits, legacyKeyInvestor, "2026-01-10");
+    assert.ok(Math.abs(total - (juana + dario)) < 1e-9);
+  });
+
+  test("depositBelongsTo respects an explicit dateStr cutoff via the *AtDate wrappers", () => {
+    const deposits = [{ juana_robledo: 4490, date: "2026-02-01", nav: 1.0 }];
+    assert.equal(computeInvestorUnitsAtDate(deposits, compoundInvestor, "2026-01-10"), 0);
+    assert.equal(computeInvestorUnitsAtDate(deposits, compoundInvestor, "2026-02-01"), 4490);
   });
 });
 
