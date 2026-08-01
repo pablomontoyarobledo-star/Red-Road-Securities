@@ -1,6 +1,6 @@
 ﻿import { XMLParser } from "fast-xml-parser";
-import { readDoc, writeDoc, writeSnapshot, backupAndWrite, appendPendingDeposits } from "../lib/store.js";
-import { isAdminRequest } from "../lib/auth.js";
+import { readDoc, writeDoc, writeSnapshot, backupAndWrite, appendPendingDeposits, writeAuditLog } from "../lib/store.js";
+import { isAdminRequest, identifyActor } from "../lib/auth.js";
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" });
 
 function parseStatement(stmtXml) {
@@ -204,6 +204,11 @@ export default async function handler(req, res) {
       pendingDepositsAdded = newDeps.length;
     }
   }
+
+  await writeAuditLog({
+    actor: identifyActor(req), action: "ib-xml.import",
+    detail: { tradesImported: newTrades.length, pendingDepositsAdded, totalValue: parsed.totalValue },
+  });
 
   return res.status(200).json({
     ok: true,

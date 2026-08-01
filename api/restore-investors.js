@@ -1,8 +1,8 @@
 // Lists available investor backups (GET) or restores one (POST { backupId }).
 // Backups now live as rows in the Neon `snapshots` table (folder "backups",
 // name "investors-<timestamp>.json") instead of blob files.
-import { listSnapshots, readSnapshot, writeDoc } from "../lib/store.js";
-import { isAdminRequest } from "../lib/auth.js";
+import { listSnapshots, readSnapshot, writeDoc, writeAuditLog } from "../lib/store.js";
+import { isAdminRequest, identifyActor } from "../lib/auth.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -26,6 +26,10 @@ export default async function handler(req, res) {
     const data = snap.data;
     if (!Array.isArray(data?.investors)) return res.status(400).json({ error: "Invalid backup format" });
     await writeDoc("investors.json", data);
+    await writeAuditLog({
+      actor: identifyActor(req), action: "investors.restore",
+      target: String(backupId), detail: { from: snap.name, count: data.investors.length },
+    });
     return res.status(200).json({ ok: true, restored: data.investors.length, from: snap.name });
   }
 

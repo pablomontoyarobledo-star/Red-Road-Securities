@@ -1,5 +1,5 @@
-import { writeDoc } from "../lib/store.js";
-import { isAdminRequest } from "../lib/auth.js";
+import { writeDoc, writeAuditLog } from "../lib/store.js";
+import { isAdminRequest, identifyActor } from "../lib/auth.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -19,6 +19,8 @@ export default async function handler(req, res) {
 
   const payload = { ...body, syncedAt: new Date().toISOString() };
   await writeDoc("fund-data.json", payload);
+
+  await writeAuditLog({ actor: identifyActor(req), action: "fund-data.sync" });
 
   return res.status(200).json({ ok: true, syncedAt: payload.syncedAt });
 }

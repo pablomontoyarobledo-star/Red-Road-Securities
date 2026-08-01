@@ -1,5 +1,5 @@
-﻿import { readDoc, backupAndWrite, writeSnapshot, removePendingDeposit } from "../lib/store.js";
-import { isAdminRequest } from "../lib/auth.js";
+﻿import { readDoc, backupAndWrite, writeSnapshot, removePendingDeposit, writeAuditLog } from "../lib/store.js";
+import { isAdminRequest, identifyActor } from "../lib/auth.js";
 import { recomputeNavSeries, fixIbDepositNavs, computeTotalUnitsAtDate, INCEPTION_NAV } from "../lib/nav.js";
 
 // Email deep-links pass bare keys ("dario") but investor.id is "inv_dario".
@@ -90,9 +90,12 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
   if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
 
+  const actor = identifyActor(req);
+
   if (req.body?.action === "repair") {
     try {
       const report = await repairDeposits();
+      await writeAuditLog({ actor, action: "deposits.repair", detail: report });
       return res.status(200).json({ ok: true, ...report });
     } catch (err) {
       return res.status(502).json({ error: err.message });
@@ -189,6 +192,11 @@ export default async function handler(req, res) {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   try { await writeSnapshot("backups", `pending-deposits-${stamp}.json`, pending); } catch {}
   await removePendingDeposit(depositId);
+
+  await writeAuditLog({
+    actor, action: "deposits.allocate", target: depositId,
+    detail: { investorKey: resolvedKey, newInvestor: !!newInvestor, amount: deposit.amount, date: deposit.date, nav: depositNav },
+  });
 
   return res.status(200).json({ ok: true, record });
 }

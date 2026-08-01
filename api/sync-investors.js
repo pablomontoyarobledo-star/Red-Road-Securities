@@ -1,5 +1,5 @@
-import { readDoc, backupAndWrite } from "../lib/store.js";
-import { isAdminRequest } from "../lib/auth.js";
+import { readDoc, backupAndWrite, writeAuditLog } from "../lib/store.js";
+import { isAdminRequest, identifyActor } from "../lib/auth.js";
 
 export default async function handler(req, res) {
   if (req.method === "GET") {
@@ -29,6 +29,11 @@ export default async function handler(req, res) {
 
     // backupAndWrite snapshots the current investors doc before overwriting.
     await backupAndWrite("investors.json", payload);
+
+    await writeAuditLog({
+      actor: identifyActor(req), action: "investors.sync",
+      detail: { count: body.investors.length },
+    });
 
     return res.status(200).json({ ok: true, count: body.investors.length, updatedAt: payload.updatedAt });
   }
