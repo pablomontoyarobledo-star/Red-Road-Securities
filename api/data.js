@@ -9,9 +9,15 @@
 // Session tokens: base64url(email|exp) + "." + HMAC-SHA256(SYNC_SECRET, email|exp).
 // Tokens expire after 30 days.
 
-import { getUserCredentialOverride, setUserCredential, readDoc } from "../lib/store.js";
+import { getUserCredentialOverride, setUserCredential, readDoc, recordLoginFailure, resetLoginFailures, getLoginFailureState } from "../lib/store.js";
 import { USERS, issueToken, verifyToken, verifyPassword, newScryptCredential } from "../lib/auth.js";
 import { computeTotalUnitsAtDate } from "../lib/nav.js";
+
+// After this many consecutive failures for an email, lock out further
+// attempts (regardless of whether the password submitted is correct) for
+// the lockout window. Resets to zero on any successful login.
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_MS         = 15 * 60 * 1000;
 
 // Files any logged-in investor may read; admin additionally gets pending-deposits.
 // ib-cache.json is the latest raw IB snapshot (positions + close prices +
@@ -73,16 +79,35 @@ export default async function handler(req, res) {
 
     if (body.action === "login") {
       const email = String(body.email || "").trim().toLowerCase();
+
+      // Rate-limit by email regardless of whether it's a known account —
+      // otherwise brute-forcing an unrecognized-but-guessed email would be
+      // untracked. Locked out just means "try again later", not "wrong
+      // password", so it doesn't leak which emails are real accounts.
+      const failState = email ? await getLoginFailureState(email).catch(() => null) : null;
+      if (failState && failState.failCount >= MAX_LOGIN_ATTEMPTS) {
+        const elapsed = Date.now() - new Date(failState.updatedAt).getTime();
+        if (elapsed < LOCKOUT_MS) {
+          return res.status(429).json({ error: "Too many failed attempts — try again later" });
+        }
+      }
+
       const entry = USERS[email];
-      if (!entry || !body.password) return res.status(401).json({ error: "Invalid credentials" });
+      if (!entry || !body.password) {
+        if (email) recordLoginFailure(email).catch(() => {});
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
 
       // A changed password lives in Neon (user_credentials) and overrides the
       // hardcoded entry; otherwise fall back to the PBKDF2 hash in lib/auth.js.
       const override = await getUserCredentialOverride(email).catch(() => null);
       const cred = override || { salt: entry.salt, pwHash: entry.pwHash, algo: "pbkdf2" };
       if (!verifyPassword(String(body.password), cred)) {
+        recordLoginFailure(email).catch(() => {});
         return res.status(401).json({ error: "Invalid credentials" });
       }
+
+      resetLoginFailures(email).catch(() => {});
 
       // Transparently upgrade off PBKDF2 onto scrypt (memory-hard) the moment
       // we have the plaintext password in hand from a successful login.
