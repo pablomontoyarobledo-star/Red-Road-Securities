@@ -3,3 +3,7 @@
 node_modules
 
 fund-data-init.json
+scripts/audit/results/screenshots/
+scripts/audit/results/*.json
+scripts/audit/vercel-dev.log
+test-results/

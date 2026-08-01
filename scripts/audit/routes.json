@@ -1,0 +1,12 @@
+[
+  { "name": "login", "path": "/", "authRequired": false, "note": "Public login screen — default state on page load" },
+  { "name": "dashboard-overview", "path": "/", "authRequired": true, "view": "overview", "note": "Post-login default tab" },
+  { "name": "dashboard-performance", "path": "/", "authRequired": true, "view": "performance" },
+  { "name": "dashboard-positions", "path": "/", "authRequired": true, "view": "positions" },
+  { "name": "dashboard-ownership", "path": "/", "authRequired": true, "view": "ownership" },
+  { "name": "dashboard-transactions", "path": "/", "authRequired": true, "view": "transactions" },
+  { "name": "dashboard-nav", "path": "/", "authRequired": true, "view": "nav" },
+  { "name": "dashboard-statements", "path": "/", "authRequired": true, "view": "statements" },
+  { "name": "settings", "path": "/", "authRequired": true, "note": "Reached via showSettingsScreen()" },
+  { "name": "admin", "path": "/", "authRequired": true, "note": "Reached via showAdminScreen(), admin accounts only" }
+]
