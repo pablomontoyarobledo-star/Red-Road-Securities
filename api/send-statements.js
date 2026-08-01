@@ -467,12 +467,17 @@ export default async function handler(req, res) {
       allInvestors, t, asOfStr,
     });
 
+    // Deliver the statement to the investor it's actually about; keep Pablo
+    // on cc for oversight. Previously every statement went only to Pablo, so
+    // no LP ever received their own statement by email.
+    const recipient = investor.email || "pablomontoyarobledo@gmail.com";
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from:    "Fund ONE <onboarding@resend.dev>",
-        to:      ["pablomontoyarobledo@gmail.com"],
+        to:      [recipient],
+        ...(recipient !== "pablomontoyarobledo@gmail.com" ? { cc: ["pablomontoyarobledo@gmail.com"] } : {}),
         subject: `${t.subject(periodLocal)} — ${investor.firstName} ${investor.lastName}`,
         html,
       }),
