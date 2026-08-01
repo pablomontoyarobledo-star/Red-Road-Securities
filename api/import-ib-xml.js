@@ -1,6 +1,7 @@
 ﻿import { XMLParser } from "fast-xml-parser";
 import { readDoc, writeDoc, writeSnapshot, backupAndWrite, appendPendingDeposits, writeAuditLog } from "../lib/store.js";
 import { isAdminRequest, identifyActor } from "../lib/auth.js";
+import { appendNavPoint } from "../lib/navPoint.js";
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" });
 
 function parseStatement(stmtXml) {
@@ -174,6 +175,27 @@ export default async function handler(req, res) {
 
   // Backup then save (backupAndWrite snapshots fund-data before overwriting)
   await backupAndWrite("fund-data.json", fundData);
+
+  // Append a NAV point from this statement's totalValue so nav-history.json
+  // — the document every return figure actually reads — stays in sync with
+  // the positions/cash just imported. Previously a manual import updated
+  // fund-data.json but left nav-history.json untouched until the next
+  // automated cron pull, so returns could silently drift out of sync with
+  // the positions an admin just imported. Uses the same implausible-swing
+  // check (flags, doesn't block) and pre-money deposit re-pricing self-heal
+  // the daily cron pull applies, via the shared lib/navPoint.js helper.
+  try {
+    let pendingCash = 0;
+    try {
+      const pd = await readDoc("pending-deposits.json");
+      if (pd) pendingCash = (pd.deposits || []).reduce((s, d) => s + (d.amount || 0), 0);
+    } catch {}
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const appended = await appendNavPoint({
+      totalValue: parsed.totalValue, dateStr, deposits: fundData.deposits || [], pendingCash,
+    });
+    if (appended?.depositsChanged) await writeDoc("fund-data.json", fundData);
+  } catch {}
 
   // Also archive as ib-history snapshot
   try {
