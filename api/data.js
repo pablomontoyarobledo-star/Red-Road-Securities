@@ -9,9 +9,8 @@
 // Session tokens: base64url(email|exp) + "." + HMAC-SHA256(SYNC_SECRET, email|exp).
 // Tokens expire after 30 days.
 
-import crypto from "node:crypto";
-import { readDoc } from "../lib/store.js";
-import { USERS, issueToken, verifyToken } from "../lib/auth.js";
+import { getUserCredentialOverride, setUserCredential, readDoc } from "../lib/store.js";
+import { USERS, issueToken, verifyToken, verifyPassword, newScryptCredential } from "../lib/auth.js";
 import { computeTotalUnitsAtDate } from "../lib/nav.js";
 
 // Files any logged-in investor may read; admin additionally gets pending-deposits.
@@ -76,8 +75,21 @@ export default async function handler(req, res) {
       const email = String(body.email || "").trim().toLowerCase();
       const entry = USERS[email];
       if (!entry || !body.password) return res.status(401).json({ error: "Invalid credentials" });
-      const hash = crypto.pbkdf2Sync(String(body.password), entry.salt, 100000, 32, "sha256").toString("hex");
-      if (hash !== entry.pwHash) return res.status(401).json({ error: "Invalid credentials" });
+
+      // A changed password lives in Neon (user_credentials) and overrides the
+      // hardcoded entry; otherwise fall back to the PBKDF2 hash in lib/auth.js.
+      const override = await getUserCredentialOverride(email).catch(() => null);
+      const cred = override || { salt: entry.salt, pwHash: entry.pwHash, algo: "pbkdf2" };
+      if (!verifyPassword(String(body.password), cred)) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      // Transparently upgrade off PBKDF2 onto scrypt (memory-hard) the moment
+      // we have the plaintext password in hand from a successful login.
+      if (cred.algo === "pbkdf2") {
+        setUserCredential(email, newScryptCredential(String(body.password))).catch(() => {});
+      }
+
       return res.status(200).json({ token: issueToken(email), email, name: entry.name, admin: entry.admin });
     }
 
