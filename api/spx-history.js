@@ -1,5 +1,8 @@
-// Returns S&P 500 (^GSPC) daily closes indexed to 100 at Dec 18 2025,
-// aligned to the dates array passed as ?dates=YYYY-MM-DD,YYYY-MM-DD,...
+// Returns S&P 500 total-return (^SP500TR, dividends reinvested) daily closes
+// indexed to 100 at Dec 18 2025, aligned to the dates array passed as
+// ?dates=YYYY-MM-DD,YYYY-MM-DD,... — total return, not ^GSPC price-only, so
+// it's an apples-to-apples comparison against Fund ONE's own dividend-
+// inclusive TWR (see the inline note below).
 // Also supports ?mode=monthly to return monthly % returns for ^SP500TR, EFA, VT
 
 const INCEPTION = "2025-12-18";
@@ -52,9 +55,16 @@ export default async function handler(req, res) {
     }
   }
 
+  // ^SP500TR (total return, dividends reinvested) — not ^GSPC (price only).
+  // Fund ONE's own TWR already includes dividends (they flow into IB's
+  // totalValue), so comparing it against a price-only index would overstate
+  // relative performance by roughly the index's dividend yield. The
+  // ?mode=monthly branch above already uses ^SP500TR for the same reason;
+  // this keeps the daily chart and the monthly table on the same benchmark
+  // definition instead of silently disagreeing.
   const period1 = Math.floor(new Date("2025-12-15").getTime() / 1000); // daily chart
   const period2 = Math.floor(Date.now() / 1000);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&period1=${period1}&period2=${period2}`;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/%5ESP500TR?interval=1d&period1=${period1}&period2=${period2}`;
 
   try {
     const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
