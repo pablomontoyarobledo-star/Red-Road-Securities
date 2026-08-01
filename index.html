@@ -841,6 +841,17 @@
             <button class="lang-btn" id="settings-lang-es" onclick="setLangAndSave('es')">ES — Español</button>
           </div>
         </div>
+
+        <!-- Change password -->
+        <div style="border-top:0.5px solid var(--border);padding-top:1.5rem;">
+          <div style="font-weight:600;font-size:14px;margin-bottom:12px;" id="settings-password-label">Change password</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input id="cp-current" type="password" placeholder="Current password" autocomplete="current-password" style="padding:8px 10px;font-size:13px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" />
+            <input id="cp-new" type="password" placeholder="New password (min. 10 characters)" autocomplete="new-password" style="padding:8px 10px;font-size:13px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" />
+            <button class="lang-btn" onclick="changePassword()" style="align-self:flex-start;padding:7px 16px;">Update password</button>
+            <span id="cp-status" style="font-size:12px;"></span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1849,6 +1860,46 @@ function calcUnits() {
   return units;
 }
 
+// Money-weighted rate of return (XIRR) — bisection solver. Mirrors lib/xirr.js
+// server-side; kept as a plain duplicate here since this file has no imports.
+function xirr(cashflows) {
+  if (!cashflows || cashflows.length < 2) return null;
+  const MS_PER_YEAR = 365 * 86400000;
+  const t0 = cashflows.reduce((min, cf) => (cf.date < min ? cf.date : min), cashflows[0].date);
+  const years = cf => (cf.date - t0) / MS_PER_YEAR;
+  const npv = r => cashflows.reduce((s, cf) => s + cf.amount / Math.pow(1 + r, years(cf)), 0);
+
+  let lo = -0.9999, hi = 10;
+  let flo = npv(lo), fhi = npv(hi);
+  let tries = 0;
+  while (flo * fhi > 0 && hi < 1e6 && tries < 60) { hi *= 2; fhi = npv(hi); tries++; }
+  if (flo * fhi > 0 || !isFinite(flo) || !isFinite(fhi)) return null;
+
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2, fm = npv(mid);
+    if (Math.abs(fm) < 1e-7) return mid;
+    if ((flo < 0) === (fm < 0)) { lo = mid; flo = fm; } else { hi = mid; fhi = fm; }
+  }
+  return (lo + hi) / 2;
+}
+
+// Per-investor cash flows for XIRR: one negative flow per deposit, plus a
+// final positive flow for their current holding value (today). Uses the same
+// deposit-key matching as calcUnits() so it agrees with the ownership figures.
+function calcInvestorMWRR(inv, currentValue) {
+  const key = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+  const flows = [];
+  for (const d of deposits) {
+    const amt = d.investor
+      ? (d.investor === inv.id || d.investor === key ? (d.amount || 0) : 0)
+      : (d[key] || 0);
+    if (amt > 0) flows.push({ date: new Date(d.date + "T12:00:00Z"), amount: -amt });
+  }
+  if (!flows.length) return null;
+  flows.push({ date: new Date(), amount: currentValue });
+  return xirr(flows);
+}
+
 function load(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } }
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
@@ -1991,6 +2042,51 @@ function showSettingsScreen() {
 function hideSettingsScreen() {
   document.getElementById("settings-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
+}
+
+async function changePassword() {
+  const statusEl = document.getElementById("cp-status");
+  const currentPassword = document.getElementById("cp-current").value;
+  const newPassword     = document.getElementById("cp-new").value;
+  statusEl.style.color = "var(--text2)";
+  statusEl.textContent = "";
+
+  if (!currentPassword || !newPassword) {
+    statusEl.style.color = "var(--red)";
+    statusEl.textContent = "Enter your current and new password.";
+    return;
+  }
+  if (newPassword.length < 10) {
+    statusEl.style.color = "var(--red)";
+    statusEl.textContent = "New password must be at least 10 characters.";
+    return;
+  }
+
+  try {
+    const r = await fetch("/api/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${_sessionToken}` },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      statusEl.style.color = "var(--red)";
+      statusEl.textContent = d.error || "Could not update password.";
+      return;
+    }
+    // The old token was revoked server-side; adopt the freshly issued one so
+    // this session keeps working without a full re-login.
+    _sessionToken = d.token;
+    const stored = JSON.parse(localStorage.getItem("rrs_session") || "{}");
+    localStorage.setItem("rrs_session", JSON.stringify({ ...stored, token: d.token }));
+    document.getElementById("cp-current").value = "";
+    document.getElementById("cp-new").value = "";
+    statusEl.style.color = "var(--green)";
+    statusEl.textContent = "Password updated.";
+  } catch {
+    statusEl.style.color = "var(--red)";
+    statusEl.textContent = "Network error — try again.";
+  }
 }
 
 function setLangAndSave(lang) {
@@ -2220,6 +2316,9 @@ function renderOwnership() {
     }, 0);
     const initials  = (inv.firstName?.[0] || "") + (inv.lastName?.[0] || "");
     const color     = palette[i % palette.length];
+    const mwrr      = calcInvestorMWRR(inv, value);
+    const mwrrLabel = currentLang === "es" ? "TIR ponderada por dinero" : "MWRR";
+    const mwrrStr   = mwrr != null ? `<span class="${mwrr >= 0 ? "pos" : "neg"}">${fmtPct(mwrr * 100)}</span>` : "—";
     return `<div class="ownership-card">
       <div class="ownership-card-header">
         <div class="avatar" style="background:${color};">${initials}</div>
@@ -2230,6 +2329,7 @@ function renderOwnership() {
       </div>
       <div class="ownership-value pos">${fmt(value)}</div>
       <div class="ownership-deposited">${depLabel}: ${fmt(deposited)}</div>
+      <div class="ownership-deposited">${mwrrLabel}: ${mwrrStr}</div>
       <div class="ownership-bar-wrap"><div class="ownership-bar-bg"><div style="height:6px;background:${color};border-radius:3px;width:${pct.toFixed(2)}%"></div></div></div>
     </div>`;
   }).join("");
