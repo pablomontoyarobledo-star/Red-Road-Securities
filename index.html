@@ -2548,8 +2548,10 @@ function renderChart() {
 }
 
 function populateAdminFields() {
-  document.getElementById("a-perf-json").value = JSON.stringify(perfData, null, 2);
-  document.getElementById("a-cash-balance").value = cashBalance;
+  const perfJsonEl = document.getElementById("a-perf-json");
+  if (perfJsonEl) perfJsonEl.value = JSON.stringify(perfData, null, 2);
+  const cashBalanceEl = document.getElementById("a-cash-balance");
+  if (cashBalanceEl) cashBalanceEl.value = cashBalance;
   ["import","position","transaction","performance"].forEach(p => {
     const el = document.getElementById("admin-"+p);
     if (el) el.style.display = p === "import" ? "flex" : "none";
