@@ -26,10 +26,10 @@ api/                 Vercel serverless functions (HTTP handlers)
   import-ib-xml.js     Admin: manually import an IB Flex XML statement
   prices.js            Cached security price lookups (Yahoo Finance)
   spx-history.js       Benchmark index history (S&P 500, EFA, VT)
-  restore-investors.js Admin: list/restore investor data backups
   send-statements.js   Monthly cron: emails investor statements
   sync-data.js         Admin: write an arbitrary dataset
-  sync-investors.js    Read/write the investors dataset
+  sync-investors.js    Read/write the investors dataset; also list/restore
+                        investor data backups (?backups=1 GET, restoreBackupId POST)
 lib/
   auth.js              Admin auth (session tokens, sync secret, cron secret)
   nav.js               Shared NAV/unit-count math
