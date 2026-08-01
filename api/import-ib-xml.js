@@ -129,7 +129,7 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-sync-secret, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await isAdminRequest(req))) return res.status(401).json({ error: "Unauthorized" });
 
   // GET ?seed=1 — migrate historical hardcoded trades into fund-data.json
   if (req.method === "GET" && req.query?.seed === "1") {
@@ -206,7 +206,7 @@ export default async function handler(req, res) {
   }
 
   await writeAuditLog({
-    actor: identifyActor(req), action: "ib-xml.import",
+    actor: await identifyActor(req), action: "ib-xml.import",
     detail: { tradesImported: newTrades.length, pendingDepositsAdded, totalValue: parsed.totalValue },
   });
 

@@ -63,7 +63,7 @@ function parseNavXml(xml) {
 // exists we cannot distinguish cron traffic, so unauthenticated GETs are allowed
 // as a temporary fallback — set CRON_SECRET to close this.
 export default async function handler(req, res) {
-  if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await isAdminRequest(req))) return res.status(401).json({ error: "Unauthorized" });
   const token     = process.env.IB_FLEX_TOKEN;
   const navQueryId = process.env.IB_NAV_QUERY_ID;
   if (!token || !navQueryId) {

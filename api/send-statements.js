@@ -3,6 +3,7 @@
 
 import { readDoc } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
+import { xirr } from "../lib/xirr.js";
 
 function isLastDayOfMonth() {
   const now      = new Date();
@@ -32,6 +33,24 @@ function computeInvestorUnits(deposits, key) {
 }
 function computeTotalUnits(deposits, investors) {
   return investors.reduce((sum, inv) => sum + computeInvestorUnits(deposits, depositKey(inv)), 0);
+}
+
+// Per-investor cash flows for XIRR: one negative flow per deposit (money
+// leaving the investor's pocket) plus a final positive flow for their current
+// holding value, as of the statement date. No withdrawal leg exists yet in
+// the data model, so deposits are the only outflows.
+function investorCashFlows(deposits, key, currentValue, asOfStr) {
+  const flows = deposits
+    .map(d => {
+      const amt = parseFloat(d[key]) || 0;
+      return amt > 0 ? { date: new Date(d.date + "T12:00:00Z"), amount: -amt } : null;
+    })
+    .filter(Boolean);
+  flows.push({ date: new Date(asOfStr + "T12:00:00Z"), amount: currentValue });
+  return flows;
+}
+function investorMWRR(deposits, key, currentValue, asOfStr) {
+  return xirr(investorCashFlows(deposits, key, currentValue, asOfStr));
 }
 
 // NAV series helpers
@@ -201,7 +220,11 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   const myValue    = myUnits * navPerUnit;
   const myGL       = myValue - myDeposited;
   const myPct      = totalUnits > 0 ? (myUnits / totalUnits) * 100 : 0;
-  const myReturn   = myDeposited > 0 ? (myGL / myDeposited) * 100 : 0;
+  // Money-weighted return (XIRR) — accounts for when each deposit landed,
+  // unlike a simple gain/deposited ratio. Falls back to simple ROI when XIRR
+  // has no solution (e.g. no deposits yet).
+  const myMWRR     = myDeposited > 0 ? investorMWRR(deposits, key, myValue, asOfStr) : null;
+  const myReturn   = myMWRR != null ? myMWRR * 100 : (myDeposited > 0 ? (myGL / myDeposited) * 100 : 0);
 
   // Monthly investor return (same as fund since NAV-based)
   const myMonthReturn = monthReturn;
@@ -367,7 +390,7 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
 // ── Handler ───────────────────────────────────────────────────────────────────
 // Manual (POST) triggers require an admin session token or the sync secret.
 // Cron (GET) requires Bearer CRON_SECRET.
-function isAuthorized(req) {
+async function isAuthorized(req) {
   if (req.method === "POST") return isAdminRequest(req);
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) return req.headers["authorization"] === `Bearer ${cronSecret}`;
@@ -375,7 +398,7 @@ function isAuthorized(req) {
 }
 
 export default async function handler(req, res) {
-  if (!isAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await isAuthorized(req))) return res.status(401).json({ error: "Unauthorized" });
   const isManual = req.method === "POST";
 
   if (!isManual && !isLastDayOfMonth()) {

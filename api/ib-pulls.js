@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(200).json(snap.data);
   }
 
-  if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await isAdminRequest(req))) return res.status(401).json({ error: "Unauthorized" });
   try {
     const rows = await listSnapshotsWithData("ib-history", { limit: 500 });
     const pulls = rows.map(row => {

@@ -4,7 +4,7 @@ import { isAdminRequest, identifyActor } from "../lib/auth.js";
 export default async function handler(req, res) {
   if (req.method === "GET") {
     // Return investors — PII, so secret required (clients use /api/data)
-    if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
+    if (!(await isAdminRequest(req))) return res.status(401).json({ error: "Unauthorized" });
     try {
       const data = await readDoc("investors.json");
       if (!data) return res.status(404).json({ investors: [] });
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
+    if (!(await isAdminRequest(req))) return res.status(401).json({ error: "Unauthorized" });
 
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     if (!Array.isArray(body?.investors)) {
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     await backupAndWrite("investors.json", payload);
 
     await writeAuditLog({
-      actor: identifyActor(req), action: "investors.sync",
+      actor: await identifyActor(req), action: "investors.sync",
       detail: { count: body.investors.length },
     });
 

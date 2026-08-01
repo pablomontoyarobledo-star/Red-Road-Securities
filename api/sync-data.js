@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  if (!isAdminRequest(req)) {
+  if (!(await isAdminRequest(req))) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   const payload = { ...body, syncedAt: new Date().toISOString() };
   await writeDoc("fund-data.json", payload);
 
-  await writeAuditLog({ actor: identifyActor(req), action: "fund-data.sync" });
+  await writeAuditLog({ actor: await identifyActor(req), action: "fund-data.sync" });
 
   return res.status(200).json({ ok: true, syncedAt: payload.syncedAt });
 }

@@ -89,7 +89,7 @@ export default async function handler(req, res) {
     // Admin tooling may also read with the sync secret directly
     const session = hasSyncSecret(req)
       ? { email: "admin", admin: true }
-      : verifyToken((req.headers["authorization"] || "").replace(/^Bearer\s+/i, ""));
+      : await verifyToken((req.headers["authorization"] || "").replace(/^Bearer\s+/i, ""));
     if (!session) return res.status(401).json({ error: "Unauthorized" });
 
     const allowed = session.admin ? READABLE_ADMIN : READABLE;

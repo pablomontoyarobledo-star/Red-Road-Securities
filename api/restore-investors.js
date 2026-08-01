@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-sync-secret, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (!isAdminRequest(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await isAdminRequest(req))) return res.status(401).json({ error: "Unauthorized" });
 
   if (req.method === "GET") {
     const rows = await listSnapshots("backups", { limit: 100, namePrefix: "investors-" });
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     if (!Array.isArray(data?.investors)) return res.status(400).json({ error: "Invalid backup format" });
     await writeDoc("investors.json", data);
     await writeAuditLog({
-      actor: identifyActor(req), action: "investors.restore",
+      actor: await identifyActor(req), action: "investors.restore",
       target: String(backupId), detail: { from: snap.name, count: data.investors.length },
     });
     return res.status(200).json({ ok: true, restored: data.investors.length, from: snap.name });
