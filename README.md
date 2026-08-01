@@ -66,6 +66,15 @@ Initialize the database schema once:
 node scripts/init-db.mjs
 ```
 
+## Tests
+
+`lib/nav.js` (NAV/unit-settlement math) has a unit test suite using Node's
+built-in test runner — no extra dependency required:
+
+```bash
+node --test test/nav.test.mjs
+```
+
 ## Local development
 
 ```bash
