@@ -3,7 +3,6 @@
 
 import { readDoc } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
-import { xirr } from "../lib/xirr.js";
 
 // Escape a value before interpolating it into the statement's HTML email.
 // Investor names and IB position/trade descriptions aren't attacker-
@@ -41,24 +40,6 @@ function computeInvestorUnits(deposits, key) {
 }
 function computeTotalUnits(deposits, investors) {
   return investors.reduce((sum, inv) => sum + computeInvestorUnits(deposits, depositKey(inv)), 0);
-}
-
-// Per-investor cash flows for XIRR: one negative flow per deposit (money
-// leaving the investor's pocket) plus a final positive flow for their current
-// holding value, as of the statement date. No withdrawal leg exists yet in
-// the data model, so deposits are the only outflows.
-function investorCashFlows(deposits, key, currentValue, asOfStr) {
-  const flows = deposits
-    .map(d => {
-      const amt = parseFloat(d[key]) || 0;
-      return amt > 0 ? { date: new Date(d.date + "T12:00:00Z"), amount: -amt } : null;
-    })
-    .filter(Boolean);
-  flows.push({ date: new Date(asOfStr + "T12:00:00Z"), amount: currentValue });
-  return flows;
-}
-function investorMWRR(deposits, key, currentValue, asOfStr) {
-  return xirr(investorCashFlows(deposits, key, currentValue, asOfStr));
 }
 
 // NAV series helpers
@@ -228,11 +209,7 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   const myValue    = myUnits * navPerUnit;
   const myGL       = myValue - myDeposited;
   const myPct      = totalUnits > 0 ? (myUnits / totalUnits) * 100 : 0;
-  // Money-weighted return (XIRR) — accounts for when each deposit landed,
-  // unlike a simple gain/deposited ratio. Falls back to simple ROI when XIRR
-  // has no solution (e.g. no deposits yet).
-  const myMWRR     = myDeposited > 0 ? investorMWRR(deposits, key, myValue, asOfStr) : null;
-  const myReturn   = myMWRR != null ? myMWRR * 100 : (myDeposited > 0 ? (myGL / myDeposited) * 100 : 0);
+  const myReturn   = myDeposited > 0 ? (myGL / myDeposited) * 100 : 0;
 
   // Monthly investor return (same as fund since NAV-based)
   const myMonthReturn = monthReturn;
