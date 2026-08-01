@@ -549,7 +549,7 @@
           <option>07 — Jul</option><option>08 — Aug</option><option>09 — Sep</option>
           <option>10 — Oct</option><option>11 — Nov</option><option>12 — Dec</option>
         </select>
-        <select id="dep-filter-year" onchange="filterDeposits()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
+        <select id="dep-filter-year" onchange="filterDeposits()" aria-label="Filter deposits by year" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
           <option value="" id="dep-all-years">All years</option>
           <option>2025</option><option>2026</option>
         </select>
@@ -587,14 +587,14 @@
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.85rem;margin-top:0.85rem;">
-        <select id="tx-filter-month" onchange="renderTx()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
+        <select id="tx-filter-month" onchange="renderTx()" aria-label="Filter transactions by month" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
           <option value="" id="tx-all-months">All months</option>
           <option>01 — Jan</option><option>02 — Feb</option><option>03 — Mar</option>
           <option>04 — Apr</option><option>05 — May</option><option>06 — Jun</option>
           <option>07 — Jul</option><option>08 — Aug</option><option>09 — Sep</option>
           <option>10 — Oct</option><option>11 — Nov</option><option>12 — Dec</option>
         </select>
-        <select id="tx-filter-year" onchange="renderTx()" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
+        <select id="tx-filter-year" onchange="renderTx()" aria-label="Filter transactions by year" style="padding:5px 10px;font-size:12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;">
           <option value="" id="tx-all-years">All years</option>
           <option>2025</option><option>2026</option>
         </select>
@@ -717,11 +717,11 @@
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem;">
             <div class="form-group" id="stmt-investor-group">
-              <label id="stmt-investor-label">Investor</label>
+              <label id="stmt-investor-label" for="stmt-investor">Investor</label>
               <select id="stmt-investor"></select>
             </div>
             <div class="form-group">
-              <label id="stmt-period-label">Period</label>
+              <label id="stmt-period-label" for="stmt-month">Period</label>
               <select id="stmt-month"><option value="">Loading…</option></select>
             </div>
           </div>
@@ -927,7 +927,7 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label id="lbl-dep-source">Source</label>
+              <label id="lbl-dep-source" for="a-dep-source">Source</label>
               <select id="a-dep-source" onchange="autoSplitDeposit()">
                 <option value="Fernando Montoya">Fernando Montoya</option>
                 <option value="Dario Montoya">Dario Montoya</option>
