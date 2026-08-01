@@ -42,7 +42,7 @@ Both functions use shared helper renderers: `drawSection`, `drawSubSection`, `dr
 ## How to continue in a new Claude session
 Open PowerShell, navigate here, and run:
 ```
-cd "C:\Users\pablo\OneDrive\Documentos\Red-Road-Securities"
+cd "C:\Claude Projects\RRS"
 claude
 ```
 Then say: "Read CLAUDE_CONTEXT.md and index.html so we can continue working on the investor portal."
