@@ -4182,10 +4182,9 @@ async function fetchFXRate() {
 
   let rate = null;
   try {
-    rate = await Promise.any([
-      tryRate("https://api.frankfurter.app/latest?from=USD&to=COP", "rates.COP"),
-      tryRate("https://open.er-api.com/v6/latest/USD",              "rates.COP"),
-    ]);
+    // frankfurter.app is CORS-blocked from this origin and never succeeds here —
+    // dropped rather than left in as a permanently-failing fallback.
+    rate = await tryRate("https://open.er-api.com/v6/latest/USD", "rates.COP");
   } catch {}
 
   if (!rate) {
