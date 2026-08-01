@@ -22,11 +22,11 @@
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
   :root {
     --bg: #ffffff; --bg2: #F4F7F5; --bg3: #EBF0ED;
-    --text: #0F1F17; --text2: #4A6358; --text3: #557567;
+    --text: #0F1F17; --text2: #4A6358; --text3: #4F6F61;
     --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.15);
     --blue: #00A651; --blue-bg: #E6F7EE; --blue-text: #006B31;
-    --green: #00A651; --green-bg: #E6F7EE;
-    --red: #C0392B; --red-bg: #FDECEB;
+    --green: #00A651; --green-bg: #E6F7EE; --green-text: #006B31;
+    --red: #C0392B; --red-bg: #FDECEB; --red-text: #C0392B;
     --amber-bg: #FEF3E2; --amber-text: #B45309;
     --purple-bg: #EDE9FE; --purple-text: #5B21B6;
     --chime-dark: #0D2B1E;
@@ -59,7 +59,7 @@
   .field label { font-size: 12px; color: var(--text2); font-weight: 600; }
   .field input { width: 100%; padding: 11px 14px; font-size: 14px; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--bg2); color: var(--text); outline: none; font-family: inherit; transition: border-color 0.15s; }
   .field input:focus { border-color: var(--chime-accent); box-shadow: 0 0 0 3px rgba(0,202,109,0.12); }
-  .login-btn { background: var(--chime-accent); color: #fff; border: none; border-radius: var(--radius); padding: 13px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; font-family: inherit; letter-spacing: -0.01em; transition: opacity 0.15s; }
+  .login-btn { background: var(--chime-accent); color: var(--chime-dark); border: none; border-radius: var(--radius); padding: 13px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; font-family: inherit; letter-spacing: -0.01em; transition: opacity 0.15s; }
   .login-btn:hover { opacity: 0.9; }
   .login-error { font-size: 13px; color: var(--red); text-align: center; display: none; }
 
@@ -99,7 +99,7 @@
   .metric-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
   .metric-value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
   .metric-sub { font-size: 12px; margin-top: 3px; }
-  .pos { color: var(--green); } .neg { color: var(--red); }
+  .pos { color: var(--green-text); } .neg { color: var(--red-text); }
   .price-refresh { font-size: 11px; color: var(--text3); margin-top: 0.4rem; display: flex; align-items: center; gap: 5px; }
   .spin { animation: spin 1s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -107,7 +107,7 @@
   /* CHART */
   .chart-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-sm); }
   .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-  .chart-header h3 { font-size: 13px; font-weight: 600; color: var(--text2); }
+  .chart-header h2 { font-size: 13px; font-weight: 600; color: var(--text2); }
 
   /* TABLES */
   .table-wrap { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
@@ -179,9 +179,9 @@
   .form-group label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
   .form-group input, .form-group select { padding: 9px 12px; font-size: 13px; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--bg2); color: var(--text); outline: none; font-family: inherit; transition: border-color 0.15s; }
   .form-group input:focus, .form-group select:focus { border-color: var(--chime-accent); box-shadow: 0 0 0 3px rgba(0,202,109,0.10); }
-  .save-btn { background: var(--chime-accent); color: #fff; border: none; border-radius: var(--radius); padding: 9px 20px; font-size: 13px; font-weight: 700; cursor: pointer; align-self: flex-start; font-family: inherit; transition: opacity 0.15s; }
+  .save-btn { background: var(--chime-accent); color: var(--chime-dark); border: none; border-radius: var(--radius); padding: 9px 20px; font-size: 13px; font-weight: 700; cursor: pointer; align-self: flex-start; font-family: inherit; transition: opacity 0.15s; }
   .save-btn:hover { opacity: 0.88; }
-  .admin-success { font-size: 12px; color: var(--green); display: none; margin-top: 4px; }
+  .admin-success { font-size: 12px; color: var(--green-text); display: none; margin-top: 4px; }
   .add-hint { font-size: 12px; color: var(--text3); margin-top: 0.75rem; text-align: center; }
 
   /* PAGE NAV */
@@ -378,7 +378,7 @@
     <div class="section">
       <div class="chart-card">
         <div class="chart-header">
-          <h3 id="overview-chart-title">Returns since inception</h3>
+          <h2 id="overview-chart-title">Returns since inception</h2>
           <span style="font-size:11px;color:var(--text3);" id="overview-chart-updated"></span>
         </div>
         <div style="position:relative;width:100%;height:220px;">
@@ -467,7 +467,7 @@
     <div class="section">
       <div class="chart-card">
         <div class="chart-header">
-          <h3 id="chart-title">Fund ONE — historical value (IB data)</h3>
+          <h2 id="chart-title">Fund ONE — historical value (IB data)</h2>
           <span style="font-size:11px;color:var(--text3);" id="chart-updated"></span>
         </div>
         <div style="position:relative;width:100%;height:260px;">
@@ -734,7 +734,7 @@
                 <div id="stmt-monthly-desc" style="font-size:12px;color:var(--text2);margin-top:2px;">Account value · returns · holdings · capital activity · NAV history</div>
               </div>
               <button onclick="downloadStatement()" id="stmt-download-btn"
-                style="background:var(--chime-accent);color:#fff;border:none;border-radius:var(--radius);padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:opacity 0.15s;">
+                style="background:var(--chime-accent);color:var(--chime-dark);border:none;border-radius:var(--radius);padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:opacity 0.15s;">
                 <i class="ti ti-download" style="font-size:15px;"></i><span id="stmt-download-btn-lbl">Download PDF</span>
               </button>
               <span id="stmt-status" style="font-size:12px;display:none;min-width:120px;"></span>
@@ -774,7 +774,7 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             <div style="display:flex;align-items:flex-start;gap:10px;">
               <div style="width:28px;height:28px;border-radius:8px;background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="ti ti-chart-bar" style="color:var(--green);font-size:14px;"></i>
+                <i class="ti ti-chart-bar" style="color:var(--green-text);font-size:14px;"></i>
               </div>
               <div>
                 <div id="stmt-account-summary" style="font-weight:600;font-size:13px;">Account Summary</div>
@@ -783,7 +783,7 @@
             </div>
             <div style="display:flex;align-items:flex-start;gap:10px;">
               <div style="width:28px;height:28px;border-radius:8px;background:var(--blue-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="ti ti-trending-up" style="color:var(--blue);font-size:14px;"></i>
+                <i class="ti ti-trending-up" style="color:var(--blue-text);font-size:14px;"></i>
               </div>
               <div>
                 <div id="stmt-period-returns-lbl" style="font-weight:600;font-size:13px;">Period Returns</div>
@@ -810,7 +810,7 @@
             </div>
             <div style="display:flex;align-items:flex-start;gap:10px;">
               <div style="width:28px;height:28px;border-radius:8px;background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="ti ti-table" style="color:var(--green);font-size:14px;"></i>
+                <i class="ti ti-table" style="color:var(--green-text);font-size:14px;"></i>
               </div>
               <div>
                 <div id="stmt-nav-history-lbl" style="font-weight:600;font-size:13px;">NAV History</div>
@@ -980,7 +980,7 @@
           <button class="tab-btn" onclick="loadIBPulls()" id="atab-pulls" style="background:var(--purple-bg);border-color:var(--purple-text);color:var(--purple-text);">
             <i class="ti ti-database" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Load pull history
           </button>
-          <button class="tab-btn" onclick="repairDeposits()" id="atab-repair-deposits" style="background:var(--orange-bg,#fdf1e6);border-color:#c77b1f;color:#c77b1f;">
+          <button class="tab-btn" onclick="repairDeposits()" id="atab-repair-deposits" style="background:var(--amber-bg);border-color:var(--amber-text);color:var(--amber-text);">
             <i class="ti ti-tool" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Repair deposit records
           </button>
         </div>
@@ -1013,12 +1013,12 @@
       <div>
         <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">System</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="tab-btn" onclick="syncToCloud()" id="atab-sync" style="background:var(--blue-bg);border-color:var(--blue);color:var(--blue);">
+          <button class="tab-btn" onclick="syncToCloud()" id="atab-sync" style="background:var(--blue-bg);border-color:var(--blue);color:var(--blue-text);">
             <i class="ti ti-cloud-upload" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="sync-btn-label">Sync to cloud</span>
           </button>
           <div style="display:flex;align-items:center;gap:6px;">
             <input type="date" id="statement-as-of" style="padding:5px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);color:var(--text);outline:none;" title="As of date for the statement" aria-label="As of date for the statement" />
-            <button class="tab-btn" onclick="sendStatementsNow()" id="atab-send" style="background:var(--green-bg);border-color:var(--green);color:var(--green);">
+            <button class="tab-btn" onclick="sendStatementsNow()" id="atab-send" style="background:var(--green-bg);border-color:var(--green);color:var(--green-text);">
               <i class="ti ti-send" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i><span id="send-btn-label">Send statements</span>
             </button>
           </div>
@@ -1776,7 +1776,7 @@ function _applyPriceStatus() {
   } else if (_priceStatusState === "failed") {
     html = `<i class="ti ti-alert-circle" style="color:var(--amber-text);"></i> ${t("priceFailed")}`;
   } else if (_priceStatusState === "ok") {
-    html = `<i class="ti ti-circle-check" style="color:var(--green);"></i> ${t("priceOk")} ${_priceStatusTime}`;
+    html = `<i class="ti ti-circle-check" style="color:var(--green-text);"></i> ${t("priceOk")} ${_priceStatusTime}`;
   }
   ["price-status", "price-status-pos"].forEach(id => {
     const el = document.getElementById(id);
@@ -2631,7 +2631,7 @@ function renderInvestors() {
         <div class="form-group" style="margin:0 0 0.5rem;"><label style="font-size:11px;">Mailing address</label><input id="inv-addr-${i}" value="${escapeHtml(inv.mailingAddress || "")}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
         <button id="inv-save-btn-${i}" onclick="saveInvestor(${i})" class="save-btn" style="font-size:12px;padding:6px 14px;">Save</button>
         <span id="inv-saved-${i}" style="font-size:12px;color:var(--green-text);margin-left:8px;display:none;">✓ Saved</span>
-        <span id="inv-err-${i}" style="font-size:12px;color:#e74c3c;margin-left:8px;display:none;"></span>
+        <span id="inv-err-${i}" style="font-size:12px;color:var(--red-text);margin-left:8px;display:none;"></span>
       </div>
     </div>`).join("");
 }
@@ -2993,7 +2993,7 @@ function openAllocateModal(depositId, investorKey, amount, date) {
   modal.style.cssText = "position:fixed;inset:0;background:#000a;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;";
   modal.innerHTML = `
     <div style="background:var(--bg2,#1a1a2e);border:1px solid var(--border);border-radius:12px;padding:24px;width:100%;max-width:400px;">
-      <h3 style="margin:0 0 16px;font-size:15px;">Allocate Deposit</h3>
+      <h2 style="margin:0 0 16px;font-size:15px;">Allocate Deposit</h2>
       <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">
         <b>$${amount.toLocaleString("en-US",{minimumFractionDigits:2})}</b> on ${date}
       </div>
@@ -3011,7 +3011,7 @@ function openAllocateModal(depositId, investorKey, amount, date) {
         NAV at deposit date: <b id="alloc-nav-display">loading…</b>
         <input type="hidden" id="alloc-nav-val" value="1">
       </div>
-      <div id="alloc-error" style="font-size:12px;color:#e74c3c;margin-bottom:8px;display:none;"></div>
+      <div id="alloc-error" style="font-size:12px;color:var(--red-text);margin-bottom:8px;display:none;"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="tab-btn" onclick="document.getElementById('allocate-modal').remove()" style="font-size:12px;">Cancel</button>
         <button class="tab-btn" id="alloc-confirm-btn" onclick="confirmAllocate('${depositId}','${investorKey}',${isNew})" style="background:var(--green-bg);border-color:var(--green-text);color:var(--green-text);font-size:12px;">Confirm</button>
@@ -3115,7 +3115,7 @@ async function importIBXml() {
   const btn    = document.getElementById("import-xml-btn");
   const status = document.getElementById("import-xml-status");
   const xml    = document.getElementById("ib-xml-input").value.trim();
-  if (!xml) { status.style.color = "#e74c3c"; status.textContent = "Paste XML first."; return; }
+  if (!xml) { status.style.color = "var(--red-text)"; status.textContent = "Paste XML first."; return; }
   btn.disabled = true; btn.textContent = "Importing…";
   status.style.color = "var(--text2)"; status.textContent = "Parsing and saving…";
   try {
@@ -3131,7 +3131,7 @@ async function importIBXml() {
     document.getElementById("ib-xml-input").value = "";
     await loadFromCloud();
   } catch(e) {
-    status.style.color = "#e74c3c";
+    status.style.color = "var(--red-text)";
     status.textContent = "✗ " + e.message;
   }
   btn.disabled = false;
@@ -3365,7 +3365,7 @@ function exportData() {
         <button id="export-copy-btn" style="background:var(--blue);color:#fff;border:none;border-radius:var(--radius);padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;">
           <i class="ti ti-clipboard-copy" style="font-size:14px;"></i> ${currentLang==="es"?"Copiar al portapapeles":"Copy to clipboard"}
         </button>
-        <span id="export-copy-confirm" style="font-size:12px;color:var(--green);display:none;">✓ ${currentLang==="es"?"¡Copiado!":"Copied!"}</span>
+        <span id="export-copy-confirm" style="font-size:12px;color:var(--green-text);display:none;">✓ ${currentLang==="es"?"¡Copiado!":"Copied!"}</span>
       </div>
     </div>`;
 
@@ -3822,7 +3822,7 @@ function renderNavTable(series, inceptionNav) {
 
     const fmtNav = v => "$" + v.toFixed(4);
     const fmtRet = v => (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
-    const retCls = ret >= 0 ? "color:var(--green-text)" : "color:#e74c3c";
+    const retCls = ret >= 0 ? "color:var(--green-text)" : "color:var(--red-text)";
 
     const endCell = isCurrentMonth
       ? `<td style="text-align:right;padding:10px 12px;color:var(--text2);">${fmtNav(navEnd)} <span style="font-size:10px;color:var(--text3);">current</span></td>`
@@ -4134,7 +4134,7 @@ function applyFXRate(rate, live) {
   document.getElementById("fx-10k").textContent  = fmtCOP(rate * 10000);
   if (live) {
     const now = new Date().toLocaleTimeString(currentLang === "es" ? "es-CO" : "en-US", {hour:"2-digit", minute:"2-digit"});
-    document.getElementById("fx-status").innerHTML = `<i class="ti ti-circle-check" style="color:var(--green);"></i> <span>${t("fxUpdated")} ${now}</span>`;
+    document.getElementById("fx-status").innerHTML = `<i class="ti ti-circle-check" style="color:var(--green-text);"></i> <span>${t("fxUpdated")} ${now}</span>`;
   } else {
     const saved = fxSnapshot?.savedAt ? new Date(fxSnapshot.savedAt).toLocaleDateString(currentLang === "es" ? "es-CO" : "en-US", {month:"short", day:"numeric"}) : "";
     document.getElementById("fx-status").innerHTML = `<i class="ti ti-clock" style="color:var(--text3);"></i> <span style="color:var(--text3);">${saved ? `${t("fxCached")} ${saved}` : t("fxLoading")}</span>`;
