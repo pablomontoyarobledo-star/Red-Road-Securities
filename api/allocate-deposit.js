@@ -1,4 +1,4 @@
-﻿import { readDoc, backupAndWrite, writeSnapshot, removePendingDeposit, writeAuditLog } from "../lib/store.js";
+﻿import { readDoc, backupAndWrite, writeSnapshot, removePendingDeposit, writeAuditLog, allocateDepositAtomic } from "../lib/store.js";
 import { isAdminRequest, identifyActor } from "../lib/auth.js";
 import { recomputeNavSeries, fixIbDepositNavs, computeTotalUnitsAtDate, INCEPTION_NAV } from "../lib/nav.js";
 
@@ -185,17 +185,44 @@ export default async function handler(req, res) {
   fundData.deposits.push(record);
   fundData.deposits.sort((a, b) => a.date.localeCompare(b.date));
 
-  await backupAndWrite("fund-data.json", fundData);
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  // Best-effort snapshot (matches backupAndWrite's existing behavior) — the
+  // write itself below is the atomic, duplicate-proof one.
+  try { await writeSnapshot("backups", `fund-data-${stamp}.json`, fundData); } catch {}
+
+  // Atomically insert the deposits-table row (the structural idempotency
+  // gate, keyed on the pending deposit this is being promoted from) and
+  // overwrite fund-data.json — both land or neither does (see
+  // allocateDepositAtomic's comment for why a naive two-step write isn't
+  // safe here). A conflict means someone already allocated this exact
+  // pending deposit — a concurrent double-submit — so fund-data.json is
+  // left untouched and the pending deposit stays put, rather than silently
+  // minting the investor's cash twice.
+  const canonicalInvestorId = invMatch ? invMatch.id : resolvedKey;
+  const depositRowId = await allocateDepositAtomic({
+    investorId: canonicalInvestorId,
+    date:       record.date,
+    amount:     record.amount,
+    nav:        record.nav,
+    source:     record.source,
+    ibDesc:     record.ibDesc,
+    txId:       record.txId || null,
+    sourcePendingId: depositId,
+    legacyKey:  depKey,
+    fundData,
+  });
+  if (depositRowId == null) {
+    return res.status(409).json({ error: "This deposit was already allocated (concurrent request) — no changes made." });
+  }
 
   // Remove from pending — atomic, so a concurrent IB pull adding/notifying
   // other deposits at the same moment can't silently resurrect this one.
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   try { await writeSnapshot("backups", `pending-deposits-${stamp}.json`, pending); } catch {}
   await removePendingDeposit(depositId);
 
   await writeAuditLog({
     actor, action: "deposits.allocate", target: depositId,
-    detail: { investorKey: resolvedKey, newInvestor: !!newInvestor, amount: deposit.amount, date: deposit.date, nav: depositNav },
+    detail: { investorKey: resolvedKey, newInvestor: !!newInvestor, amount: deposit.amount, date: deposit.date, nav: depositNav, depositRowId },
   });
 
   return res.status(200).json({ ok: true, record });
