@@ -3984,7 +3984,7 @@ function renderPeriodReturns(series, inceptionNav) {
 let navHist = null;     // module-level so renderBenchmarks can access it
 let inceptionNav = 1.0; // module-level so renderBenchmarks can access it
 
-function _applyNavHistory(_navHistArg) {
+async function _applyNavHistory(_navHistArg) {
   navHist = _navHistArg;
   if (!navHist?.series?.length) return;
 
@@ -4010,15 +4010,13 @@ function _applyNavHistory(_navHistArg) {
   renderNavTable(navHist.series, inceptionNav);
   loadBenchmarkData();
   renderChart();
-  renderOverviewChart();
   renderMetrics();
 
-  // Fetch S&P 500 in background and refresh chart when ready
-  fetchSPXSeries(dates).then(spy => {
-    if (!spy) return;
-    COMPARISON_CHART_DATA.spy = spy;
-    renderOverviewChart();
-  });
+  // Wait for S&P 500 so Fund ONE and the benchmark land together — avoids a
+  // stale/mismatched line rendering first and then jumping when SPX arrives.
+  const spy = await fetchSPXSeries(dates);
+  COMPARISON_CHART_DATA.spy = spy || dates.map(() => null);
+  renderOverviewChart();
 }
 
 async function loadNavHistory() {
@@ -4028,6 +4026,8 @@ async function loadNavHistory() {
     _applyNavHistory(await r.json());
   } catch {}
 }
+
+const OVERVIEW_DRAW_MS = 2600; // total time to trace the returns line, start to today
 
 function renderOverviewChart() {
   if (typeof Chart === "undefined") return;
@@ -4067,6 +4067,32 @@ function renderOverviewChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      // Trace the line in from inception to today instead of popping in —
+      // each point's x/y animates in sequence so the whole curve draws itself.
+      animation: {
+        x: {
+          type: "number", easing: "linear", duration: OVERVIEW_DRAW_MS,
+          from: NaN,
+          delay(ctx) {
+            if (ctx.type !== "data" || ctx.xStarted) return 0;
+            ctx.xStarted = true;
+            return (ctx.index / (ctx.chart.data.labels.length - 1 || 1)) * OVERVIEW_DRAW_MS;
+          }
+        },
+        y: {
+          type: "number", easing: "linear", duration: OVERVIEW_DRAW_MS,
+          from(ctx) {
+            if (ctx.index === 0) return ctx.chart.scales.y.getPixelForValue(100);
+            const prev = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.index - 1];
+            return prev ? prev.getProps(["y"], true).y : ctx.chart.scales.y.getPixelForValue(100);
+          },
+          delay(ctx) {
+            if (ctx.type !== "data" || ctx.yStarted) return 0;
+            ctx.yStarted = true;
+            return (ctx.index / (ctx.chart.data.labels.length - 1 || 1)) * OVERVIEW_DRAW_MS;
+          }
+        }
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
