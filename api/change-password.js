@@ -11,9 +11,7 @@
 // session's own identity.
 
 import { getUserCredentialOverride, setUserCredential, revokeSessionsNow, writeAuditLog } from "../lib/store.js";
-import { USERS, verifyToken, verifyPassword, newScryptCredential, issueToken } from "../lib/auth.js";
-
-const MIN_LENGTH = 10;
+import { USERS, verifyToken, verifyPassword, newScryptCredential, issueToken, MIN_PASSWORD_LENGTH } from "../lib/auth.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
@@ -27,15 +25,17 @@ export default async function handler(req, res) {
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ error: "currentPassword and newPassword are required" });
   }
-  if (String(newPassword).length < MIN_LENGTH) {
-    return res.status(400).json({ error: `newPassword must be at least ${MIN_LENGTH} characters` });
+  if (String(newPassword).length < MIN_PASSWORD_LENGTH) {
+    return res.status(400).json({ error: `newPassword must be at least ${MIN_PASSWORD_LENGTH} characters` });
   }
 
-  const entry = USERS[session.email];
-  if (!entry) return res.status(401).json({ error: "Unauthorized" });
-
+  // verifyToken() already confirmed session.email is a known user (hardcoded
+  // or a claimed self-service account) — no separate USERS check needed here.
+  // A self-service account has no hardcoded fallback; user_credentials is its
+  // only credential (written at claim time via api/claim-account.js).
   const override = await getUserCredentialOverride(session.email).catch(() => null);
-  const cred = override || { salt: entry.salt, pwHash: entry.pwHash, algo: "pbkdf2" };
+  const cred = override || (USERS[session.email] ? { salt: USERS[session.email].salt, pwHash: USERS[session.email].pwHash, algo: "pbkdf2" } : null);
+  if (!cred) return res.status(401).json({ error: "Unauthorized" });
   if (!verifyPassword(String(currentPassword), cred)) {
     return res.status(401).json({ error: "Current password is incorrect" });
   }

@@ -1,6 +1,7 @@
-﻿import { readDoc, backupAndWrite, writeSnapshot, removePendingDeposit, writeAuditLog, allocateDepositAtomic } from "../lib/store.js";
-import { isAdminRequest, identifyActor } from "../lib/auth.js";
+﻿import { readDoc, backupAndWrite, writeSnapshot, removePendingDeposit, writeAuditLog, allocateDepositAtomic, insertClaimToken } from "../lib/store.js";
+import { isAdminRequest, identifyActor, issueClaimToken } from "../lib/auth.js";
 import { recomputeNavSeries, fixIbDepositNavs, computeTotalUnitsAtDate, INCEPTION_NAV } from "../lib/nav.js";
+import { sendClaimAccountEmail } from "../lib/claimEmail.js";
 
 // Email deep-links pass bare keys ("dario") but investor.id is "inv_dario".
 // Match either form — same flexible lookup the client uses in calcUnits().
@@ -213,6 +214,23 @@ export default async function handler(req, res) {
   });
   if (depositRowId == null) {
     return res.status(409).json({ error: "This deposit was already allocated (concurrent request) — no changes made." });
+  }
+
+  // Brand-new investor, first deposit just landed — send them a claim-account
+  // link so they can set their own password. Best-effort: an email failure
+  // must never roll back or block the deposit allocation that already
+  // succeeded above (falls back to the admin "Invite" button in the
+  // Investors tab, which sends the same email).
+  if (newInvestor && newInvestor.email) {
+    try {
+      const email = newInvestor.email.toLowerCase();
+      const { token, jti, expiresAt } = issueClaimToken({ investorId: canonicalInvestorId, email });
+      await insertClaimToken({ jti, investorId: canonicalInvestorId, email, expiresAt });
+      await sendClaimAccountEmail({
+        to: newInvestor.email, firstName: newInvestor.firstName, lang: newInvestor.lang || "en",
+        amount: deposit.amount, date: deposit.date, token,
+      });
+    } catch (err) { console.error("[allocate-deposit] claim email failed:", err.message); }
   }
 
   // Remove from pending — atomic, so a concurrent IB pull adding/notifying

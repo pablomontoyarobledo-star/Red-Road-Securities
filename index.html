@@ -50,6 +50,7 @@
 
   /* LOGIN */
   #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg3); }
+  #claim-screen { min-height: 100vh; align-items: center; justify-content: center; background: var(--bg3); }
   .login-card { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem; width: 380px; display: flex; flex-direction: column; gap: 1.25rem; box-shadow: 0 8px 32px rgba(0,0,0,0.10); }
   .login-logo { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; }
   .logo-mark { width: 56px; height: 56px; border-radius: 16px; background: var(--chime-dark); display: flex; align-items: center; justify-content: center; }
@@ -193,6 +194,13 @@
   .page-tab:hover:not(.active) { color: var(--text); }
   .page { display: none; }
   .page.active { display: block; }
+
+  /* SUB-TABS (nested inside a top-level page) */
+  .subpage { display: none; }
+  .subpage.active { display: block; }
+  .sub-tabs { margin-bottom: 1.25rem; }
+  .sub-tabs .tab-btn { font-size: 13px; padding: 7px 16px; }
+  .nested-tabs .tab-btn { font-size: 11px; padding: 5px 12px; }
 
   /* PERIOD RETURNS */
   .period-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
@@ -341,6 +349,45 @@
   </div>
 </main>
 
+<main id="claim-screen" style="display:none;">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-mark"><svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><polyline points="4,22 10,14 16,18 22,9 28,13" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h1>Red Road Securities</h1>
+      <p id="claim-subtitle">Set up your account</p>
+    </div>
+    <div id="claim-loading" style="font-size:13px;color:var(--text2);text-align:center;padding:12px 0;">Checking your link…</div>
+    <div id="claim-invalid" style="display:none;">
+      <p class="login-error" style="display:block;" id="claim-invalid-msg">This link is invalid or has expired.</p>
+      <button class="login-btn" onclick="showLoginFromClaim()" id="claim-back-to-login">Back to sign in</button>
+    </div>
+    <div id="claim-form" style="display:none;">
+      <div class="field">
+        <label id="claim-email-label" for="claim-email">Email</label>
+        <input type="email" id="claim-email" disabled />
+      </div>
+      <div class="field">
+        <label id="claim-fn-label" for="claim-fn">First name</label>
+        <input type="text" id="claim-fn" />
+      </div>
+      <div class="field">
+        <label id="claim-ln-label" for="claim-ln">Last name</label>
+        <input type="text" id="claim-ln" />
+      </div>
+      <div class="field">
+        <label id="claim-pw-label" for="claim-pw">Password (min. 10 characters)</label>
+        <input type="password" id="claim-pw" autocomplete="new-password" />
+      </div>
+      <div class="field">
+        <label id="claim-pw2-label" for="claim-pw2">Confirm password</label>
+        <input type="password" id="claim-pw2" autocomplete="new-password" />
+      </div>
+      <button class="login-btn" onclick="completeClaim()" id="claim-submit-btn">Create account</button>
+      <p class="login-error" id="claim-error"></p>
+    </div>
+  </div>
+</main>
+
 <div id="app">
   <header class="top-bar-outer">
     <div class="top-bar">
@@ -362,11 +409,7 @@
     <nav class="page-nav">
       <button class="page-tab active" onclick="showPage('overview',this)" id="ptab-overview">Overview</button>
       <button class="page-tab" onclick="showPage('performance',this)" id="ptab-performance">Performance</button>
-      <button class="page-tab" onclick="showPage('positions',this)" id="ptab-positions">Positions</button>
-      <button class="page-tab" onclick="showPage('ownership',this)" id="ptab-ownership">Ownership</button>
-      <button class="page-tab" onclick="showPage('transactions',this)" id="ptab-transactions">Transactions</button>
-      <button class="page-tab" onclick="showPage('nav',this)" id="ptab-nav">NAV</button>
-      <button class="page-tab" onclick="showPage('taxes',this);renderTaxes();" id="ptab-taxes" style="display:none;">Taxes</button>
+      <button class="page-tab" onclick="showPage('activity',this)" id="ptab-activity">Activity</button>
       <button class="page-tab" onclick="showPage('statements',this);populateStatementMonths();" id="ptab-statements">Statements</button>
     </nav>
   </div>
@@ -462,8 +505,17 @@
     </div>
   </div>
 
-  <!-- PAGE: Performance -->
+  <!-- PAGE: Performance (sub-tabs: Chart / NAV / Positions) -->
   <div id="page-performance" class="page">
+    <div class="tabs sub-tabs" id="perf-tabs">
+      <button class="tab-btn active" onclick="showSubTab('perf','chart',this)" id="perf-tab-chart">Chart</button>
+      <button class="tab-btn" onclick="showSubTab('perf','nav',this)" id="perf-tab-nav">NAV</button>
+      <button class="tab-btn" onclick="showSubTab('perf','positions',this)" id="perf-tab-positions">Positions</button>
+    </div>
+    <div id="perf-panels">
+
+    <!-- SUBPAGE: Performance chart -->
+    <div id="perf-chart" class="subpage active">
     <div class="section">
       <div class="chart-card">
         <div class="chart-header">
@@ -508,10 +560,32 @@
         </div>
       </div>
     </div>
-  </div>
+    </div>
 
-  <!-- PAGE: Positions -->
-  <div id="page-positions" class="page">
+    <!-- SUBPAGE: NAV -->
+    <div id="perf-nav" class="subpage">
+    <div class="section">
+      <p class="section-label">Monthly NAV</p>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="border-bottom:1.5px solid var(--border);">
+              <th style="text-align:left;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">Month</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">NAV — start</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">NAV — end</th>
+              <th style="text-align:right;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">Monthly return</th>
+            </tr>
+          </thead>
+          <tbody id="nav-table-body">
+            <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text3);font-size:12px;">Loading NAV history…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    </div>
+
+    <!-- SUBPAGE: Positions -->
+    <div id="perf-positions" class="subpage">
     <div class="section">
       <div class="section-header" style="margin-bottom:0.85rem;">
         <p class="section-label" style="margin-bottom:0;" id="lbl-positions">Current positions</p>
@@ -532,10 +606,21 @@
         </table>
       </div>
     </div>
+    </div>
+
+    </div><!-- /perf-panels -->
   </div>
 
-  <!-- PAGE: Ownership -->
-  <div id="page-ownership" class="page">
+  <!-- PAGE: Activity (sub-tabs: Ownership / Transactions) -->
+  <div id="page-activity" class="page">
+    <div class="tabs sub-tabs" id="activity-tabs">
+      <button class="tab-btn active" onclick="showSubTab('activity','ownership',this)" id="activity-tab-ownership">Ownership</button>
+      <button class="tab-btn" onclick="showSubTab('activity','transactions',this)" id="activity-tab-transactions">Transactions</button>
+    </div>
+    <div id="activity-panels">
+
+    <!-- SUBPAGE: Ownership -->
+    <div id="activity-ownership" class="subpage active">
     <div class="section">
       <p class="section-label" id="lbl-ownership">Investor ownership</p>
       <div class="ownership-cards" id="ownership-cards"></div>
@@ -573,14 +658,14 @@
       </div>
       <p class="add-hint" id="ownership-hint">Ownership calculated using unit/NAV method · Each deposit tagged to individual investor</p>
     </div>
-  </div>
+    </div><!-- /activity-ownership -->
 
-  <!-- PAGE: Transactions -->
-  <div id="page-transactions" class="page">
+    <!-- SUBPAGE: Transactions -->
+    <div id="activity-transactions" class="subpage">
     <div class="section">
       <div class="tx-header">
         <p class="section-label" style="margin-bottom:0;" id="lbl-transactions">Transaction history</p>
-        <div class="tabs" id="tx-tabs">
+        <div class="tabs nested-tabs" id="tx-tabs">
           <button class="tab-btn active" onclick="filterTx('all',this)" id="ttab-all">All</button>
           <button class="tab-btn" onclick="filterTx('buy',this)" id="ttab-buy">Buys</button>
           <button class="tab-btn" onclick="filterTx('sell',this)" id="ttab-sell">Sells</button>
@@ -620,32 +705,21 @@
       </div>
       <p class="add-hint" id="tx-hint">Transaction data imported from Interactive Brokers · Managed by Pablo Montoya</p>
     </div>
-  </div>
+    </div><!-- /activity-transactions -->
 
-<!-- NAV page -->
-  <div id="page-nav" class="page">
-    <div class="section">
-      <p class="section-label">Monthly NAV</p>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead>
-            <tr style="border-bottom:1.5px solid var(--border);">
-              <th style="text-align:left;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">Month</th>
-              <th style="text-align:right;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">NAV — start</th>
-              <th style="text-align:right;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">NAV — end</th>
-              <th style="text-align:right;padding:8px 12px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">Monthly return</th>
-            </tr>
-          </thead>
-          <tbody id="nav-table-body">
-            <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text3);font-size:12px;">Loading NAV history…</td></tr>
-          </tbody>
-        </table>
-      </div>
+    </div><!-- /activity-panels -->
+  </div><!-- /page-activity -->
+
+  <!-- PAGE: Statements (sub-tabs: Statements / Taxes) -->
+  <div id="page-statements" class="page">
+    <div class="tabs sub-tabs" id="statements-tabs">
+      <button class="tab-btn active" onclick="showSubTab('statements','main',this)" id="statements-tab-main">Statements</button>
+      <button class="tab-btn" onclick="showSubTab('statements','taxes',this)" id="statements-tab-taxes" style="display:none;">Taxes</button>
     </div>
-  </div>
+    <div id="statements-panels">
 
-  <!-- PAGE: Taxes -->
-  <div id="page-taxes" class="page">
+    <!-- SUBPAGE: Taxes -->
+    <div id="statements-taxes" class="subpage">
     <div class="section">
       <p class="section-label">Estimated tax — potential liability</p>
       <div class="metric-card" style="background:var(--yellow-bg,#fff8e6);border:0.5px solid var(--border);font-size:12px;color:var(--text2);line-height:1.5;">
@@ -695,10 +769,10 @@
         </table>
       </div>
     </div>
-  </div>
+    </div><!-- /statements-taxes -->
 
-  <!-- PAGE: Statements -->
-  <div id="page-statements" class="page">
+    <!-- SUBPAGE: Statements -->
+    <div id="statements-main" class="subpage active">
 
     <!-- Generator card -->
     <div class="section">
@@ -822,7 +896,10 @@
 
       </div>
     </div>
-  </div>
+    </div><!-- /statements-main -->
+
+    </div><!-- /statements-panels -->
+  </div><!-- /page-statements -->
 
   </main><!-- /app-content -->
 </div><!-- /app -->
@@ -1095,7 +1172,7 @@ const TR = {
     fxCached: "Last recorded",
     // Page tabs
     tab_overview: "Overview", tab_performance: "Performance", tab_positions: "Positions",
-    tab_ownership: "Ownership", tab_transactions: "Transactions",
+    tab_ownership: "Ownership", tab_transactions: "Transactions", tab_activity: "Activity",
     // Period returns
     lbl_period_returns: "Period returns",
     lbl_mtd: "MTD", lbl_qtd: "QTD", lbl_ytd: "YTD", lbl_inception: "Since inception",
@@ -1381,7 +1458,7 @@ const TR = {
     fxUpdated: "Actualizado",
     fxCached: "Último registrado",
     tab_overview: "Resumen", tab_performance: "Rendimiento", tab_positions: "Posiciones",
-    tab_ownership: "Participación", tab_transactions: "Transacciones",
+    tab_ownership: "Participación", tab_transactions: "Transacciones", tab_activity: "Actividad",
     lbl_period_returns: "Retornos por período",
     lbl_mtd: "MTD", lbl_qtd: "QTD", lbl_ytd: "YTD", lbl_inception: "Desde el inicio",
     lbl_income: "Ingresos y costos — desde el inicio",
@@ -1704,8 +1781,10 @@ function setLang(lang) {
     "tx-col-notes": "tx_col_notes",
     "tx-hint": "tx_hint",
     "ptab-overview": "tab_overview", "ptab-performance": "tab_performance",
-    "ptab-positions": "tab_positions", "ptab-ownership": "tab_ownership",
-    "ptab-transactions": "tab_transactions", "ptab-nav": "tab_nav", "ptab-taxes": "tab_taxes", "ptab-statements": "lbl_statements",
+    "ptab-activity": "tab_activity", "ptab-statements": "lbl_statements",
+    "perf-tab-chart": "tab_performance", "perf-tab-nav": "tab_nav", "perf-tab-positions": "tab_positions",
+    "activity-tab-ownership": "tab_ownership", "activity-tab-transactions": "tab_transactions",
+    "statements-tab-main": "lbl_statements", "statements-tab-taxes": "tab_taxes",
     "lbl-statements": "lbl_statements",
     "stmt-download-heading": "stmt_download_heading",
     "stmt-investor-label": "stmt_investor_label", "stmt-period-label": "stmt_period_label",
@@ -1943,7 +2022,7 @@ function _launchApp(email, entry) {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
   document.getElementById("investor-badge").textContent = entry.name;
-  if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; const _tt = document.getElementById("ptab-taxes"); if (_tt) _tt.style.display = ""; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } renderDepositForm(); loadPendingDeposits(); checkAllocateUrlParam(); }
+  if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; const _tt = document.getElementById("statements-tab-taxes"); if (_tt) _tt.style.display = ""; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } renderDepositForm(); loadPendingDeposits(); checkAllocateUrlParam(); }
   fetchPrices();
   fetchFXRate();
   const _s = fn => { try { fn(); } catch(e) { console.error(fn.name, e); } };
@@ -1972,7 +2051,99 @@ async function tryLogin() {
   }
 }
 
+let _claimToken = null;
+
+// Reads ?claim=<token> before any session restore runs, so a stale local
+// session on the same device can't silently swallow a claim link — the
+// investor lands on the claim screen every time they open one, even if
+// they're (or someone else is) already logged in on that browser.
+function checkClaimUrlParam() {
+  const p = new URLSearchParams(location.search);
+  const token = p.get("claim");
+  if (!token) return false;
+  history.replaceState({}, "", location.pathname);
+  openClaimScreen(token);
+  return true;
+}
+
+async function openClaimScreen(token) {
+  _claimToken = token;
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("claim-screen").style.display = "flex";
+  document.getElementById("claim-loading").style.display = "block";
+  document.getElementById("claim-invalid").style.display = "none";
+  document.getElementById("claim-form").style.display = "none";
+  try {
+    const r = await fetch("/api/claim-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "verify", token }),
+    });
+    const d = await r.json();
+    document.getElementById("claim-loading").style.display = "none";
+    if (!r.ok) {
+      document.getElementById("claim-invalid").style.display = "block";
+      return;
+    }
+    document.getElementById("claim-email").value = d.email || "";
+    document.getElementById("claim-fn").value = d.firstName || "";
+    document.getElementById("claim-ln").value = d.lastName || "";
+    document.getElementById("claim-form").style.display = "block";
+  } catch {
+    document.getElementById("claim-loading").style.display = "none";
+    document.getElementById("claim-invalid").style.display = "block";
+  }
+}
+
+function showLoginFromClaim() {
+  _claimToken = null;
+  document.getElementById("claim-screen").style.display = "none";
+  document.getElementById("login-screen").style.display = "flex";
+}
+
+async function completeClaim() {
+  const errEl = document.getElementById("claim-error");
+  errEl.style.display = "none";
+  const firstName = document.getElementById("claim-fn").value.trim();
+  const lastName  = document.getElementById("claim-ln").value.trim();
+  const password  = document.getElementById("claim-pw").value;
+  const password2 = document.getElementById("claim-pw2").value;
+
+  if (password.length < 10) {
+    errEl.textContent = "Password must be at least 10 characters.";
+    errEl.style.display = "block";
+    return;
+  }
+  if (password !== password2) {
+    errEl.textContent = "Passwords do not match.";
+    errEl.style.display = "block";
+    return;
+  }
+
+  try {
+    const r = await fetch("/api/claim-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "complete", token: _claimToken, password, firstName, lastName }),
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      errEl.textContent = d.error || "Something went wrong. Please try again.";
+      errEl.style.display = "block";
+      return;
+    }
+    _sessionToken = d.token;
+    localStorage.setItem("rrs_session", JSON.stringify({ token: d.token, email: d.email, name: d.name, admin: d.admin }));
+    document.getElementById("claim-screen").style.display = "none";
+    _launchApp(d.email, { name: d.name, admin: d.admin });
+  } catch {
+    errEl.textContent = "Something went wrong. Please try again.";
+    errEl.style.display = "block";
+  }
+}
+
 window.addEventListener("DOMContentLoaded", async function restoreSession() {
+  if (checkClaimUrlParam()) return;
   try {
     const raw = localStorage.getItem("rrs_session");
     if (!raw) return;
@@ -2609,6 +2780,10 @@ function renderInvestors() {
         <span>🌐 ${inv.lang === "es" ? "Español" : "English"}</span>
         ${inv.mailingAddress ? `<span style="grid-column:1/-1;">📬 ${escapeHtml(inv.mailingAddress)}</span>` : ""}
       </div>
+      <div style="margin-top:0.6rem;display:flex;align-items:center;gap:8px;">
+        <button onclick="inviteInvestor(${i})" ${inv.email ? "" : "disabled"} style="font-size:11px;padding:4px 10px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;" id="inv-invite-btn-${i}" title="${inv.email ? "" : "No email on file"}">Invite</button>
+        <span id="inv-invite-status-${i}" style="font-size:11px;color:var(--text3);"></span>
+      </div>
       <div id="inv-form-${i}" style="display:none;margin-top:0.75rem;border-top:0.5px solid var(--border);padding-top:0.75rem;">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
           <div class="form-group" style="margin:0;"><label style="font-size:11px;">First name</label><input id="inv-fn-${i}" value="${inv.firstName}" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;" /></div>
@@ -2634,6 +2809,52 @@ function renderInvestors() {
         <span id="inv-err-${i}" style="font-size:12px;color:var(--red-text);margin-left:8px;display:none;"></span>
       </div>
     </div>`).join("");
+  refreshClaimedBadges();
+}
+
+let _claimedInvestorIds = null;
+
+// Marks which investors already have a self-service account, so the button
+// reads "Invite" (never claimed) vs "Resend" (claimed but wants a new link,
+// e.g. lost the original email).
+async function refreshClaimedBadges() {
+  try {
+    const r = await fetch("/api/investor-accounts", { headers: adminSecretHeader() });
+    if (!r.ok) return;
+    const d = await r.json();
+    _claimedInvestorIds = new Set(d.claimed || []);
+    investors.forEach((inv, i) => {
+      const btn = document.getElementById(`inv-invite-btn-${i}`);
+      if (btn && !btn.disabled) btn.textContent = _claimedInvestorIds.has(inv.id) ? "Resend" : "Invite";
+    });
+  } catch {}
+}
+
+async function inviteInvestor(i) {
+  const inv = investors[i];
+  const btn = document.getElementById(`inv-invite-btn-${i}`);
+  const status = document.getElementById(`inv-invite-status-${i}`);
+  if (!inv.email) return;
+  btn.disabled = true;
+  status.style.color = "var(--text3)";
+  status.textContent = "Sending…";
+  try {
+    const r = await fetch("/api/send-claim-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...adminSecretHeader() },
+      body: JSON.stringify({ investorId: inv.id }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || "Failed to send");
+    status.style.color = "var(--green-text)";
+    status.textContent = "✓ Sent";
+    setTimeout(() => { status.textContent = ""; }, 3000);
+  } catch (err) {
+    status.style.color = "var(--red-text)";
+    status.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function toggleInvestorEdit(i) {
@@ -3751,8 +3972,18 @@ function showPage(name, btn) {
   if (name === "overview" && overviewChart) { overviewChart.resize(); }
 }
 
+// Switches a nested sub-tab panel within a top-level page (e.g. Performance's Chart/NAV/Positions).
+function showSubTab(group, name, btn) {
+  document.querySelectorAll(`#${group}-tabs .tab-btn`).forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(`#${group}-panels > .subpage`).forEach(p => p.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById(`${group}-${name}`).classList.add("active");
+  if (group === "perf" && name === "chart" && perfChart) { perfChart.resize(); }
+  if (group === "statements" && name === "taxes") { renderTaxes(); }
+}
+
 function _applyPageTabLabels() {
-  ["overview","performance","positions","ownership","transactions"].forEach(n => {
+  ["overview","performance","activity"].forEach(n => {
     const el = document.getElementById("ptab-" + n);
     if (el) el.textContent = t("tab_" + n);
   });

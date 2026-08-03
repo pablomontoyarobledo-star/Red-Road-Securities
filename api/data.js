@@ -10,7 +10,7 @@
 // Tokens expire after 30 days.
 
 import { getUserCredentialOverride, setUserCredential, readDoc, recordLoginFailure, resetLoginFailures, getLoginFailureState } from "../lib/store.js";
-import { USERS, issueToken, verifyToken, verifyPassword, newScryptCredential } from "../lib/auth.js";
+import { USERS, issueToken, verifyToken, verifyPassword, newScryptCredential, lookupUser } from "../lib/auth.js";
 import { computeTotalUnitsAtDate, investorKeysFor, depositBelongsTo } from "../lib/nav.js";
 
 // After this many consecutive failures for an email, lock out further
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
         }
       }
 
-      const entry = USERS[email];
+      const entry = await lookupUser(email).catch(() => null);
       if (!entry || !body.password) {
         if (email) recordLoginFailure(email).catch(() => {});
         return res.status(401).json({ error: "Invalid credentials" });
@@ -81,8 +81,14 @@ export default async function handler(req, res) {
 
       // A changed password lives in Neon (user_credentials) and overrides the
       // hardcoded entry; otherwise fall back to the PBKDF2 hash in lib/auth.js.
+      // Self-service accounts (claimed via api/claim-account.js) have no
+      // hardcoded fallback — user_credentials is their only credential.
       const override = await getUserCredentialOverride(email).catch(() => null);
-      const cred = override || { salt: entry.salt, pwHash: entry.pwHash, algo: "pbkdf2" };
+      const cred = override || (USERS[email] ? { salt: USERS[email].salt, pwHash: USERS[email].pwHash, algo: "pbkdf2" } : null);
+      if (!cred) {
+        recordLoginFailure(email).catch(() => {});
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
       if (!verifyPassword(String(body.password), cred)) {
         recordLoginFailure(email).catch(() => {});
         return res.status(401).json({ error: "Invalid credentials" });
