@@ -32,7 +32,7 @@ export default async function handler(req, res) {
   // verifyToken() already confirmed session.email is a known user (hardcoded
   // or a claimed self-service account) — no separate USERS check needed here.
   // A self-service account has no hardcoded fallback; user_credentials is its
-  // only credential (written at claim time via api/claim-account.js).
+  // only credential (written at claim time via api/investor-claim.js).
   const override = await getUserCredentialOverride(session.email).catch(() => null);
   const cred = override || (USERS[session.email] ? { salt: USERS[session.email].salt, pwHash: USERS[session.email].pwHash, algo: "pbkdf2" } : null);
   if (!cred) return res.status(401).json({ error: "Unauthorized" });

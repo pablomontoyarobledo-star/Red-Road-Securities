@@ -81,7 +81,7 @@ export default async function handler(req, res) {
 
       // A changed password lives in Neon (user_credentials) and overrides the
       // hardcoded entry; otherwise fall back to the PBKDF2 hash in lib/auth.js.
-      // Self-service accounts (claimed via api/claim-account.js) have no
+      // Self-service accounts (claimed via api/investor-claim.js) have no
       // hardcoded fallback — user_credentials is their only credential.
       const override = await getUserCredentialOverride(email).catch(() => null);
       const cred = override || (USERS[email] ? { salt: USERS[email].salt, pwHash: USERS[email].pwHash, algo: "pbkdf2" } : null);

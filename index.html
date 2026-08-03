@@ -267,9 +267,6 @@
     .metric-value { font-size: 18px; }
     #nav-unit-card .metric-value { font-size: 20px; }
 
-    /* Admin tabs — scrollable row */
-    #admin-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; gap: 4px; }
-    #admin-tabs .tab-btn { white-space: nowrap; flex-shrink: 0; font-size: 11px; padding: 5px 10px; }
     #atab-export, #atab-reset { margin-left: 0; }
 
     /* Admin forms */
@@ -991,34 +988,9 @@
       <!-- ── Section 2: Fund Management ── -->
       <div>
         <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Fund Management</p>
-        <div class="tabs" id="admin-tabs" style="margin-bottom:1rem;">
-          <button class="tab-btn active" onclick="switchAdminTab('deposit', this)" id="atab-deposit">Log deposit</button>
-          <button class="tab-btn" onclick="switchAdminTab('investors', this)" id="atab-investors">Investors</button>
-        </div>
-
-        <!-- Log deposit -->
-        <div id="admin-deposit" class="admin-form">
-          <div class="form-row">
-            <div class="form-group"><label id="lbl-dep-date" for="a-dep-date">Date</label><input type="date" id="a-dep-date" /></div>
-            <div class="form-group"><label id="lbl-dep-amount" for="a-dep-amount">Amount ($)</label><input type="number" step="0.01" id="a-dep-amount" placeholder="e.g. 100000" oninput="autoSplitDeposit()" /></div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label id="lbl-dep-source" for="a-dep-source">Source</label>
-              <select id="a-dep-source" onchange="autoSplitDeposit()">
-                <option value="Fernando Montoya">Fernando Montoya</option>
-                <option value="Dario Montoya">Dario Montoya</option>
-              </select>
-            </div>
-            <div class="form-group"><label id="lbl-dep-nav">NAV at deposit ($)</label><input type="number" step="0.01" id="a-dep-nav" placeholder="e.g. 1.0500" /></div>
-          </div>
-          <div id="dep-investor-fields" class="form-row"></div>
-          <button class="save-btn" onclick="saveDeposit()" id="save-dep-btn">Log deposit</button>
-          <span class="admin-success" id="dep-log-success">✓ Deposit logged</span>
-        </div>
 
         <!-- Investors -->
-        <div id="admin-investors" class="admin-form" style="display:none;">
+        <div id="admin-investors" class="admin-form">
           <div id="investor-list"></div>
           <button class="save-btn" onclick="addInvestor()" style="margin-top:1rem;background:var(--bg2);color:var(--text);border-color:var(--border2);">
             <i class="ti ti-user-plus" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Add investor
@@ -1129,7 +1101,6 @@ const TR = {
     atab_import: "Import IB file",
     atab_position: "Update position",
     atab_transaction: "Log transaction",
-    atab_deposit: "Log deposit",
     atab_performance: "Performance data",
     atab_export: "Export data",
     ibIntro: "Upload your Interactive Brokers Activity Statement CSV to automatically update positions, transactions, and fallback prices.",
@@ -1155,11 +1126,6 @@ const TR = {
     lbl_perf_json: "Performance JSON",
     savePerfBtn: "Save & refresh chart",
     perfSuccess: "✓ Chart updated",
-    lbl_dep_date: "Date", lbl_dep_amount: "Amount ($)", lbl_dep_source: "Source",
-    lbl_dep_nav: "NAV at deposit ($)", lbl_dep_fernando: "Fernando Montoya ($)", lbl_dep_dario: "Dario Montoya ($)",
-    dep_split_hint: "Each deposit is tagged to the individual investor.",
-    saveDepBtn: "Log deposit", depLogSuccess: "✓ Deposit logged",
-    alert_dep_required: "Date, amount, and NAV are required.",
     // Overview
     lbl_overview: "Fund ONE overview",
     priceLoading: "Fetching live prices…",
@@ -1417,7 +1383,6 @@ const TR = {
     atab_import: "Importar archivo IB",
     atab_position: "Actualizar posición",
     atab_transaction: "Registrar transacción",
-    atab_deposit: "Registrar depósito",
     atab_performance: "Datos de rendimiento",
     atab_export: "Exportar datos",
     ibIntro: "Suba su CSV de Estado de Actividad de Interactive Brokers para actualizar automáticamente posiciones, transacciones y precios.",
@@ -1443,11 +1408,6 @@ const TR = {
     lbl_perf_json: "JSON de rendimiento",
     savePerfBtn: "Guardar y actualizar gráfico",
     perfSuccess: "✓ Gráfico actualizado",
-    lbl_dep_date: "Fecha", lbl_dep_amount: "Monto ($)", lbl_dep_source: "Fuente",
-    lbl_dep_nav: "NAV al depositar ($)", lbl_dep_fernando: "Fernando Montoya ($)", lbl_dep_dario: "Dario Montoya ($)",
-    dep_split_hint: "Cada depósito se asigna al inversor individual.",
-    saveDepBtn: "Registrar depósito", depLogSuccess: "✓ Depósito registrado",
-    alert_dep_required: "La fecha, el monto y el NAV son obligatorios.",
     lbl_overview: "Resumen Fund ONE",
     priceLoading: "Obteniendo precios en vivo…",
     priceFailed: "Precios en vivo no disponibles — mostrando último valor registrado",
@@ -1706,7 +1666,6 @@ function setLang(lang) {
     "atab-import": "atab_import",
     "atab-position": "atab_position",
     "atab-transaction": "atab_transaction",
-    "atab-deposit": "atab_deposit",
     "atab-performance": "atab_performance",
     "export-btn-label": "atab_export",
     "ib-intro-text": "ibIntro",
@@ -1732,15 +1691,6 @@ function setLang(lang) {
     "lbl-perf-json": "lbl_perf_json",
     "save-perf-btn": "savePerfBtn",
     "perf-success": "perfSuccess",
-    "lbl-dep-date": "lbl_dep_date",
-    "lbl-dep-amount": "lbl_dep_amount",
-    "lbl-dep-source": "lbl_dep_source",
-    "lbl-dep-nav": "lbl_dep_nav",
-    "lbl-dep-fernando": "lbl_dep_fernando",
-    "lbl-dep-dario": "lbl_dep_dario",
-    "dep-split-hint": "dep_split_hint",
-    "save-dep-btn": "saveDepBtn",
-    "dep-log-success": "depLogSuccess",
     "lbl-overview": "lbl_overview",
     "nav-unit-label": "nav_unit_label",
     "chart-title": "chartTitle",
@@ -2022,7 +1972,7 @@ function _launchApp(email, entry) {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
   document.getElementById("investor-badge").textContent = entry.name;
-  if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; const _tt = document.getElementById("statements-tab-taxes"); if (_tt) _tt.style.display = ""; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } renderDepositForm(); loadPendingDeposits(); checkAllocateUrlParam(); }
+  if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; const _tt = document.getElementById("statements-tab-taxes"); if (_tt) _tt.style.display = ""; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } renderInvestors(); populateStatementsInvestorSelector(); loadPendingDeposits(); checkAllocateUrlParam(); }
   fetchPrices();
   fetchFXRate();
   const _s = fn => { try { fn(); } catch(e) { console.error(fn.name, e); } };
@@ -2074,7 +2024,7 @@ async function openClaimScreen(token) {
   document.getElementById("claim-invalid").style.display = "none";
   document.getElementById("claim-form").style.display = "none";
   try {
-    const r = await fetch("/api/claim-account", {
+    const r = await fetch("/api/investor-claim", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "verify", token }),
@@ -2121,7 +2071,7 @@ async function completeClaim() {
   }
 
   try {
-    const r = await fetch("/api/claim-account", {
+    const r = await fetch("/api/investor-claim", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "complete", token: _claimToken, password, firstName, lastName }),
@@ -2751,14 +2701,6 @@ function savePerf() {
     const el=document.getElementById("perf-success");el.style.display="inline";setTimeout(()=>el.style.display="none",2500);
   } catch { alert(t("alert_perf_invalid")); }
 }
-function switchAdminTab(panel,btn) {
-  ["deposit","investors"].forEach(p=>document.getElementById("admin-"+p).style.display="none");
-  document.getElementById("admin-"+panel).style.display="flex";
-  document.querySelectorAll("#admin-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
-  if (panel === "investors") renderInvestors();
-}
-
 // ── INVESTOR DB ──
 function renderInvestors() {
   const list = document.getElementById("investor-list");
@@ -2819,7 +2761,7 @@ let _claimedInvestorIds = null;
 // e.g. lost the original email).
 async function refreshClaimedBadges() {
   try {
-    const r = await fetch("/api/investor-accounts", { headers: adminSecretHeader() });
+    const r = await fetch("/api/investor-claim", { headers: adminSecretHeader() });
     if (!r.ok) return;
     const d = await r.json();
     _claimedInvestorIds = new Set(d.claimed || []);
@@ -2839,10 +2781,10 @@ async function inviteInvestor(i) {
   status.style.color = "var(--text3)";
   status.textContent = "Sending…";
   try {
-    const r = await fetch("/api/send-claim-email", {
+    const r = await fetch("/api/investor-claim", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...adminSecretHeader() },
-      body: JSON.stringify({ investorId: inv.id }),
+      body: JSON.stringify({ action: "invite", investorId: inv.id }),
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || "Failed to send");
@@ -2874,7 +2816,7 @@ function adminSecretHeader() {
 
 async function persistInvestors() {
   save("mff_investors", investors);
-  const res = await fetch("/api/sync-investors", {
+  const res = await fetch("/api/sync?target=investors", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...adminSecretHeader() },
     body: JSON.stringify({ investors }),
@@ -2994,7 +2936,7 @@ async function triggerAutoSync() {
   if (!_sessionToken) return; // not logged in yet
   _setCloudStatus("ti-cloud-upload", "Saving…", "var(--text2)");
   try {
-    const res = await fetch("/api/sync-data", {
+    const res = await fetch("/api/sync?target=fund", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...adminSecretHeader() },
       body: JSON.stringify(buildSyncPayload()),
@@ -3075,7 +3017,7 @@ async function loadFromCloud() {
         save("mff_investors", investors);
         // Records may carry a language preference we didn't have at login.
         try { _applyPreferredLang(currentUser?.loginEmail); } catch {}
-        renderDepositForm();
+        populateStatementsInvestorSelector();
         renderOwnership();
         renderDeposits();
         if (document.getElementById("admin-investors") && document.getElementById("admin-investors").style.display !== "none") renderInvestors();
@@ -3098,7 +3040,7 @@ async function syncToCloud() {
   label.textContent = "Syncing…";
 
   try {
-    const res = await fetch("/api/sync-data", {
+    const res = await fetch("/api/sync?target=fund", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...adminSecretHeader() },
       body: JSON.stringify(buildSyncPayload()),
@@ -3721,89 +3663,13 @@ function renderDeposits() {
   document.getElementById("dep-body").innerHTML = rows + totalRow;
 }
 
-function renderDepositForm() {
-  // Populate source dropdown
-  const src = document.getElementById("a-dep-source");
-  if (src) {
-    src.innerHTML = investors.map(inv =>
-      `<option value="${inv.firstName} ${inv.lastName}">${inv.firstName} ${inv.lastName}</option>`
-    ).join("");
-  }
-
-  // Populate per-investor split fields
-  const container = document.getElementById("dep-investor-fields");
-  if (container) {
-    container.innerHTML = investors.map(inv =>
-      `<div class="form-group"><label>${inv.firstName} ${inv.lastName} ($)</label><input type="number" step="0.01" id="a-dep-inv-${inv.id}" placeholder="auto-split" /></div>`
-    ).join("");
-  }
-
-  // Populate statements investor selector
+function populateStatementsInvestorSelector() {
   const stmtSel = document.getElementById("stmt-investor");
   if (stmtSel) {
     stmtSel.innerHTML = investors.map(inv =>
       `<option value="${inv.id}">${inv.firstName} ${inv.lastName}</option>`
     ).join("");
   }
-
-  // Pre-fill date with today
-  const dateEl = document.getElementById("a-dep-date");
-  if (dateEl && !dateEl.value) {
-    dateEl.value = new Date().toISOString().slice(0, 10);
-  }
-
-  // Pre-fill NAV from latest nav-history entry
-  _prefillDepositNav();
-}
-
-function _prefillDepositNav() {
-  const navEl   = document.getElementById("a-dep-nav");
-  const navLbl  = document.getElementById("lbl-dep-nav");
-  if (!navEl) return;
-  const series  = navHist?.series;
-  if (!series?.length) return;
-
-  // Use the most recent entry in nav-history
-  const latest  = series[series.length - 1];
-  if (!navEl.value) navEl.value = latest.nav.toFixed(6);
-
-  // Update label to show the source date so the admin knows which day's NAV is pre-filled
-  const dt = new Date(latest.date + "T12:00:00");
-  const dtLabel = dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  if (navLbl) navLbl.textContent = `NAV at deposit ($) — ${dtLabel}: ${latest.nav.toFixed(6)}`;
-}
-
-function autoSplitDeposit() {
-  const source = document.getElementById("a-dep-source").value;
-  const amount = parseFloat(document.getElementById("a-dep-amount").value) || 0;
-  investors.forEach(inv => {
-    const el   = document.getElementById(`a-dep-inv-${inv.id}`);
-    if (!el) return;
-    const name = `${inv.firstName} ${inv.lastName}`;
-    el.value   = source === name ? (amount || "") : "";
-  });
-}
-
-function saveDeposit() {
-  const date   = document.getElementById("a-dep-date").value;
-  const amount = parseFloat(document.getElementById("a-dep-amount").value);
-  const source = document.getElementById("a-dep-source").value;
-  const nav    = parseFloat(document.getElementById("a-dep-nav").value);
-  if (!date || isNaN(amount) || isNaN(nav)) return alert(t("alert_dep_required"));
-  const rec = { date, amount, source, nav };
-  investors.forEach(inv => {
-    const key  = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
-    const el   = document.getElementById(`a-dep-inv-${inv.id}`);
-    rec[key]   = el ? (parseFloat(el.value) || 0) : 0;
-  });
-  deposits.push(rec);
-  deposits.sort((a,b) => a.date.localeCompare(b.date));
-  save("mff_deposits", deposits);
-  triggerAutoSync();
-  renderDeposits(); renderMetrics(); renderIncome(); renderOwnership();
-  ["a-dep-date","a-dep-amount","a-dep-nav"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
-  investors.forEach(inv => { const el = document.getElementById(`a-dep-inv-${inv.id}`); if (el) el.value = ""; });
-  const el = document.getElementById("dep-log-success"); el.style.display="inline"; setTimeout(()=>el.style.display="none",2500);
 }
 
 // ── PAGE NAVIGATION ──
@@ -4146,7 +4012,6 @@ function _applyNavHistory(_navHistArg) {
   renderChart();
   renderOverviewChart();
   renderMetrics();
-  if (currentUser?.admin) _prefillDepositNav();
 
   // Fetch S&P 500 in background and refresh chart when ready
   fetchSPXSeries(dates).then(spy => {

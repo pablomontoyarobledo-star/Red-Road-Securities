@@ -216,7 +216,7 @@ export default async function handler(req, res) {
     return res.status(409).json({ error: "This deposit was already allocated (concurrent request) — no changes made." });
   }
 
-  // Brand-new investor, first deposit just landed — send them a claim-account
+  // Brand-new investor, first deposit just landed — send them an investor-claim
   // link so they can set their own password. Best-effort: an email failure
   // must never roll back or block the deposit allocation that already
   // succeeded above (falls back to the admin "Invite" button in the
