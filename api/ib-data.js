@@ -256,6 +256,51 @@ function parseStatement(stmtXml) {
 }
 
 // ---------------------------------------------------------------------------
+// Trade transactions — merge buy/sell executions into fund-data.transactions,
+// the field the dashboard's Transactions tab actually renders. Without this,
+// a trade landed in trades-history.json (via appendTrades above) but stayed
+// invisible in the UI — only a manual XML import ever wrote trades into
+// fund-data.transactions. Dedup mirrors import-ib-xml.js's approach: IB's
+// tradeID when present, else a composite key, since same-day same-ticker
+// buys are common (e.g. several BND fills in one session) and a date+type
+// +ticker key — fine for dividends — would collapse them into one.
+// ---------------------------------------------------------------------------
+async function appendTradeTx({ trades }) {
+  if (!trades.length) return;
+
+  let fd;
+  try {
+    fd = await readDoc("fund-data.json");
+    if (!fd) return;
+  } catch { return; }
+
+  if (!fd.transactions) fd.transactions = [];
+
+  const tradeKey = t => `${t.date}_${t.ticker}_${t.shares}_${t.price}_${t.type}`;
+  const existingIds        = new Set(fd.transactions.filter(t => t.tradeId).map(t => t.tradeId));
+  const existingComposites = new Set(fd.transactions.filter(t => !t.tradeId).map(tradeKey));
+
+  let added = 0;
+  for (const t of trades) {
+    if (t.tradeId) {
+      if (existingIds.has(t.tradeId)) continue;
+      existingIds.add(t.tradeId);
+    } else {
+      const key = tradeKey(t);
+      if (existingComposites.has(key)) continue;
+      existingComposites.add(key);
+    }
+    fd.transactions.push(t);
+    added++;
+  }
+
+  if (added === 0) return;
+
+  fd.transactions.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  await writeDoc("fund-data.json", fd);
+}
+
+// ---------------------------------------------------------------------------
 // Income transactions — merge dividends/interest/fees into fund-data.transactions
 // Deduplication key: date + type + ticker (or date + type for non-ticker)
 // ---------------------------------------------------------------------------
@@ -547,7 +592,14 @@ export default async function handler(req, res) {
   // Append new trades to trades-history.json
   try {
     await appendTrades({ trades: parsed.trades });
-  } catch {}
+  } catch (err) { console.error("[ib-data] appendTrades failed:", err.message); }
+
+  // Merge trades into fund-data.transactions so they actually show up in
+  // the dashboard's Transactions tab (trades-history.json above is a
+  // separate archive nothing in the UI reads).
+  try {
+    await appendTradeTx({ trades: parsed.trades });
+  } catch (err) { console.error("[ib-data] appendTradeTx failed:", err.message); }
 
   // Keep fund-data.json's positions/cashBalance current — the dashboard's
   // total-value calculation reads these directly, and previously only a
