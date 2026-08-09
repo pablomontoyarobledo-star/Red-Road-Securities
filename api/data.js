@@ -11,7 +11,7 @@
 
 import { getUserCredentialOverride, setUserCredential, readDoc, recordLoginFailure, resetLoginFailures, getLoginFailureState } from "../lib/store.js";
 import { USERS, issueToken, verifyToken, verifyPassword, newScryptCredential, lookupUser } from "../lib/auth.js";
-import { computeTotalUnitsAtDate, investorKeysFor, depositBelongsTo } from "../lib/nav.js";
+import { computeTotalUnitsAtDate, investorKeysFor, depositBelongsTo, depositCash } from "../lib/nav.js";
 
 // After this many consecutive failures for an email, lock out further
 // attempts (regardless of whether the password submitted is correct) for
@@ -49,6 +49,19 @@ function scopeFundDataToInvestor(fundData, keys) {
     deposits: (fundData.deposits || []).filter(d => depositBelongsTo(d, keys)),
     totalUnitsOutstanding,
   };
+}
+
+// Fund-wide total cash deposited across every investor, regardless of record
+// shape. The metrics grid on the dashboard is a fund-wide summary — portfolio
+// value and TWR are whole-fund figures — so "Total deposited" (and the
+// gain/loss derived from it) must be the whole fund's deposits too. A non-admin
+// investor's `deposits` array is scoped to only their own records, so the
+// client can't sum this itself without under-counting and massively
+// overstating the gain; attach the aggregate precomputed (a single number, not
+// other investors' individual records — safe to expose, same rationale as
+// totalUnitsOutstanding).
+function fundTotalDeposited(fundData) {
+  return (fundData.deposits || []).reduce((s, d) => s + depositCash(d), 0);
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -127,12 +140,16 @@ export default async function handler(req, res) {
       // contribution amount — scope it to the caller's own records unless
       // they're an admin (or a scripted sync-secret/cron caller, which is
       // fund-operations tooling, not a specific investor).
-      if (file === "fund-data.json" && !session.admin) {
-        const investorsDoc = await readDoc("investors.json").catch(() => null);
-        const inv = (investorsDoc?.investors || [])
-          .find(i => (i.email || "").toLowerCase() === session.email.toLowerCase());
-        const scoped = inv ? scopeFundDataToInvestor(data, investorKeysFor(inv)) : { ...data, deposits: [] };
-        return res.status(200).json(scoped);
+      if (file === "fund-data.json") {
+        const totalDepositedAll = fundTotalDeposited(data);
+        if (!session.admin) {
+          const investorsDoc = await readDoc("investors.json").catch(() => null);
+          const inv = (investorsDoc?.investors || [])
+            .find(i => (i.email || "").toLowerCase() === session.email.toLowerCase());
+          const scoped = inv ? scopeFundDataToInvestor(data, investorKeysFor(inv)) : { ...data, deposits: [] };
+          return res.status(200).json({ ...scoped, totalDepositedAll });
+        }
+        return res.status(200).json({ ...data, totalDepositedAll });
       }
 
       return res.status(200).json(data);

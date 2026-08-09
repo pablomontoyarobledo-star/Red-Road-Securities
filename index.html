@@ -1938,6 +1938,11 @@ let currentUser  = null;
 // scoped down to just this investor's own records (non-admin sessions), so
 // ownership % still divides by the real fund total instead of just their own.
 let fundTotalUnitsOverride = load("mff_total_units_override", null);
+// Server-computed fund-wide total cash deposited — used by the fund-wide
+// metrics grid, because a non-admin session's `deposits` array is scoped to
+// only that investor's own records (summing it locally would under-count
+// deposits and overstate the fund's gain by every other investor's total).
+let fundTotalDepositedOverride = load("mff_total_deposited_override", null);
 let perfChart    = null;
 let overviewChart = null;
 let _priceStatusState = null;
@@ -2365,7 +2370,13 @@ function renderMetrics() {
     // neutral and their cash still counts toward the fund value.
     const { pendingCash, pendingUnits, fairNav } = getPendingInfo(allocatedUnits, totalValue);
     const totalUnits = allocatedUnits + pendingUnits;
-    const totalDeposited = deposits.reduce((s,d) => s + d.amount, 0) + pendingCash;
+    // Fund-wide deposits: prefer the server's authoritative aggregate. Falls
+    // back to summing the local ledger only if the field is absent (older
+    // cached response), which is correct for admin sessions (full ledger) but
+    // would undercount a non-admin's scoped ledger — hence the override.
+    const totalDeposited = (fundTotalDepositedOverride != null
+      ? fundTotalDepositedOverride
+      : deposits.reduce((s,d) => s + (d.amount || 0), 0)) + pendingCash;
     const gl    = totalValue - totalDeposited;
     const glPct = totalDeposited > 0 ? (gl / totalDeposited) * 100 : 0;
     const navPerUnit = fairNav;
@@ -2985,6 +2996,10 @@ async function loadFromCloud() {
       if (data.totalUnitsOutstanding != null) {
         fundTotalUnitsOverride = data.totalUnitsOutstanding;
         save("mff_total_units_override", fundTotalUnitsOverride);
+      }
+      if (data.totalDepositedAll != null) {
+        fundTotalDepositedOverride = data.totalDepositedAll;
+        save("mff_total_deposited_override", fundTotalDepositedOverride);
       }
       if (data.cashBalance != null) { cashBalance = data.cashBalance; save("mff_cash", cashBalance); }
       // Seed snapshot from IB close prices so metrics show immediately on next login
