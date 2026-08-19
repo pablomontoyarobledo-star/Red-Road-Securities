@@ -1,6 +1,8 @@
 import { XMLParser } from "fast-xml-parser";
-import { readDoc, writeDoc, writeSnapshot, appendPendingDeposits, markPendingDepositsNotified } from "../lib/store.js";
+import { sql, readDoc, writeDoc, writeSnapshot, appendPendingDeposits, markPendingDepositsNotified } from "../lib/store.js";
 import { appendNavPoint } from "../lib/navPoint.js";
+import { postIBSyncToLedger } from "../lib/ledger.js";
+import { checkAndPostMonthlyFees } from "../lib/unitTransfer.js";
 
 // IB Flex fields are inconsistent — reportDate/dateTime sometimes arrive as
 // "2026-07-06" (dashed) and sometimes as raw "20260706" or "20260706;095512"
@@ -223,6 +225,11 @@ function parseStatement(stmtXml) {
         netAmount: amount,
         price:     rateMatch ? parseFloat(rateMatch[1]) : 0,
         notes:     "Cash dividend",
+        // IB's own per-row id — carried through so the general ledger has a
+        // real natural key to dedup on (the "date|type|ticker" key used by
+        // appendIncomeTx below is too weak to trust for GL idempotency:
+        // two same-day dividends on the same ticker would collide).
+        txId:      String(t.transactionID || t.transactionId || ""),
       };
     });
 
@@ -235,6 +242,7 @@ function parseStatement(stmtXml) {
       type:      "interest",
       netAmount: parseFloat(t.amount),
       notes:     String(t.description || t.type || ""),
+      txId:      String(t.transactionID || t.transactionId || ""),
     }));
 
   // Broker fees (negative amounts, type "Other Fees" etc.)
@@ -250,6 +258,7 @@ function parseStatement(stmtXml) {
       type:      "fee",
       netAmount: parseFloat(t.amount),
       notes:     String(t.description || t.type || ""),
+      txId:      String(t.transactionID || t.transactionId || ""),
     }));
 
   return { positions, totalValue, cashBalance, trades, deposits, dividends, interest, fees };
@@ -624,6 +633,27 @@ export default async function handler(req, res) {
       fees:      parsed.fees      || [],
     });
   } catch {}
+
+  // Post trades/dividends/interest/fees into the general ledger. Idempotent
+  // against repeated pulls (DB unique index on source_type+source_id) — a
+  // failure here must never fail the cron pull itself, same philosophy as
+  // every other secondary step in this handler.
+  try {
+    await postIBSyncToLedger(sql, {
+      trades:    parsed.trades    || [],
+      dividends: parsed.dividends || [],
+      interest:  parsed.interest  || [],
+      fees:      parsed.fees      || [],
+      actor: "cron",
+    });
+  } catch (err) { console.error("[ib-data] postIBSyncToLedger failed:", err.message); }
+
+  // Post any management-fee/bonus unit transfers owed as of today (backlog
+  // catch-up + this month's fee are the same code path — see
+  // lib/unitTransfer.js). Also best-effort; retried on the next pull.
+  try {
+    await checkAndPostMonthlyFees(sql, { actor: "cron" });
+  } catch (err) { console.error("[ib-data] checkAndPostMonthlyFees failed:", err.message); }
 
   return res.status(200).json(result);
 }

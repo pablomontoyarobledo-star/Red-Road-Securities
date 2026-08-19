@@ -1,7 +1,8 @@
 ﻿import { XMLParser } from "fast-xml-parser";
-import { readDoc, writeDoc, writeSnapshot, backupAndWrite, appendPendingDeposits, writeAuditLog } from "../lib/store.js";
+import { sql, readDoc, writeDoc, writeSnapshot, backupAndWrite, appendPendingDeposits, writeAuditLog } from "../lib/store.js";
 import { isAdminRequest, identifyActor } from "../lib/auth.js";
 import { appendNavPoint } from "../lib/navPoint.js";
+import { postIBSyncToLedger } from "../lib/ledger.js";
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" });
 
 function parseStatement(stmtXml) {
@@ -232,6 +233,16 @@ export default async function handler(req, res) {
       pendingDepositsAdded = newDeps.length;
     }
   }
+
+  // Post trades into the general ledger — idempotent (DB unique index on
+  // source_type+source_id), same helper the automated IB cron uses, so a
+  // manual import and the daily pull can never double-post the same trade.
+  // This XML format carries no CashTransactions detail beyond deposits, so
+  // dividends/interest/fees aren't posted from here (they arrive via the
+  // daily cron instead).
+  try {
+    await postIBSyncToLedger(sql, { trades: parsed.trades, actor: await identifyActor(req) });
+  } catch (err) { console.error("[import-ib-xml] postIBSyncToLedger failed:", err.message); }
 
   await writeAuditLog({
     actor: await identifyActor(req), action: "ib-xml.import",

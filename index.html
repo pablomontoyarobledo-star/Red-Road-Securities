@@ -998,6 +998,61 @@
         </div>
       </div>
 
+      <!-- ── Section: Expenses ── -->
+      <div>
+        <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Expenses</p>
+        <div id="admin-expenses" class="admin-form">
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border2);color:var(--text3);text-align:left;">
+                  <th style="padding:6px 10px;">Date</th>
+                  <th style="padding:6px 10px;">Category</th>
+                  <th style="padding:6px 10px;text-align:right;">Amount</th>
+                  <th style="padding:6px 10px;">Description</th>
+                  <th style="padding:6px 10px;">Status</th>
+                </tr>
+              </thead>
+              <tbody id="expense-list-body">
+                <tr><td colspan="5" style="padding:1.5rem;text-align:center;color:var(--text3);">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="expense-new-form" style="display:none;margin-top:1rem;border-top:0.5px solid var(--border);padding-top:0.75rem;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Date</label><input type="date" id="exp-new-date" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;" /></div>
+              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Category</label>
+                <select id="exp-new-category" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;">
+                  <option value="custodial">Custodial</option>
+                  <option value="audit">Audit</option>
+                  <option value="legal">Legal</option>
+                  <option value="admin">Admin</option>
+                  <option value="reg">Regulatory</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Amount (USD)</label><input type="number" step="0.01" min="0.01" id="exp-new-amount" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;" /></div>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Description</label><input id="exp-new-description" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;" /></div>
+              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Status</label>
+                <select id="exp-new-status" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;">
+                  <option value="paid">Paid</option>
+                  <option value="accrued">Accrued</option>
+                </select>
+              </div>
+            </div>
+            <button id="exp-save-btn" onclick="saveNewExpense()" class="save-btn" style="font-size:12px;padding:6px 14px;">Save expense</button>
+            <button onclick="toggleExpenseForm(false)" style="font-size:12px;padding:6px 14px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;margin-left:8px;">Cancel</button>
+            <span id="exp-saved" style="font-size:12px;color:var(--green-text);margin-left:8px;display:none;">✓ Saved</span>
+            <span id="exp-err" style="font-size:12px;color:var(--red-text);margin-left:8px;display:none;"></span>
+          </div>
+          <button class="save-btn" onclick="toggleExpenseForm(true)" id="exp-add-btn" style="margin-top:1rem;background:var(--bg2);color:var(--text);border-color:var(--border2);">
+            <i class="ti ti-receipt" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Add expense
+          </button>
+        </div>
+      </div>
+
       <!-- ── Section 4: Pending Deposits ── -->
       <div id="pending-deposits-section" style="display:none;margin-bottom:2rem;">
         <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">
@@ -1258,6 +1313,7 @@ const TR = {
     pdf_col_date: "Date", pdf_col_amount_invested: "Amount Invested",
     pdf_col_nav_at_purchase: "NAV at Purchase", pdf_col_units_purchased: "Units Purchased",
     pdf_no_capital_activity: "No capital activity in this period.",
+    pdf_management_fee: "Management fee", pdf_bonus: "Bonus",
     pdf_nav_history_full: "NAV HISTORY — FUND PERFORMANCE SINCE INCEPTION",
     pdf_col_month: "Month", pdf_col_nav_start: "NAV — Start",
     pdf_col_nav_end: "NAV — End", pdf_col_monthly_return: "Monthly Return",
@@ -1317,12 +1373,13 @@ const TR = {
     pdf_mtd_return: "MTD RETURN", pdf_ytd_return: "YTD RETURN",
     pdf_investment_income: "INVESTMENT INCOME",
     pdf_dividend_income: "Dividend income:",
+    pdf_mgmt_fee_income: "Management fee income",
     pdf_interest_income: "Interest income",
     pdf_withholding_taxes: "Less: foreign withholding taxes",
     pdf_total_investment_income: "Total investment income",
     pdf_no_dividends: "No dividends received in this period",
     pdf_operating_expenses: "OPERATING EXPENSES",
-    pdf_mgmt_fees_rate: "Management fees  (0.00% per annum)",
+    pdf_mgmt_fees_rate: "Management fees",
     pdf_perf_fees: "Performance fees  (carried interest)",
     pdf_admin_fees: "Administrative fees",
     pdf_custodial_fees: "Custodial fees",
@@ -1528,6 +1585,7 @@ const TR = {
     pdf_col_date: "Fecha", pdf_col_amount_invested: "Monto Invertido",
     pdf_col_nav_at_purchase: "NAV al Comprar", pdf_col_units_purchased: "Unidades Compradas",
     pdf_no_capital_activity: "Sin actividad de capital en este período.",
+    pdf_management_fee: "Comisión de gestión", pdf_bonus: "Bono",
     pdf_nav_history_full: "HISTORIAL DE NAV — RENDIMIENTO DEL FONDO DESDE EL INICIO",
     pdf_col_month: "Mes", pdf_col_nav_start: "NAV — Inicio",
     pdf_col_nav_end: "NAV — Fin", pdf_col_monthly_return: "Retorno Mensual",
@@ -1587,12 +1645,13 @@ const TR = {
     pdf_mtd_return: "RETORNO MTD", pdf_ytd_return: "RETORNO YTD",
     pdf_investment_income: "INGRESOS DE INVERSIÓN",
     pdf_dividend_income: "Ingresos por dividendos:",
+    pdf_mgmt_fee_income: "Ingresos por comisión de gestión",
     pdf_interest_income: "Ingresos por intereses",
     pdf_withholding_taxes: "Menos: retenciones fiscales extranjeras",
     pdf_total_investment_income: "Total ingresos de inversión",
     pdf_no_dividends: "Sin dividendos recibidos en este período",
     pdf_operating_expenses: "GASTOS OPERATIVOS",
-    pdf_mgmt_fees_rate: "Honorarios de gestión  (0,00% anual)",
+    pdf_mgmt_fees_rate: "Honorarios de gestión",
     pdf_perf_fees: "Honorarios de desempeño  (interés preferente)",
     pdf_admin_fees: "Honorarios administrativos",
     pdf_custodial_fees: "Honorarios de custodia",
@@ -1894,12 +1953,33 @@ function calcUnits() {
       }
     }
   }
+  // Management-fee/bonus unit transfers — reallocates ownership between two
+  // investors (e.g. Fernando -> Pablo) without changing the fund's total
+  // units outstanding, since every transfer's two legs use the same
+  // amount/nav. Matched the same way deposits are: by full id or by id with
+  // the "inv_" prefix stripped.
+  for (const t of unitTransfers) {
+    for (const inv of investors) {
+      const key = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+      if (t.to   === inv.id || t.to   === key) units[inv.id] = (units[inv.id] || 0) + (t.units || 0);
+      if (t.from === inv.id || t.from === key) units[inv.id] = (units[inv.id] || 0) - (t.units || 0);
+    }
+  }
   for (const inv of investors) totalUnits += units[inv.id] || 0;
   if (fundTotalUnitsOverride != null) totalUnits = fundTotalUnitsOverride;
   units.totalUnits    = totalUnits;
   units.fernandoUnits = units["inv_fernando"] || 0;
   units.darioUnits    = units["inv_dario"]    || 0;
   return units;
+}
+
+// Whether a unit-transfer's `from`/`to` (an investor key — full id or the
+// "inv_"-stripped short form) refers to a given investor. Same matching
+// convention calcUnits() above uses for deposits; shared here so the PDF
+// generators don't each reimplement it.
+function transferKeyMatches(inv, key) {
+  const short = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+  return key === inv.id || key === short;
 }
 
 function load(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } }
@@ -1943,6 +2023,11 @@ let fundTotalUnitsOverride = load("mff_total_units_override", null);
 // only that investor's own records (summing it locally would under-count
 // deposits and overstate the fund's gain by every other investor's total).
 let fundTotalDepositedOverride = load("mff_total_deposited_override", null);
+// Management-fee/bonus unit transfers and manual expenses — the general
+// ledger's investor-facing projections (see api/data.js's expenses.json /
+// unit-transfers.json special cases). Loaded via dataFetch in loadFromCloud().
+let unitTransfers = load("mff_unit_transfers", []);
+let expenses      = load("mff_expenses", []);
 let perfChart    = null;
 let overviewChart = null;
 let _priceStatusState = null;
@@ -1977,7 +2062,7 @@ function _launchApp(email, entry) {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
   document.getElementById("investor-badge").textContent = entry.name;
-  if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; const _tt = document.getElementById("statements-tab-taxes"); if (_tt) _tt.style.display = ""; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } renderInvestors(); populateStatementsInvestorSelector(); loadPendingDeposits(); checkAllocateUrlParam(); }
+  if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; const _tt = document.getElementById("statements-tab-taxes"); if (_tt) _tt.style.display = ""; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } renderInvestors(); renderExpenses(); populateStatementsInvestorSelector(); loadPendingDeposits(); checkAllocateUrlParam(); }
   fetchPrices();
   fetchFXRate();
   const _s = fn => { try { fn(); } catch(e) { console.error(fn.name, e); } };
@@ -2880,6 +2965,79 @@ async function deleteInvestor(i) {
   renderInvestors();
 }
 
+const EXPENSE_CATEGORY_LABELS = { custodial: "Custodial", audit: "Audit", legal: "Legal", admin: "Admin", reg: "Regulatory", other: "Other" };
+
+function renderExpenses() {
+  const body = document.getElementById("expense-list-body");
+  if (!body) return;
+  if (!expenses.length) {
+    body.innerHTML = '<tr><td colspan="5" style="padding:1.5rem;text-align:center;color:var(--text3);">No expenses recorded yet.</td></tr>';
+    return;
+  }
+  body.innerHTML = expenses.slice().reverse().map(e => `
+    <tr style="border-bottom:0.5px solid var(--border2);">
+      <td style="padding:6px 10px;">${e.date}</td>
+      <td style="padding:6px 10px;">${EXPENSE_CATEGORY_LABELS[e.category] || e.category}</td>
+      <td style="padding:6px 10px;text-align:right;">$${Number(e.amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td style="padding:6px 10px;color:var(--text2);">${escapeHtml(e.description || "—")}</td>
+      <td style="padding:6px 10px;text-transform:capitalize;">${e.status}</td>
+    </tr>`).join("");
+}
+
+function toggleExpenseForm(open) {
+  const form = document.getElementById("expense-new-form");
+  const btn  = document.getElementById("exp-add-btn");
+  if (!form) return;
+  form.style.display = open ? "block" : "none";
+  if (btn) btn.style.display = open ? "none" : "inline-flex";
+  if (open) {
+    document.getElementById("exp-new-date").value        = new Date().toISOString().slice(0, 10);
+    document.getElementById("exp-new-amount").value      = "";
+    document.getElementById("exp-new-description").value = "";
+    document.getElementById("exp-err").style.display     = "none";
+  }
+}
+
+// Entries are append-only from this UI — there's no edit-in-place; a
+// mistaken entry gets corrected via a reversing entry, not by mutating a
+// submitted row (same append-only philosophy as the journal itself).
+async function saveNewExpense() {
+  const date        = document.getElementById("exp-new-date").value;
+  const category    = document.getElementById("exp-new-category").value;
+  const amount      = parseFloat(document.getElementById("exp-new-amount").value);
+  const description = document.getElementById("exp-new-description").value.trim();
+  const status      = document.getElementById("exp-new-status").value;
+  const btn   = document.getElementById("exp-save-btn");
+  const saved = document.getElementById("exp-saved");
+  const err   = document.getElementById("exp-err");
+  err.style.display = "none";
+  if (!date || !(amount > 0)) {
+    err.textContent = "Date and a positive amount are required.";
+    err.style.display = "inline";
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = "Saving…";
+  try {
+    const res = await fetch("/api/sync?target=ledger", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...adminSecretHeader() },
+      body: JSON.stringify({ action: "add-expense", date, category, amount, description, status }),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+    const r = await dataFetch("expenses.json");
+    if (r.ok) { const d = await r.json(); expenses = d.expenses || []; save("mff_expenses", expenses); }
+    renderExpenses();
+    toggleExpenseForm(false);
+    saved.style.display = "inline";
+    setTimeout(() => { saved.style.display = "none"; }, 2000);
+  } catch (e) {
+    err.textContent = "✗ Save failed: " + e.message;
+    err.style.display = "inline";
+  }
+  btn.disabled = false; btn.textContent = "Save expense";
+}
+
 async function syncFromIB() {
   const btn = document.getElementById("atab-ib");
   const label = document.getElementById("ib-btn-label");
@@ -2965,12 +3123,36 @@ async function triggerAutoSync() {
 
 async function loadFromCloud() {
   // Kick off all fetches simultaneously — don't let any one block the others
-  const [fundProm, invProm, navProm, snapProm] = [
+  const [fundProm, invProm, navProm, snapProm, xferProm, expProm] = [
     dataFetch("fund-data.json"),
     dataFetch("investors.json"),
     dataFetch("nav-history.json"),
     dataFetch("ib-cache.json"),
+    dataFetch("unit-transfers.json"),
+    dataFetch("expenses.json"),
   ];
+
+  // Management-fee/bonus unit transfers — affects ownership %, so re-render
+  // once they arrive.
+  xferProm.then(async r => {
+    if (!r.ok) return;
+    try {
+      const d = await r.json();
+      if (d.unitTransfers) { unitTransfers = d.unitTransfers; save("mff_unit_transfers", unitTransfers); }
+      renderOwnership(); renderMetrics();
+    } catch {}
+  }).catch(() => {});
+
+  // Manual expenses — feeds the Balance Sheet/Income Statement PDFs and the
+  // admin Expenses section.
+  expProm.then(async r => {
+    if (!r.ok) return;
+    try {
+      const d = await r.json();
+      if (d.expenses) { expenses = d.expenses; save("mff_expenses", expenses); }
+      if (document.getElementById("admin-expenses") && document.getElementById("admin-expenses").style.display !== "none") renderExpenses();
+    } catch {}
+  }).catch(() => {});
 
   // Latest raw IB snapshot — getTotalValue() live-adjusts from this base
   snapProm.then(async r => {
@@ -4681,6 +4863,23 @@ async function _generateStatementPDF(investorId, periodMonth) {
             d.nav ? (amt/d.nav).toFixed(4) : "—"];
   }).filter(Boolean);
 
+  // Management fee / bonus unit transfers this period — paid or received in
+  // kind, so there's no cash "amount invested"; the NAV/units columns still
+  // apply since it's a real unit reallocation, priced at that day's NAV.
+  const periodTransfers = (unitTransfers || []).filter(tr =>
+    tr.date?.startsWith(periodMonth) && (transferKeyMatches(inv, tr.from) || transferKeyMatches(inv, tr.to)));
+  for (const tr of periodTransfers) {
+    const isPayer = transferKeyMatches(inv, tr.from);
+    const sign    = isPayer ? "-" : "+";
+    const label   = tr.type === "bonus" ? t("pdf_bonus") : t("pdf_management_fee");
+    actRows.push([
+      `${tr.date} (${label})`,
+      `${sign}$${tr.amountUsd.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+      "$" + tr.navPerUnit.toFixed(4),
+      `${sign}${tr.units.toFixed(4)}`,
+    ]);
+  }
+
   if (!actRows.length) {
     doc.setTextColor(...C.tMed); doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
     doc.text(t("pdf_no_capital_activity"), ML, y+5); y += 14;
@@ -4802,6 +5001,22 @@ async function _generateBalanceSheetPDF(periodMonth) {
     return s + (t.price||0) * (p2?.shares||0);
   }, 0);
   const cumulativeRealized = totalNetAssets - totalPaidIn - unrealizedApp - allTimeDivs;
+
+  // Accrued (unpaid) manual expenses as of this period end — the only
+  // non-zero liability lines this statement has real data for. Mgmt/perf
+  // fees payable, payables for investments purchased, redemptions payable,
+  // and "due to broker" stay at their placeholder $0: the management fee
+  // settles same-day via unit transfer (never accrues), and there's no
+  // performance fee, purchase/redemption payable, or broker payable
+  // tracked in this system.
+  const accruedByCategory = cat => (expenses || [])
+    .filter(e => e.status === "accrued" && e.category === cat && e.date <= asOfDate)
+    .reduce((s, e) => s + Number(e.amount || 0), 0);
+  const accruedAdmin     = accruedByCategory("admin");
+  const accruedAudit     = accruedByCategory("audit");
+  const accruedCustodial = accruedByCategory("custodial");
+  const accruedOther     = accruedByCategory("legal") + accruedByCategory("reg") + accruedByCategory("other");
+  const totalLiabilities = accruedAdmin + accruedAudit + accruedCustodial + accruedOther;
 
   // PDF setup
   const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
@@ -4930,12 +5145,12 @@ async function _generateBalanceSheetPDF(periodMonth) {
   drawLine(t("pdf_perf_fees_payable"), 0, { dash:true });
   drawLine(t("pdf_payable_inv_purchased"), 0, { dash:true });
   drawLine(t("pdf_redemptions_payable"), 0, { dash:true });
-  drawLine(t("pdf_accrued_admin"), 0, { dash:true });
-  drawLine(t("pdf_accrued_audit"), 0, { dash:true });
-  drawLine(t("pdf_accrued_custodial"), 0, { dash:true });
+  drawLine(t("pdf_accrued_admin"), accruedAdmin, { dash: accruedAdmin === 0 });
+  drawLine(t("pdf_accrued_audit"), accruedAudit, { dash: accruedAudit === 0 });
+  drawLine(t("pdf_accrued_custodial"), accruedCustodial, { dash: accruedCustodial === 0 });
   drawLine(t("pdf_due_to_broker"), 0, { dash:true });
-  drawLine(t("pdf_other_liabilities"), 0, { dash:true });
-  drawTotal(t("pdf_total_liabilities"), 0, { dash:true });
+  drawLine(t("pdf_other_liabilities"), accruedOther, { dash: accruedOther === 0 });
+  drawTotal(t("pdf_total_liabilities"), totalLiabilities, { dash: totalLiabilities === 0 });
   drawBlank(5);
 
   // ── NET ASSETS ──
@@ -5100,6 +5315,30 @@ async function _generateIncomeStatementPDF(periodMonth) {
   });
   const totalDiv = Object.values(divByTicker).reduce((s, v) => s + v, 0);
 
+  // Management fee / bonus unit transfers this period. This is a pure
+  // ownership reallocation between capital accounts (Fernando/Dario -> Pablo)
+  // — no cash leaves the fund — so the income and expense sides are always
+  // equal and net to zero fund-wide, which is exactly the point: it doesn't
+  // change total fund NAV, only who owns what. Still shown as two line items
+  // for transparency.
+  const periodTransfers = (unitTransfers || []).filter(tr => tr.date?.startsWith(periodMonth));
+  const mgmtFeeAndBonus = periodTransfers.reduce((s, tr) => s + (tr.amountUsd || 0), 0);
+  const mgmtFeeExpense  = mgmtFeeAndBonus; // payer side (Fernando/Dario)
+  const mgmtFeeIncome   = mgmtFeeAndBonus; // payee side (Pablo) — same total
+
+  // Manual expenses this period, by category — accrual basis (counted when
+  // incurred, not when paid).
+  const periodExpenses   = (expenses || []).filter(e => e.date?.startsWith(periodMonth));
+  const expenseByCategory = cat => periodExpenses.filter(e => e.category === cat).reduce((s, e) => s + Number(e.amount || 0), 0);
+  const adminFees     = expenseByCategory("admin");
+  const custodialFees = expenseByCategory("custodial");
+  const auditFees     = expenseByCategory("audit");
+  const legalFees     = expenseByCategory("legal");
+  const regFees       = expenseByCategory("reg");
+  const otherFees     = expenseByCategory("other");
+  const totalExpenses = mgmtFeeExpense + adminFees + custodialFees + auditFees + legalFees + regFees + otherFees;
+  const netInvestmentIncome = totalDiv + mgmtFeeIncome - totalExpenses;
+
   // Realized gains from sells in period
   const sellTx = (transactions||[]).filter(t => t.type==="sell" && t.date?.startsWith(periodMonth));
   const totalProceeds  = sellTx.reduce((s, t) => s + (t.netAmount || t.shares * t.price), 0);
@@ -5244,26 +5483,27 @@ async function _generateIncomeStatementPDF(periodMonth) {
       drawLine(`${ticker}  —  ${pos?.name || ticker}`, amt, { indent:1 });
     }
   }
+  drawLine(t("pdf_mgmt_fee_income"), mgmtFeeIncome, { dash: mgmtFeeIncome === 0 });
   drawLine(t("pdf_interest_income"), 0, { dash:true });
   drawLine(t("pdf_withholding_taxes"), 0, { dash:true });
-  drawSubtotal(t("pdf_total_investment_income"), totalDiv);
+  drawSubtotal(t("pdf_total_investment_income"), totalDiv + mgmtFeeIncome);
   drawBlank(4);
 
   // ── OPERATING EXPENSES ──
   drawSection(t("pdf_operating_expenses"));
-  drawLine(t("pdf_mgmt_fees_rate"), 0, { dash:true });
+  drawLine(t("pdf_mgmt_fees_rate"), mgmtFeeExpense, { dash: mgmtFeeExpense === 0 });
   drawLine(t("pdf_perf_fees"), 0, { dash:true });
-  drawLine(t("pdf_admin_fees"), 0, { dash:true });
-  drawLine(t("pdf_custodial_fees"), 0, { dash:true });
-  drawLine(t("pdf_audit_fees"), 0, { dash:true });
-  drawLine(t("pdf_legal_fees"), 0, { dash:true });
+  drawLine(t("pdf_admin_fees"), adminFees, { dash: adminFees === 0 });
+  drawLine(t("pdf_custodial_fees"), custodialFees, { dash: custodialFees === 0 });
+  drawLine(t("pdf_audit_fees"), auditFees, { dash: auditFees === 0 });
+  drawLine(t("pdf_legal_fees"), legalFees, { dash: legalFees === 0 });
   drawLine(t("pdf_transfer_agent"), 0, { dash:true });
-  drawLine(t("pdf_reg_fees"), 0, { dash:true });
-  drawLine(t("pdf_other_expenses"), 0, { dash:true });
-  drawSubtotal(t("pdf_total_expenses"), 0, { dash:true });
+  drawLine(t("pdf_reg_fees"), regFees, { dash: regFees === 0 });
+  drawLine(t("pdf_other_expenses"), otherFees, { dash: otherFees === 0 });
+  drawSubtotal(t("pdf_total_expenses"), totalExpenses, { dash: totalExpenses === 0 });
   drawBlank(2);
-  drawTotal(t("pdf_net_investment_income"), totalDiv,
-    { col: totalDiv >= 0 ? C.tDark : C.neg });
+  drawTotal(t("pdf_net_investment_income"), netInvestmentIncome,
+    { col: netInvestmentIncome >= 0 ? C.tDark : C.neg });
   drawBlank(4);
 
   // ── REALIZED AND UNREALIZED GAINS ──
@@ -5354,8 +5594,12 @@ async function _generateIncomeStatementPDF(periodMonth) {
   // ── SUPPLEMENTAL INFORMATION ──
   if (y > H - 60) { doc.addPage(); y = 22; }
   drawSection(t("pdf_supplemental"));
-  drawLine(t("pdf_expense_ratio"), undefined, { amtStr:"0.00%" });
-  drawLine(t("pdf_mgmt_fee_rate"), undefined, { amtStr:"0.00%" });
+  // Annualized (×12, this is a one-month period) ratio of period expenses to
+  // average assets during the period — the standard expense-ratio convention.
+  const expenseRatioPct = avgAssets > 0 ? (totalExpenses / avgAssets) * 100 * 12 : null;
+  const mgmtFeeRatePct  = avgAssets > 0 ? (mgmtFeeExpense / avgAssets) * 100 * 12 : null;
+  drawLine(t("pdf_expense_ratio"), undefined, { amtStr: expenseRatioPct != null ? expenseRatioPct.toFixed(2)+"%" : "—" });
+  drawLine(t("pdf_mgmt_fee_rate"), undefined, { amtStr: mgmtFeeRatePct != null ? mgmtFeeRatePct.toFixed(2)+"%" : "—" });
   drawLine(t("pdf_portfolio_turnover"), undefined, { amtStr: turnoverRate > 0 ? turnoverRate.toFixed(2)+"%" : "—" });
   drawLine(t("pdf_net_assets_beginning"), totalStart);
   drawLine(t("pdf_net_assets_end_period"), totalEnd);

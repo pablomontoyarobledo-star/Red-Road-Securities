@@ -1,15 +1,21 @@
 // Cloud sync for admin-owned documents — folds sync-data.js and
 // sync-investors.js into one file to stay under Vercel's per-deployment
-// Serverless Function cap. Route by ?target=fund|investors.
+// Serverless Function cap. Route by ?target=fund|investors|ledger.
 //
 //   POST ?target=fund       { ...fund-data fields }    → overwrite fund-data.json (auto-backs up first)
 //   GET  ?target=investors                             → current investors.json
 //   GET  ?target=investors&backups=1                   → list investor backups (Neon `snapshots` table)
 //   POST ?target=investors  { investors }               → overwrite investors.json (auto-backs up first)
 //   POST ?target=investors  { restoreBackupId }          → restore investors.json from a given backup
+//   GET  ?target=ledger&view=expenses                   → list manual expense entries
+//   GET  ?target=ledger&view=trial-balance[&asOf=]       → account balances as of a date
+//   GET  ?target=ledger&view=entries&accountCode=&from=&to=  → journal-line activity for one account
+//   POST ?target=ledger  {action:"add-expense", date, category, amount, description, status}
+//   POST ?target=ledger  {action:"reverse-entry", entryId, memo}
 
-import { readDoc, backupAndWrite, writeDoc, writeAuditLog, listSnapshots, readSnapshot } from "../lib/store.js";
+import { sql, readDoc, backupAndWrite, writeDoc, writeAuditLog, listSnapshots, readSnapshot } from "../lib/store.js";
 import { isAdminRequest, identifyActor } from "../lib/auth.js";
+import { postExpense, reverseJournalEntry, getTrialBalance, getAccountActivity, listExpenses } from "../lib/ledger.js";
 
 async function handleFund(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -97,6 +103,74 @@ async function handleInvestors(req, res) {
   return res.status(405).end();
 }
 
+const EXPENSE_CATEGORIES = new Set(["custodial", "audit", "legal", "admin", "reg", "other"]);
+
+async function handleLedger(req, res) {
+  if (!(await isAdminRequest(req))) return res.status(401).json({ error: "Unauthorized" });
+
+  if (req.method === "GET") {
+    const view = req.query?.view;
+    try {
+      if (view === "expenses") {
+        const rows = await listExpenses(sql, { from: req.query?.from || null, to: req.query?.to || null });
+        return res.status(200).json({ expenses: rows });
+      }
+      if (view === "trial-balance") {
+        const rows = await getTrialBalance(sql, req.query?.asOf ? { asOf: req.query.asOf } : {});
+        return res.status(200).json({ accounts: rows });
+      }
+      if (view === "entries") {
+        if (!req.query?.accountCode || !req.query?.from || !req.query?.to) {
+          return res.status(400).json({ error: "entries view requires accountCode, from, to" });
+        }
+        const rows = await getAccountActivity(sql, {
+          accountCode: req.query.accountCode, from: req.query.from, to: req.query.to,
+        });
+        return res.status(200).json({ entries: rows });
+      }
+      return res.status(400).json({ error: "Unknown or missing ?view= (expected expenses|trial-balance|entries)" });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  if (req.method === "POST") {
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const actor = await identifyActor(req);
+
+    if (body?.action === "add-expense") {
+      const { date, category, amount, description = null, status = "paid" } = body;
+      if (!date || !EXPENSE_CATEGORIES.has(category) || !(Number(amount) > 0)) {
+        return res.status(400).json({ error: "Requires date, a valid category, and amount > 0" });
+      }
+      if (status !== "paid" && status !== "accrued") {
+        return res.status(400).json({ error: "status must be 'paid' or 'accrued'" });
+      }
+      const { entryId, expenseId } = await postExpense(sql, {
+        date, category, amountUsd: Number(amount), description, status, actor,
+      });
+      await writeAuditLog({ actor, action: "ledger.add-expense", target: String(expenseId), detail: { date, category, amount, status } });
+      return res.status(200).json({ ok: true, entryId, expenseId });
+    }
+
+    if (body?.action === "reverse-entry") {
+      const { entryId, memo } = body;
+      if (!(Number(entryId) > 0)) return res.status(400).json({ error: "Requires entryId" });
+      try {
+        const reversalId = await reverseJournalEntry(sql, Number(entryId), { memo, actor });
+        await writeAuditLog({ actor, action: "ledger.reverse-entry", target: String(entryId), detail: { reversalId, memo } });
+        return res.status(200).json({ ok: true, reversalId });
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
+    }
+
+    return res.status(400).json({ error: "Unknown action (expected add-expense|reverse-entry)" });
+  }
+
+  return res.status(405).end();
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -106,5 +180,6 @@ export default async function handler(req, res) {
   const target = req.query?.target;
   if (target === "fund") return handleFund(req, res);
   if (target === "investors") return handleInvestors(req, res);
-  return res.status(400).json({ error: "Unknown or missing ?target= (expected fund|investors)" });
+  if (target === "ledger") return handleLedger(req, res);
+  return res.status(400).json({ error: "Unknown or missing ?target= (expected fund|investors|ledger)" });
 }

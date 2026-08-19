@@ -1,9 +1,10 @@
 // Monthly investor statement — Vercel Cron fires on days 28-31, checks for last day of month.
 // Schedule: "0 13 28-31 * *" (1 pm UTC). Also callable manually via POST.
 
-import { readDoc } from "../lib/store.js";
+import { sql, readDoc } from "../lib/store.js";
 import { isAdminRequest } from "../lib/auth.js";
-import { computeInvestorUnitsAtDate, depositedByInvestorAtDate, computeTotalUnitsAtDate, investorKeysFor, depositBelongsTo } from "../lib/nav.js";
+import { computeInvestorUnitsAtDateWithTransfers, depositedByInvestorAtDate, computeTotalUnitsAtDate, investorKeysFor, depositBelongsTo } from "../lib/nav.js";
+import { listUnitTransfers } from "../lib/unitTransfer.js";
 
 // Escape a value before interpolating it into the statement's HTML email.
 // Investor names and IB position/trade descriptions aren't attacker-
@@ -175,12 +176,21 @@ function sectionHeader(title) {
 }
 function sectionClose() { return `</table></td></tr>`; }
 
-function statementHtml({ investor, fundData, navSeries, trades, period, periodYear, periodMonth, allInvestors, t, asOfStr }) {
+function statementHtml({ investor, fundData, navSeries, trades, unitTransfers, period, periodYear, periodMonth, allInvestors, t, asOfStr }) {
   const lang       = investor.lang || "en";
   const { positions = [] } = fundData;
   // Only count deposits that existed on or before the as-of date
   const deposits   = (fundData.deposits || []).filter(d => !asOfStr || d.date <= asOfStr);
+  const xfersAsOf  = (unitTransfers || []).filter(tr => !asOfStr || tr.date <= asOfStr);
   const investorKeys = investorKeysFor(investor);
+  const monthPrefix  = `${periodYear}-${String(periodMonth + 1).padStart(2, "0")}`;
+  // Net management-fee/bonus unit-transfer activity this period, signed from
+  // this investor's own point of view (negative if they paid, positive if
+  // they received — e.g. Pablo). Informational only: myUnits below already
+  // reflects it via the transfer-aware helper, so this doesn't double-count.
+  const myFeeNetThisMonth = (unitTransfers || [])
+    .filter(tr => tr.date?.startsWith(monthPrefix) && (investorKeys.has(tr.from) || investorKeys.has(tr.to)))
+    .reduce((s, tr) => s + (investorKeys.has(tr.to) ? tr.amountUsd : -tr.amountUsd), 0);
 
   // ── Compute values ──
   const latestNav  = navSeries[navSeries.length - 1] || {};
@@ -199,8 +209,10 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   const ytdStart  = lastNavOfMonth(navSeries, periodYear - 1, 11) || firstNavOfYear(navSeries, periodYear);
   const ytdReturn = ytdStart && curPt ? ((curPt.nav / ytdStart.nav) - 1) * 100 : null;
 
-  // Investor-specific
-  const myUnits    = computeInvestorUnitsAtDate(deposits, investor, asOfStr);
+  // Investor-specific — transfer-aware so a management-fee/bonus unit
+  // transfer already shows up in this investor's own value/ownership,
+  // exactly as it does on the dashboard.
+  const myUnits    = computeInvestorUnitsAtDateWithTransfers(deposits, xfersAsOf, investor, asOfStr);
   const totalUnits = computeTotalUnitsAtDate(deposits, asOfStr || "9999-12-31");
   const myDeposited = depositedByInvestorAtDate(deposits, investor, asOfStr);
   const myValue    = myUnits * navPerUnit;
@@ -235,7 +247,6 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   ].join("");
 
   // Trades this month
-  const monthPrefix  = `${periodYear}-${String(periodMonth + 1).padStart(2, "0")}`;
   const monthTrades  = trades.filter(tr => tr.date?.startsWith(monthPrefix));
   const tradeRows    = monthTrades.length
     ? monthTrades.map(tr => `<tr>
@@ -281,7 +292,7 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
   ${sectionHeader(t.capitalSummary)}
     ${row(t.totalDeposited, fmt(myDeposited, 0))}
     ${row(t.gainLoss,       fmt(myGL),       false, retColor(myGL))}
-    ${row(t.mgmtFee,        "$0.00")}
+    ${row(t.mgmtFee,        myFeeNetThisMonth !== 0 ? fmt(myFeeNetThisMonth) : "$0.00", false, retColor(myFeeNetThisMonth))}
     ${row(t.perfFee,        "$0.00")}
     <tr style="background:#f9f8f6;">
       <td style="padding:13px 10px;font-size:15px;font-weight:700;color:#1a1a1a;border-radius:6px 0 0 6px;">${t.currentValue}</td>
@@ -350,9 +361,9 @@ function statementHtml({ investor, fundData, navSeries, trades, period, periodYe
 
   <!-- Fees -->
   ${sectionHeader(t.fees)}
-    ${row(t.mgmtFee, "$0.00")}
+    ${row(t.mgmtFee, myFeeNetThisMonth !== 0 ? fmt(myFeeNetThisMonth) : "$0.00", false, retColor(myFeeNetThisMonth))}
     ${row(t.perfFee, "$0.00")}
-    <tr><td colspan="2" style="padding:8px 0;font-size:11px;color:#bbb;">${t.feeNote}</td></tr>
+    ${myFeeNetThisMonth === 0 ? `<tr><td colspan="2" style="padding:8px 0;font-size:11px;color:#bbb;">${t.feeNote}</td></tr>` : ""}
   ${sectionClose()}
 
   <!-- Footer -->
@@ -395,13 +406,14 @@ export default async function handler(req, res) {
   if (!resendKey) return res.status(500).json({ error: "RESEND_API_KEY not set" });
 
   // Load everything in parallel
-  let fundData, navHistory, invStore, tradesStore;
+  let fundData, navHistory, invStore, tradesStore, unitTransfers;
   try {
-    [fundData, navHistory, invStore, tradesStore] = await Promise.all([
+    [fundData, navHistory, invStore, tradesStore, unitTransfers] = await Promise.all([
       readDoc("fund-data.json").then(d => d ?? {}),
       readDoc("nav-history.json").then(d => d ?? { series: [] }),
       readDoc("investors.json").then(d => d ?? { investors: [] }),
       readDoc("trades-history.json").then(d => d ?? { trades: [] }),
+      listUnitTransfers(sql).catch(() => []),
     ]);
   } catch (err) {
     return res.status(500).json({ error: `Failed to load data: ${err.message}` });
@@ -436,7 +448,7 @@ export default async function handler(req, res) {
     const periodLocal = `${t.months[periodMonth]} ${periodYear}`;
 
     const html = statementHtml({
-      investor, fundData, navSeries: navSeriesAsOf, trades,
+      investor, fundData, navSeries: navSeriesAsOf, trades, unitTransfers,
       period: periodLocal, periodYear, periodMonth,
       allInvestors, t, asOfStr,
     });

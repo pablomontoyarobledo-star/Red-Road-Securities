@@ -9,9 +9,11 @@
 // Session tokens: base64url(email|exp) + "." + HMAC-SHA256(SYNC_SECRET, email|exp).
 // Tokens expire after 30 days.
 
-import { getUserCredentialOverride, setUserCredential, readDoc, recordLoginFailure, resetLoginFailures, getLoginFailureState } from "../lib/store.js";
+import { sql, getUserCredentialOverride, setUserCredential, readDoc, recordLoginFailure, resetLoginFailures, getLoginFailureState } from "../lib/store.js";
 import { USERS, issueToken, verifyToken, verifyPassword, newScryptCredential, lookupUser } from "../lib/auth.js";
-import { computeTotalUnitsAtDate, investorKeysFor, depositBelongsTo, depositCash } from "../lib/nav.js";
+import { computeTotalUnitsAtDate, investorKeysFor, depositBelongsTo, depositCash, unitTransferBelongsTo } from "../lib/nav.js";
+import { listExpenses } from "../lib/ledger.js";
+import { listUnitTransfers } from "../lib/unitTransfer.js";
 
 // After this many consecutive failures for an email, lock out further
 // attempts (regardless of whether the password submitted is correct) for
@@ -22,7 +24,12 @@ const LOCKOUT_MS         = 15 * 60 * 1000;
 // Files any logged-in investor may read; admin additionally gets pending-deposits.
 // ib-cache.json is the latest raw IB snapshot (positions + close prices +
 // account total) — the dashboard uses it to live-adjust the fund value.
-const READABLE       = new Set(["fund-data.json", "investors.json", "nav-history.json", "trades-history.json", "ib-cache.json"]);
+// expenses.json and unit-transfers.json aren't real documents — they're
+// synthetic projections of the gl_accounts/unit_transfers relational tables
+// (see the special cases below), included here so the READABLE allowlist
+// stays the single source of truth for "what can a logged-in investor ask
+// for", same as every other file.
+const READABLE       = new Set(["fund-data.json", "investors.json", "nav-history.json", "trades-history.json", "ib-cache.json", "expenses.json", "unit-transfers.json"]);
 const READABLE_ADMIN = new Set([...READABLE, "pending-deposits.json"]);
 
 function hasSyncSecret(req) {
@@ -133,6 +140,27 @@ export default async function handler(req, res) {
     if (!allowed.has(file)) return res.status(403).json({ error: "File not allowed" });
 
     try {
+      // expenses.json is fund-level, not investor-identifying — any logged-in
+      // investor's income-statement PDF needs the full list.
+      if (file === "expenses.json") {
+        const rows = await listExpenses(sql);
+        return res.status(200).json({ expenses: rows });
+      }
+
+      // unit-transfers.json IS investor-identifying (it names who paid a fee
+      // and who received it), so it gets the same scoping treatment as
+      // fund-data.json's deposits below: admin sees every row, a non-admin
+      // investor only sees rows they're a party to.
+      if (file === "unit-transfers.json") {
+        const rows = await listUnitTransfers(sql);
+        if (session.admin) return res.status(200).json({ unitTransfers: rows });
+        const investorsDoc = await readDoc("investors.json").catch(() => null);
+        const inv = (investorsDoc?.investors || [])
+          .find(i => (i.email || "").toLowerCase() === session.email.toLowerCase());
+        const keys = inv ? investorKeysFor(inv) : new Set();
+        return res.status(200).json({ unitTransfers: rows.filter(t => unitTransferBelongsTo(t, keys)) });
+      }
+
       const data = await readDoc(file);
       if (data == null) return res.status(404).json({ error: "Not found" });
 
