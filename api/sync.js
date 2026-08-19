@@ -10,12 +10,13 @@
 //   GET  ?target=ledger&view=expenses                   → list manual expense entries
 //   GET  ?target=ledger&view=trial-balance[&asOf=]       → account balances as of a date
 //   GET  ?target=ledger&view=entries&accountCode=&from=&to=  → journal-line activity for one account
+//   GET  ?target=ledger&view=journal[&from=&to=&limit=]  → full journal listing (General Ledger UI)
 //   POST ?target=ledger  {action:"add-expense", date, category, amount, description, status}
 //   POST ?target=ledger  {action:"reverse-entry", entryId, memo}
 
 import { sql, readDoc, backupAndWrite, writeDoc, writeAuditLog, listSnapshots, readSnapshot } from "../lib/store.js";
 import { isAdminRequest, identifyActor } from "../lib/auth.js";
-import { postExpense, reverseJournalEntry, getTrialBalance, getAccountActivity, listExpenses } from "../lib/ledger.js";
+import { postExpense, reverseJournalEntry, getTrialBalance, getAccountActivity, listExpenses, listJournalEntries } from "../lib/ledger.js";
 
 async function handleFund(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -128,7 +129,13 @@ async function handleLedger(req, res) {
         });
         return res.status(200).json({ entries: rows });
       }
-      return res.status(400).json({ error: "Unknown or missing ?view= (expected expenses|trial-balance|entries)" });
+      if (view === "journal") {
+        const rows = await listJournalEntries(sql, {
+          from: req.query?.from || null, to: req.query?.to || null, limit: req.query?.limit || 300,
+        });
+        return res.status(200).json({ journal: rows });
+      }
+      return res.status(400).json({ error: "Unknown or missing ?view= (expected expenses|trial-balance|entries|journal)" });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }

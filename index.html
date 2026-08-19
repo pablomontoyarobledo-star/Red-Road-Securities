@@ -408,6 +408,7 @@
       <button class="page-tab" onclick="showPage('performance',this)" id="ptab-performance">Performance</button>
       <button class="page-tab" onclick="showPage('activity',this)" id="ptab-activity">Activity</button>
       <button class="page-tab" onclick="showPage('statements',this);populateStatementMonths();" id="ptab-statements">Statements</button>
+      <button class="page-tab" onclick="showPage('accounting',this);populateStatementMonths();renderAccountingActivePanel();" id="ptab-accounting" style="display:none;">Accounting</button>
     </nav>
   </div>
 
@@ -898,6 +899,126 @@
     </div><!-- /statements-panels -->
   </div><!-- /page-statements -->
 
+  <!-- PAGE: Accounting (admin-only; sub-tabs: General Ledger / Live Statements / Expenses) -->
+  <div id="page-accounting" class="page">
+    <div class="tabs sub-tabs" id="accounting-tabs">
+      <button class="tab-btn active" onclick="showSubTab('accounting','ledger',this);renderGeneralLedger();" id="accounting-tab-ledger">General Ledger</button>
+      <button class="tab-btn" onclick="showSubTab('accounting','live',this);renderLiveStatements();" id="accounting-tab-live">Live Statements</button>
+      <button class="tab-btn" onclick="showSubTab('accounting','expenses',this)" id="accounting-tab-expenses">Expenses</button>
+    </div>
+    <div id="accounting-panels">
+
+    <!-- SUBPAGE: General Ledger -->
+    <div id="accounting-ledger" class="subpage active">
+      <div class="section">
+        <p class="section-label">General Ledger</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem;">
+          <div class="form-group" style="margin:0;"><label>From</label><input type="date" id="gl-from" /></div>
+          <div class="form-group" style="margin:0;"><label>To</label><input type="date" id="gl-to" /></div>
+          <button class="tab-btn" onclick="renderGeneralLedger()" id="gl-load-btn">Load</button>
+        </div>
+        <div class="table-wrap">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border2);color:var(--text3);text-align:left;">
+                <th style="padding:6px 10px;">Date</th>
+                <th style="padding:6px 10px;">Memo</th>
+                <th style="padding:6px 10px;">Source</th>
+                <th style="padding:6px 10px;">Account</th>
+                <th style="padding:6px 10px;">Investor</th>
+                <th style="padding:6px 10px;text-align:right;">Debit</th>
+                <th style="padding:6px 10px;text-align:right;">Credit</th>
+              </tr>
+            </thead>
+            <tbody id="gl-body"><tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--text3);">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div id="gl-status" style="font-size:11px;color:var(--text3);margin-top:6px;"></div>
+      </div>
+    </div><!-- /accounting-ledger -->
+
+    <!-- SUBPAGE: Live Statements -->
+    <div id="accounting-live" class="subpage">
+      <div class="section">
+        <p class="section-label">Live Statements</p>
+        <div class="form-group" style="max-width:260px;"><label for="acct-stmt-month">Period</label>
+          <select id="acct-stmt-month"></select>
+        </div>
+      </div>
+      <div class="section">
+        <p class="section-label">Balance Sheet
+          <button onclick="downloadBalanceSheet()" class="tab-btn" style="float:right;">Download PDF</button>
+        </p>
+        <div class="table-wrap" id="live-balance-sheet"></div>
+      </div>
+      <div class="section">
+        <p class="section-label">Income Statement
+          <button onclick="downloadIncomeStatement()" class="tab-btn" style="float:right;">Download PDF</button>
+        </p>
+        <div class="table-wrap" id="live-income-statement"></div>
+      </div>
+    </div><!-- /accounting-live -->
+
+    <!-- SUBPAGE: Expenses (relocated from the admin screen) -->
+    <div id="accounting-expenses" class="subpage">
+      <div class="section">
+        <p class="section-label">Expenses</p>
+        <div id="admin-expenses" class="admin-form">
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border2);color:var(--text3);text-align:left;">
+                  <th style="padding:6px 10px;">Date</th>
+                  <th style="padding:6px 10px;">Category</th>
+                  <th style="padding:6px 10px;text-align:right;">Amount</th>
+                  <th style="padding:6px 10px;">Description</th>
+                  <th style="padding:6px 10px;">Status</th>
+                </tr>
+              </thead>
+              <tbody id="expense-list-body">
+                <tr><td colspan="5" style="padding:1.5rem;text-align:center;color:var(--text3);">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="expense-new-form" style="display:none;margin-top:1rem;border-top:0.5px solid var(--border);padding-top:0.75rem;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Date</label><input type="date" id="exp-new-date" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;" /></div>
+              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Category</label>
+                <select id="exp-new-category" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;">
+                  <option value="custodial">Custodial</option>
+                  <option value="audit">Audit</option>
+                  <option value="legal">Legal</option>
+                  <option value="admin">Admin</option>
+                  <option value="reg">Regulatory</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Amount (USD)</label><input type="number" step="0.01" min="0.01" id="exp-new-amount" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;" /></div>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Description</label><input id="exp-new-description" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;" /></div>
+              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Status</label>
+                <select id="exp-new-status" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;">
+                  <option value="paid">Paid</option>
+                  <option value="accrued">Accrued</option>
+                </select>
+              </div>
+            </div>
+            <button id="exp-save-btn" onclick="saveNewExpense()" class="save-btn" style="font-size:12px;padding:6px 14px;">Save expense</button>
+            <button onclick="toggleExpenseForm(false)" style="font-size:12px;padding:6px 14px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;margin-left:8px;">Cancel</button>
+            <span id="exp-saved" style="font-size:12px;color:var(--green-text);margin-left:8px;display:none;">✓ Saved</span>
+            <span id="exp-err" style="font-size:12px;color:var(--red-text);margin-left:8px;display:none;"></span>
+          </div>
+          <button class="save-btn" onclick="toggleExpenseForm(true)" id="exp-add-btn" style="margin-top:1rem;background:var(--bg2);color:var(--text);border-color:var(--border2);">
+            <i class="ti ti-receipt" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Add expense
+          </button>
+        </div>
+      </div>
+    </div><!-- /accounting-expenses -->
+
+    </div><!-- /accounting-panels -->
+  </div><!-- /page-accounting -->
+
   </main><!-- /app-content -->
 </div><!-- /app -->
 
@@ -994,61 +1115,6 @@
           <div id="investor-list"></div>
           <button class="save-btn" onclick="addInvestor()" style="margin-top:1rem;background:var(--bg2);color:var(--text);border-color:var(--border2);">
             <i class="ti ti-user-plus" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Add investor
-          </button>
-        </div>
-      </div>
-
-      <!-- ── Section: Expenses ── -->
-      <div>
-        <p style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Expenses</p>
-        <div id="admin-expenses" class="admin-form">
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:12px;">
-              <thead>
-                <tr style="border-bottom:1px solid var(--border2);color:var(--text3);text-align:left;">
-                  <th style="padding:6px 10px;">Date</th>
-                  <th style="padding:6px 10px;">Category</th>
-                  <th style="padding:6px 10px;text-align:right;">Amount</th>
-                  <th style="padding:6px 10px;">Description</th>
-                  <th style="padding:6px 10px;">Status</th>
-                </tr>
-              </thead>
-              <tbody id="expense-list-body">
-                <tr><td colspan="5" style="padding:1.5rem;text-align:center;color:var(--text3);">Loading…</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div id="expense-new-form" style="display:none;margin-top:1rem;border-top:0.5px solid var(--border);padding-top:0.75rem;">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
-              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Date</label><input type="date" id="exp-new-date" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;" /></div>
-              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Category</label>
-                <select id="exp-new-category" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;">
-                  <option value="custodial">Custodial</option>
-                  <option value="audit">Audit</option>
-                  <option value="legal">Legal</option>
-                  <option value="admin">Admin</option>
-                  <option value="reg">Regulatory</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Amount (USD)</label><input type="number" step="0.01" min="0.01" id="exp-new-amount" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;" /></div>
-            </div>
-            <div style="display:grid;grid-template-columns:2fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
-              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Description</label><input id="exp-new-description" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;" /></div>
-              <div class="form-group" style="margin:0;"><label style="font-size:11px;">Status</label>
-                <select id="exp-new-status" style="width:100%;padding:6px 8px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;">
-                  <option value="paid">Paid</option>
-                  <option value="accrued">Accrued</option>
-                </select>
-              </div>
-            </div>
-            <button id="exp-save-btn" onclick="saveNewExpense()" class="save-btn" style="font-size:12px;padding:6px 14px;">Save expense</button>
-            <button onclick="toggleExpenseForm(false)" style="font-size:12px;padding:6px 14px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;margin-left:8px;">Cancel</button>
-            <span id="exp-saved" style="font-size:12px;color:var(--green-text);margin-left:8px;display:none;">✓ Saved</span>
-            <span id="exp-err" style="font-size:12px;color:var(--red-text);margin-left:8px;display:none;"></span>
-          </div>
-          <button class="save-btn" onclick="toggleExpenseForm(true)" id="exp-add-btn" style="margin-top:1rem;background:var(--bg2);color:var(--text);border-color:var(--border2);">
-            <i class="ti ti-receipt" style="font-size:12px;vertical-align:-1px;margin-right:4px;"></i> Add expense
           </button>
         </div>
       </div>
@@ -2062,7 +2128,7 @@ function _launchApp(email, entry) {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
   document.getElementById("investor-badge").textContent = entry.name;
-  if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; const _tt = document.getElementById("statements-tab-taxes"); if (_tt) _tt.style.display = ""; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } renderInvestors(); renderExpenses(); populateStatementsInvestorSelector(); loadPendingDeposits(); checkAllocateUrlParam(); }
+  if (entry.admin) { document.getElementById("admin-nav-btn").style.display = "inline-flex"; const _tt = document.getElementById("statements-tab-taxes"); if (_tt) _tt.style.display = ""; const _at = document.getElementById("ptab-accounting"); if (_at) _at.style.display = ""; try { populateAdminFields(); } catch(e) { console.error("populateAdminFields", e); } renderInvestors(); renderExpenses(); populateStatementsInvestorSelector(); loadPendingDeposits(); checkAllocateUrlParam(); }
   fetchPrices();
   fetchFXRate();
   const _s = fn => { try { fn(); } catch(e) { console.error(fn.name, e); } };
@@ -2216,6 +2282,7 @@ function logout() {
   document.getElementById("app").style.display = "none";
   document.getElementById("admin-screen").style.display = "none";
   document.getElementById("admin-nav-btn").style.display = "none";
+  const _at = document.getElementById("ptab-accounting"); if (_at) _at.style.display = "none";
   document.getElementById("email").value = "";
   document.getElementById("pw").value = "";
   document.getElementById("login-error").style.display = "none";
@@ -4962,10 +5029,14 @@ async function downloadBalanceSheet() {
   btn.innerHTML = `<i class="ti ti-download" style="font-size:15px;"></i><span id="stmt-bs-btn-lbl">${t("stmt_download_pdf")}</span>`;
 }
 
-async function _generateBalanceSheetPDF(periodMonth) {
-  if (!window.jspdf) throw new Error("PDF library not loaded");
-  const { jsPDF } = window.jspdf;
-
+// Pure computation — no jsPDF/DOM involved — shared by the PDF generator
+// below and the live on-screen Balance Sheet (renderLiveBalanceSheet()).
+// Extracted verbatim from _generateBalanceSheetPDF's former inline
+// computation block; keep it that way — this is financially-sensitive code
+// that just caused a production incident (see lib/ledger.js's casting
+// comments), so any future change here must be mirrored in intent, not
+// duplicated ad hoc elsewhere.
+function computeBalanceSheetData(periodMonth) {
   const series = navHist?.series || [];
   if (!series.length) throw new Error("NAV history not loaded — please wait and try again");
 
@@ -4977,9 +5048,8 @@ async function _generateBalanceSheetPDF(periodMonth) {
   const monthLabel     = new Date(`${periodMonth}-15`).toLocaleDateString("en-US", { month:"long", year:"numeric" });
   const asOfDate       = navPt?.date || periodMonth;
 
-  const { fernandoUnits, darioUnits, totalUnits } = calcUnits();
-  const fPct = totalUnits > 0 ? fernandoUnits / totalUnits : 0;
-  const dPct = totalUnits > 0 ? darioUnits   / totalUnits : 0;
+  const unitMap = calcUnits();
+  const { totalUnits } = unitMap;
 
   const pos    = positions || [];
   const totalFV = pos.reduce((s, p) => s + p.shares * (livePrice[p.ticker] || p.ibClose || 0), 0) + (cashBalance || 0);
@@ -5017,6 +5087,57 @@ async function _generateBalanceSheetPDF(periodMonth) {
   const accruedCustodial = accruedByCategory("custodial");
   const accruedOther     = accruedByCategory("legal") + accruedByCategory("reg") + accruedByCategory("other");
   const totalLiabilities = accruedAdmin + accruedAudit + accruedCustodial + accruedOther;
+
+  // Investor ownership — same calcUnits() result as above, one row per
+  // investor. unrealizedGL is always the raw (possibly negative) figure;
+  // callers that only want to show it when the fund is net-unrealized-up
+  // should gate on the returned unrealizedApp themselves (matches the
+  // PDF's original display rule exactly).
+  const investorOwnership = (investors || []).map(inv => {
+    const units = unitMap[inv.id] || 0;
+    const pct   = totalUnits > 0 ? units / totalUnits : 0;
+    return {
+      investorId: inv.id, name: `${inv.firstName} ${inv.lastName}`,
+      units, pct,
+      accountValue: totalNetAssets * pct,
+      unrealizedGL: unrealizedApp * pct,
+    };
+  });
+
+  // Schedule of investments — one row per position.
+  const schedule = scaledPos.map(p => {
+    const historicalPx = p.shares > 0 ? p.val / p.shares : 0;
+    const costTotal    = p.shares * p.costBasis;
+    const unrealized   = p.val - costTotal;
+    return {
+      ticker: p.ticker, name: p.name, shares: p.shares, costBasis: p.costBasis,
+      costTotal, historicalPx, val: p.val,
+      pctNetAssets: totalNetAssets > 0 ? (p.val / totalNetAssets) * 100 : null,
+      unrealized,
+    };
+  });
+
+  return {
+    periodMonth, monthLabel, asOfDate,
+    totalNetAssets, navPerUnit, totalUnits,
+    scaledPos, scaledCash, totalInvestments, costBasisTotal, unrealizedApp,
+    totalPaidIn, allTimeDivs, cumulativeRealized,
+    accruedAdmin, accruedAudit, accruedCustodial, accruedOther, totalLiabilities,
+    investorOwnership, schedule,
+  };
+}
+
+async function _generateBalanceSheetPDF(periodMonth) {
+  if (!window.jspdf) throw new Error("PDF library not loaded");
+  const { jsPDF } = window.jspdf;
+
+  const {
+    monthLabel, asOfDate, totalNetAssets, navPerUnit, totalUnits,
+    scaledPos, scaledCash, totalInvestments, costBasisTotal, unrealizedApp,
+    totalPaidIn, allTimeDivs, cumulativeRealized,
+    accruedAdmin, accruedAudit, accruedCustodial, accruedOther, totalLiabilities,
+    investorOwnership, schedule,
+  } = computeBalanceSheetData(periodMonth);
 
   // PDF setup
   const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
@@ -5174,19 +5295,14 @@ async function _generateBalanceSheetPDF(periodMonth) {
   drawBlank(5);
 
   // ── INVESTOR OWNERSHIP ──
-  const bsUnitMap = calcUnits();
   drawSection(t("pdf_investor_ownership_section"));
-  const bsInvRows = (investors||[]).map(inv => {
-    const invU = bsUnitMap[inv.id] || 0;
-    const pct  = totalUnits > 0 ? invU / totalUnits : 0;
-    return [
-      `${inv.firstName} ${inv.lastName}`,
-      invU.toFixed(4),
-      (pct*100).toFixed(2)+"%",
-      "$"+Math.round(totalNetAssets*pct).toLocaleString(),
-      unrealizedApp > 0 ? "$"+Math.round(unrealizedApp*pct).toLocaleString() : "—",
-    ];
-  });
+  const bsInvRows = investorOwnership.map(r => [
+    r.name,
+    r.units.toFixed(4),
+    (r.pct*100).toFixed(2)+"%",
+    "$"+Math.round(r.accountValue).toLocaleString(),
+    unrealizedApp > 0 ? "$"+Math.round(r.unrealizedGL).toLocaleString() : "—",
+  ]);
   bsInvRows.push([
     {content:t("pdf_total"),styles:{fontStyle:"bold"}},
     {content:totalUnits.toFixed(4),styles:{fontStyle:"bold"}},
@@ -5207,23 +5323,18 @@ async function _generateBalanceSheetPDF(periodMonth) {
   // ── SCHEDULE OF INVESTMENTS ──
   if (y > H - 60) { doc.addPage(); y = 22; }
   drawSection(t("pdf_schedule_investments"));
-  const schedRows = scaledPos.map(p => {
-    const historicalPx = p.shares > 0 ? p.val / p.shares : 0;
-    const costTotal    = p.shares * p.costBasis;
-    const unrealized   = p.val - costTotal;
-    return [
-      p.ticker,
-      p.name,
-      p.shares.toLocaleString("en-US",{maximumFractionDigits:2}),
-      "$"+p.costBasis.toFixed(2),
-      "$"+Math.round(costTotal).toLocaleString("en-US"),
-      "$"+historicalPx.toFixed(2),
-      "$"+Math.round(p.val).toLocaleString("en-US"),
-      (totalNetAssets>0?((p.val/totalNetAssets)*100).toFixed(1)+"%":"—"),
-      { content: unrealized>=0 ? "$"+Math.round(unrealized).toLocaleString() : "("+Math.round(Math.abs(unrealized)).toLocaleString()+")",
-        styles:{ textColor: unrealized>=0 ? C.pos : C.neg } },
-    ];
-  });
+  const schedRows = schedule.map(p => [
+    p.ticker,
+    p.name,
+    p.shares.toLocaleString("en-US",{maximumFractionDigits:2}),
+    "$"+p.costBasis.toFixed(2),
+    "$"+Math.round(p.costTotal).toLocaleString("en-US"),
+    "$"+p.historicalPx.toFixed(2),
+    "$"+Math.round(p.val).toLocaleString("en-US"),
+    (p.pctNetAssets != null ? p.pctNetAssets.toFixed(1)+"%" : "—"),
+    { content: p.unrealized>=0 ? "$"+Math.round(p.unrealized).toLocaleString() : "("+Math.round(Math.abs(p.unrealized)).toLocaleString()+")",
+      styles:{ textColor: p.unrealized>=0 ? C.pos : C.neg } },
+  ]);
   autoTbl({ startY:y,
     head:[[t("pdf_col_ticker"),t("pdf_col_security_name"),t("pdf_col_shares"),t("pdf_col_cost_share"),t("pdf_col_total_cost"),t("pdf_col_market_price"),t("pdf_col_market_value"),t("pdf_col_pct_net_assets"),t("pdf_col_unrealized_gl2")]],
     body: schedRows,
@@ -5277,10 +5388,12 @@ async function downloadIncomeStatement() {
   btn.innerHTML = `<i class="ti ti-download" style="font-size:15px;"></i><span id="stmt-is-btn-lbl">${t("stmt_download_pdf")}</span>`;
 }
 
-async function _generateIncomeStatementPDF(periodMonth) {
-  if (!window.jspdf) throw new Error("PDF library not loaded");
-  const { jsPDF } = window.jspdf;
-
+// Pure computation — no jsPDF/DOM involved — shared by the PDF generator
+// below and the live on-screen Income Statement (renderLiveIncomeStatement()).
+// Extracted verbatim from _generateIncomeStatementPDF's former inline
+// computation block; keep it that way (see computeBalanceSheetData's
+// comment for why).
+function computeIncomeStatementData(periodMonth) {
   const series = navHist?.series || [];
   if (!series.length) throw new Error("NAV history not loaded — please wait and try again");
 
@@ -5300,6 +5413,7 @@ async function _generateIncomeStatementPDF(periodMonth) {
   const bmMonth    = (_benchmarkMonths || []).find(b => b.key === periodMonth);
   const spxtrMTD   = bmMonth?.spxtr ?? null;
   const monthLabel = new Date(`${periodMonth}-15`).toLocaleDateString("en-US", { month:"long", year:"numeric" });
+  const asOfDate   = navEnd?.date || periodMonth;
 
   const periodDeps    = (deposits||[]).filter(d => d.date?.startsWith(periodMonth));
   const totalContribs = periodDeps.reduce((s, d) => s + (d.fernando||0) + (d.dario||0), 0);
@@ -5353,11 +5467,73 @@ async function _generateIncomeStatementPDF(periodMonth) {
   // Portfolio turnover
   const avgAssets     = (totalStart + totalEnd) / 2;
   const turnoverRate  = avgAssets > 0 ? (totalProceeds / avgAssets * 100) : 0;
+  // Annualized (×12, this is a one-month period) ratio of period expenses to
+  // average assets during the period — the standard expense-ratio convention.
+  const expenseRatioPct = avgAssets > 0 ? (totalExpenses / avgAssets) * 100 * 12 : null;
+  const mgmtFeeRatePct  = avgAssets > 0 ? (mgmtFeeExpense / avgAssets) * 100 * 12 : null;
 
   // Investor attribution
   const isUnitMap = calcUnits();
   const { totalUnits } = isUnitMap;
   const isInvList = investors || [];
+
+  const investorAttribution = isInvList.map(inv => {
+    const k    = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+    const pct  = totalUnits > 0 ? (isUnitMap[inv.id]||0) / totalUnits : 0;
+    const deps = periodDeps.reduce((s, d) => s + (d[k]||0), 0);
+    return {
+      investorId: inv.id, name: `${inv.firstName} ${inv.lastName}`,
+      beginningValue: totalStart*pct, contributions: deps, endingValue: totalEnd*pct,
+      returnPct: mtd, gain: investmentReturn*pct,
+    };
+  });
+
+  // Capital activity detail — one row per deposit record, with each
+  // investor's contribution that day broken out (mirrors the PDF's
+  // capHeadInvCols/invCols table exactly, just as data instead of strings).
+  const capitalActivityRows = periodDeps.map(d => {
+    const perInvestor = isInvList.map(inv => {
+      const k = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+      return { investorId: inv.id, amount: d[k] || 0 };
+    });
+    const total = perInvestor.reduce((s, r) => s + r.amount, 0);
+    return { date: d.date, nav: d.nav || null, perInvestor, total };
+  });
+
+  return {
+    periodMonth, monthLabel, asOfDate,
+    mtd, ytd, sinceInc, spxtrMTD,
+    totalStart, totalEnd, totalContribs, investmentReturn,
+    divByTicker, totalDiv,
+    mgmtFeeAndBonus, mgmtFeeExpense, mgmtFeeIncome,
+    adminFees, custodialFees, auditFees, legalFees, regFees, otherFees,
+    totalExpenses, netInvestmentIncome,
+    sellTx, totalProceeds, totalCostSold, realizedGain, changeUnrealized, netFromOps,
+    avgAssets, turnoverRate, expenseRatioPct, mgmtFeeRatePct,
+    totalUnits, isUnitMap,
+    unitsBeginning: navStart ? (totalStart / (navStart.nav||1)) : null,
+    navBeginning: navStart?.nav || null, navEndVal: navEnd?.nav || null,
+    periodDeps, capitalActivityRows, investorAttribution, isInvList,
+  };
+}
+
+async function _generateIncomeStatementPDF(periodMonth) {
+  if (!window.jspdf) throw new Error("PDF library not loaded");
+  const { jsPDF } = window.jspdf;
+
+  const {
+    monthLabel, asOfDate, mtd, ytd, sinceInc, spxtrMTD,
+    totalStart, totalEnd, totalContribs, investmentReturn,
+    divByTicker, totalDiv,
+    mgmtFeeExpense, mgmtFeeIncome,
+    adminFees, custodialFees, auditFees, legalFees, regFees, otherFees,
+    totalExpenses, netInvestmentIncome,
+    sellTx, totalProceeds, totalCostSold, realizedGain, changeUnrealized, netFromOps,
+    avgAssets, turnoverRate, expenseRatioPct, mgmtFeeRatePct,
+    totalUnits, isUnitMap,
+    unitsBeginning, navBeginning, navEndVal,
+    periodDeps, capitalActivityRows, investorAttribution, isInvList,
+  } = computeIncomeStatementData(periodMonth);
 
   // PDF setup
   const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
@@ -5449,7 +5625,7 @@ async function _generateIncomeStatementPDF(periodMonth) {
   doc.setTextColor(...C.white); doc.setFont("helvetica","bold"); doc.setFontSize(13);
   doc.text(monthLabel, W-MR, 17, {align:"right"});
   doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...C.dimText);
-  doc.text(t("pdf_for_period_ended") + (navEnd?.date || periodMonth), W-MR, 25, {align:"right"});
+  doc.text(t("pdf_for_period_ended") + asOfDate, W-MR, 25, {align:"right"});
   y = 52;
 
   // ── RETURN METRICS BOXES ──
@@ -5547,17 +5723,12 @@ async function _generateIncomeStatementPDF(periodMonth) {
     const capHeadInvCols = isInvList.map(inv => `${inv.firstName} ${inv.lastName}`);
     autoTbl({ startY:y,
       head:[[t("pdf_col_date"), ...capHeadInvCols, t("pdf_col_nav_at_purchase"), t("pdf_col_total_contribution")]],
-      body: periodDeps.map(d => {
-        const invCols = isInvList.map(inv => {
-          const k = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
-          return d[k] > 0 ? "$"+Math.round(d[k]).toLocaleString() : "—";
-        });
-        const total = isInvList.reduce((s, inv) => {
-          const k = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
-          return s + (d[k]||0);
-        }, 0);
-        return [d.date||"—", ...invCols, d.nav ? "$"+d.nav.toFixed(4) : "—", "$"+total.toLocaleString("en-US",{maximumFractionDigits:0})];
-      }),
+      body: capitalActivityRows.map(r => [
+        r.date||"—",
+        ...r.perInvestor.map(pi => pi.amount > 0 ? "$"+Math.round(pi.amount).toLocaleString() : "—"),
+        r.nav ? "$"+r.nav.toFixed(4) : "—",
+        "$"+r.total.toLocaleString("en-US",{maximumFractionDigits:0}),
+      ]),
       styles:{ fontSize:8.5, cellPadding:3.5, textColor:C.tDark },
       headStyles:{ fillColor:C.dark, textColor:255, fontStyle:"bold", fontSize:7.5 },
       alternateRowStyles:{ fillColor:C.light },
@@ -5567,20 +5738,15 @@ async function _generateIncomeStatementPDF(periodMonth) {
 
   // ── INVESTOR ATTRIBUTION ──
   drawSection(t("pdf_investor_attribution"));
-  const attrRows = isInvList.map(inv => {
-    const k    = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
-    const pct  = totalUnits > 0 ? (isUnitMap[inv.id]||0) / totalUnits : 0;
-    const deps = periodDeps.reduce((s, d) => s + (d[k]||0), 0);
-    return [
-      `${inv.firstName} ${inv.lastName}`,
-      "$"+Math.round(totalStart*pct).toLocaleString(),
-      deps > 0 ? "$"+Math.round(deps).toLocaleString() : "—",
-      "$"+Math.round(totalEnd*pct).toLocaleString(),
-      { content:Pct(mtd), styles:{ textColor: mtd==null?C.tMed:mtd>=0?C.pos:C.neg, fontStyle:"bold" } },
-      { content:(investmentReturn*pct>=0?"$":"(")+Math.round(Math.abs(investmentReturn*pct)).toLocaleString("en-US")+(investmentReturn*pct<0?")":""),
-        styles:{ textColor: investmentReturn>=0?C.pos:C.neg, fontStyle:"bold" } },
-    ];
-  });
+  const attrRows = investorAttribution.map(r => [
+    r.name,
+    "$"+Math.round(r.beginningValue).toLocaleString(),
+    r.contributions > 0 ? "$"+Math.round(r.contributions).toLocaleString() : "—",
+    "$"+Math.round(r.endingValue).toLocaleString(),
+    { content:Pct(r.returnPct), styles:{ textColor: r.returnPct==null?C.tMed:r.returnPct>=0?C.pos:C.neg, fontStyle:"bold" } },
+    { content:(r.gain>=0?"$":"(")+Math.round(Math.abs(r.gain)).toLocaleString("en-US")+(r.gain<0?")":""),
+      styles:{ textColor: r.gain>=0?C.pos:C.neg, fontStyle:"bold" } },
+  ]);
   autoTbl({ startY:y,
     head:[[t("pdf_col_investor"),t("pdf_col_beginning_value"),t("pdf_col_contributions"),t("pdf_col_ending_value"),t("pdf_col_return_pct"),t("pdf_col_investment_gain")]],
     body: attrRows,
@@ -5594,19 +5760,15 @@ async function _generateIncomeStatementPDF(periodMonth) {
   // ── SUPPLEMENTAL INFORMATION ──
   if (y > H - 60) { doc.addPage(); y = 22; }
   drawSection(t("pdf_supplemental"));
-  // Annualized (×12, this is a one-month period) ratio of period expenses to
-  // average assets during the period — the standard expense-ratio convention.
-  const expenseRatioPct = avgAssets > 0 ? (totalExpenses / avgAssets) * 100 * 12 : null;
-  const mgmtFeeRatePct  = avgAssets > 0 ? (mgmtFeeExpense / avgAssets) * 100 * 12 : null;
   drawLine(t("pdf_expense_ratio"), undefined, { amtStr: expenseRatioPct != null ? expenseRatioPct.toFixed(2)+"%" : "—" });
   drawLine(t("pdf_mgmt_fee_rate"), undefined, { amtStr: mgmtFeeRatePct != null ? mgmtFeeRatePct.toFixed(2)+"%" : "—" });
   drawLine(t("pdf_portfolio_turnover"), undefined, { amtStr: turnoverRate > 0 ? turnoverRate.toFixed(2)+"%" : "—" });
   drawLine(t("pdf_net_assets_beginning"), totalStart);
   drawLine(t("pdf_net_assets_end_period"), totalEnd);
-  drawLine(t("pdf_units_beginning"), undefined, { amtStr: (navStart ? (totalStart / (navStart.nav||1)).toFixed(4) : "—") });
+  drawLine(t("pdf_units_beginning"), undefined, { amtStr: (unitsBeginning != null ? unitsBeginning.toFixed(4) : "—") });
   drawLine(t("pdf_units_end"), undefined, { amtStr: totalUnits.toFixed(4) });
-  drawLine(t("pdf_nav_beginning_period"), undefined, { amtStr: "$"+(navStart?.nav||0).toFixed(4) });
-  drawLine(t("pdf_nav_end_period_line"), undefined, { amtStr: "$"+(navEnd?.nav||0).toFixed(4) });
+  drawLine(t("pdf_nav_beginning_period"), undefined, { amtStr: "$"+(navBeginning||0).toFixed(4) });
+  drawLine(t("pdf_nav_end_period_line"), undefined, { amtStr: "$"+(navEndVal||0).toFixed(4) });
   drawLine(t("pdf_sp500_total_return"), undefined, { amtStr: Pct(spxtrMTD) });
 
   // ── FOOTER ──
@@ -5623,6 +5785,126 @@ async function _generateIncomeStatementPDF(periodMonth) {
   }
 
   doc.save(`RRS_IncomeStatement_${periodMonth}.pdf`);
+}
+
+// ── ACCOUNTING TAB ───────────────────────────────────────────────────────────
+
+async function renderGeneralLedger() {
+  const tbody  = document.getElementById("gl-body");
+  const status = document.getElementById("gl-status");
+  if (!tbody) return;
+  const from = document.getElementById("gl-from")?.value || "";
+  const to   = document.getElementById("gl-to")?.value || "";
+  tbody.innerHTML = `<tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--text3);">Loading…</td></tr>`;
+  status.textContent = "";
+  try {
+    const qs = new URLSearchParams({ target: "ledger", view: "journal", limit: "300" });
+    if (from) qs.set("from", from);
+    if (to) qs.set("to", to);
+    const res  = await fetch(`/api/sync?${qs}`, { headers: adminSecretHeader() });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Failed to load ledger");
+    const rows = data.journal || [];
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--text3);">No journal entries in range.</td></tr>`;
+    } else {
+      tbody.innerHTML = rows.map(r => `
+        <tr style="border-bottom:0.5px solid var(--border2);">
+          <td style="padding:6px 10px;">${r.date}</td>
+          <td style="padding:6px 10px;">${escapeHtml(r.memo)}</td>
+          <td style="padding:6px 10px;color:var(--text3);font-size:11px;">${escapeHtml(r.source_type)}</td>
+          <td style="padding:6px 10px;">${escapeHtml(r.account_code)} — ${escapeHtml(r.account_name)}</td>
+          <td style="padding:6px 10px;color:var(--text2);">${r.investor_id ? escapeHtml(r.investor_id) : "—"}</td>
+          <td style="padding:6px 10px;text-align:right;">${r.debit ? "$"+r.debit.toLocaleString("en-US",{minimumFractionDigits:2}) : "—"}</td>
+          <td style="padding:6px 10px;text-align:right;">${r.credit ? "$"+r.credit.toLocaleString("en-US",{minimumFractionDigits:2}) : "—"}</td>
+        </tr>`).join("");
+    }
+    status.textContent = `${rows.length} line(s)${rows.length === 300 ? " · capped at 300, narrow the date range for more" : ""}`;
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--red);">${escapeHtml(e.message)}</td></tr>`;
+  }
+}
+
+// Populates the Accounting tab's own period selector by cloning the
+// Statements tab's already-built option list (populateStatementMonths()
+// builds that once, guarded by its own dataset.populated flag) — kept as a
+// separate <select> so the two tabs' selections can't collide.
+function renderLiveStatements() {
+  const src = document.getElementById("stmt-month");
+  const dst = document.getElementById("acct-stmt-month");
+  if (dst && src && src.options.length && !dst.dataset.populated) {
+    dst.innerHTML = src.innerHTML;
+    dst.dataset.populated = "1";
+    dst.value = src.value;
+    dst.onchange = () => { renderLiveBalanceSheet(dst.value); renderLiveIncomeStatement(dst.value); };
+  }
+  const month = dst?.value || src?.value;
+  if (month) { renderLiveBalanceSheet(month); renderLiveIncomeStatement(month); }
+}
+
+function renderLiveBalanceSheet(periodMonth) {
+  const el = document.getElementById("live-balance-sheet");
+  if (!el || !periodMonth) return;
+  try {
+    const d = computeBalanceSheetData(periodMonth);
+    const fmt = v => v == null ? "—" : "$" + Math.round(v).toLocaleString("en-US");
+    el.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tbody>
+          <tr><td style="padding:6px 10px;font-weight:600;" colspan="2">Assets</td></tr>
+          ${d.scaledPos.map(p => `<tr><td style="padding:4px 10px 4px 24px;">${escapeHtml(p.ticker)} — ${escapeHtml(p.name)}</td><td style="padding:4px 10px;text-align:right;">${fmt(p.val)}</td></tr>`).join("")}
+          <tr><td style="padding:4px 10px 4px 24px;">Cash &amp; equivalents</td><td style="padding:4px 10px;text-align:right;">${fmt(d.scaledCash)}</td></tr>
+          <tr style="border-top:1px solid var(--border2);font-weight:700;"><td style="padding:6px 10px;">Total assets</td><td style="padding:6px 10px;text-align:right;">${fmt(d.totalNetAssets)}</td></tr>
+          <tr><td style="padding:6px 10px;font-weight:600;" colspan="2">Liabilities</td></tr>
+          <tr><td style="padding:4px 10px 4px 24px;">Accrued expenses</td><td style="padding:4px 10px;text-align:right;">${fmt(d.totalLiabilities)}</td></tr>
+          <tr style="border-top:2px solid var(--border2);font-weight:700;"><td style="padding:6px 10px;">Net assets</td><td style="padding:6px 10px;text-align:right;">${fmt(d.totalNetAssets)}</td></tr>
+        </tbody>
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:14px;">
+        <thead><tr style="border-bottom:1px solid var(--border2);color:var(--text3);text-align:left;"><th style="padding:6px 10px;">Investor</th><th style="padding:6px 10px;text-align:right;">Units</th><th style="padding:6px 10px;text-align:right;">%</th><th style="padding:6px 10px;text-align:right;">Value</th></tr></thead>
+        <tbody>${d.investorOwnership.map(r => `<tr><td style="padding:4px 10px;">${escapeHtml(r.name)}</td><td style="padding:4px 10px;text-align:right;">${r.units.toFixed(4)}</td><td style="padding:4px 10px;text-align:right;">${(r.pct*100).toFixed(2)}%</td><td style="padding:4px 10px;text-align:right;">${fmt(r.accountValue)}</td></tr>`).join("")}</tbody>
+      </table>`;
+  } catch (e) {
+    el.innerHTML = `<p style="padding:1rem;color:var(--red);">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function renderLiveIncomeStatement(periodMonth) {
+  const el = document.getElementById("live-income-statement");
+  if (!el || !periodMonth) return;
+  try {
+    const d = computeIncomeStatementData(periodMonth);
+    const fmt = v => v == null ? "—" : "$" + Math.round(v).toLocaleString("en-US");
+    el.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tbody>
+          <tr><td style="padding:6px 10px;font-weight:600;" colspan="2">Investment income</td></tr>
+          <tr><td style="padding:4px 10px 4px 24px;">Dividend income</td><td style="padding:4px 10px;text-align:right;">${fmt(d.totalDiv)}</td></tr>
+          <tr><td style="padding:4px 10px 4px 24px;">Management fee income</td><td style="padding:4px 10px;text-align:right;">${fmt(d.mgmtFeeIncome)}</td></tr>
+          <tr><td style="padding:6px 10px;font-weight:600;" colspan="2">Operating expenses</td></tr>
+          <tr><td style="padding:4px 10px 4px 24px;">Management fees</td><td style="padding:4px 10px;text-align:right;">${fmt(d.mgmtFeeExpense)}</td></tr>
+          <tr><td style="padding:4px 10px 4px 24px;">Admin / custodial / audit / legal / other</td><td style="padding:4px 10px;text-align:right;">${fmt(d.adminFees + d.custodialFees + d.auditFees + d.legalFees + d.regFees + d.otherFees)}</td></tr>
+          <tr style="border-top:1px solid var(--border2);font-weight:700;"><td style="padding:6px 10px;">Net investment income</td><td style="padding:6px 10px;text-align:right;">${fmt(d.netInvestmentIncome)}</td></tr>
+          <tr><td style="padding:6px 10px;font-weight:600;" colspan="2">Realized &amp; unrealized</td></tr>
+          <tr><td style="padding:4px 10px 4px 24px;">Net realized gain</td><td style="padding:4px 10px;text-align:right;">${fmt(d.realizedGain)}</td></tr>
+          <tr><td style="padding:4px 10px 4px 24px;">Net change in unrealized</td><td style="padding:4px 10px;text-align:right;">${fmt(d.changeUnrealized)}</td></tr>
+          <tr style="border-top:2px solid var(--border2);font-weight:700;"><td style="padding:6px 10px;">Net increase from operations</td><td style="padding:6px 10px;text-align:right;">${fmt(d.netFromOps)}</td></tr>
+        </tbody>
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:14px;">
+        <thead><tr style="border-bottom:1px solid var(--border2);color:var(--text3);text-align:left;"><th style="padding:6px 10px;">Investor</th><th style="padding:6px 10px;text-align:right;">Beginning</th><th style="padding:6px 10px;text-align:right;">Contributions</th><th style="padding:6px 10px;text-align:right;">Ending</th><th style="padding:6px 10px;text-align:right;">Gain</th></tr></thead>
+        <tbody>${d.investorAttribution.map(r => `<tr><td style="padding:4px 10px;">${escapeHtml(r.name)}</td><td style="padding:4px 10px;text-align:right;">${fmt(r.beginningValue)}</td><td style="padding:4px 10px;text-align:right;">${r.contributions?fmt(r.contributions):"—"}</td><td style="padding:4px 10px;text-align:right;">${fmt(r.endingValue)}</td><td style="padding:4px 10px;text-align:right;">${fmt(r.gain)}</td></tr>`).join("")}</tbody>
+      </table>`;
+  } catch (e) {
+    el.innerHTML = `<p style="padding:1rem;color:var(--red);">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+// Refreshes whichever Accounting sub-tab is currently active, called when
+// the Accounting nav tab itself is opened.
+function renderAccountingActivePanel() {
+  if (document.getElementById("accounting-ledger")?.classList.contains("active")) renderGeneralLedger();
+  if (document.getElementById("accounting-live")?.classList.contains("active")) renderLiveStatements();
 }
 </script>
 </body>
