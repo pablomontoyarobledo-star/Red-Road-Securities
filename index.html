@@ -1375,6 +1375,7 @@ const TR = {
     pdf_col_ticker: "Ticker", pdf_col_description: "Description", pdf_col_shares: "Shares",
     pdf_col_price: "Price", pdf_col_market_value: "Market Value", pdf_col_allocation: "Allocation",
     pdf_cash: "Cash & equivalents",
+    pdf_holdings_note: "* Holdings reflect current portfolio composition, scaled to this period's historical account value.",
     pdf_capital_activity: "CAPITAL ACTIVITY",
     pdf_col_date: "Date", pdf_col_amount_invested: "Amount Invested",
     pdf_col_nav_at_purchase: "NAV at Purchase", pdf_col_units_purchased: "Units Purchased",
@@ -1647,6 +1648,7 @@ const TR = {
     pdf_col_ticker: "Ticker", pdf_col_description: "Descripción", pdf_col_shares: "Acciones",
     pdf_col_price: "Precio", pdf_col_market_value: "Valor de Mercado", pdf_col_allocation: "Asignación",
     pdf_cash: "Efectivo y equivalentes",
+    pdf_holdings_note: "* Las posiciones reflejan la composición actual del portafolio, escaladas al valor de cuenta histórico de este período.",
     pdf_capital_activity: "ACTIVIDAD DE CAPITAL",
     pdf_col_date: "Fecha", pdf_col_amount_invested: "Monto Invertido",
     pdf_col_nav_at_purchase: "NAV al Comprar", pdf_col_units_purchased: "Unidades Compradas",
@@ -4893,15 +4895,26 @@ async function _generateStatementPDF(investorId, periodMonth) {
   doc.setTextColor(...C.tLight); doc.setFont("helvetica","bold"); doc.setFontSize(7);
   doc.text(t("pdf_portfolio_holdings"), ML+3, y+4.5); y += 7;
 
+  // Positions/prices are always the CURRENT (live) portfolio, not a
+  // point-in-time snapshot for periodMonth — for a past period these can
+  // differ substantially from what the fund actually held then. Scale
+  // current position weights to this period's historical total (same
+  // technique as computeBalanceSheetData's Schedule of Investments) so the
+  // table's totals reconcile with the ACCOUNT VALUE box above instead of
+  // silently showing today's numbers on a past-dated statement.
   const totalFV = (positions||[]).reduce((s,p) => s + p.shares*(livePrice[p.ticker]||p.ibClose||0), 0) + (cashBalance||0);
+  const holdScale = totalFV > 0 && totalVal > 0 ? totalVal / totalFV : 1;
   const holdRows = (positions||[]).map(p => {
     const px = livePrice[p.ticker] || p.ibClose || 0;
-    const val = p.shares * px;
+    const val = p.shares * px * holdScale;
     return [p.ticker, p.name||"", p.shares.toLocaleString("en-US",{maximumFractionDigits:2}),
-            "$"+px.toFixed(2), "$"+Math.round(val).toLocaleString(),
-            totalFV>0 ? (val/totalFV*100).toFixed(1)+"%" : "—"];
+            "$"+(px*holdScale).toFixed(2), "$"+Math.round(val).toLocaleString(),
+            totalVal>0 ? (val/totalVal*100).toFixed(1)+"%" : "—"];
   });
-  if (cashBalance) holdRows.push(["CASH", t("pdf_cash"),"—","—","$"+Math.round(cashBalance).toLocaleString(),totalFV>0?(cashBalance/totalFV*100).toFixed(1)+"%":"—"]);
+  if (cashBalance) {
+    const cVal = cashBalance * holdScale;
+    holdRows.push(["CASH", t("pdf_cash"),"—","—","$"+Math.round(cVal).toLocaleString(),totalVal>0?(cVal/totalVal*100).toFixed(1)+"%":"—"]);
+  }
 
   autoTbl({ startY:y,
     head:[[t("pdf_col_ticker"),t("pdf_col_description"),t("pdf_col_shares"),t("pdf_col_price"),t("pdf_col_market_value"),t("pdf_col_allocation")]],
@@ -4913,7 +4926,10 @@ async function _generateStatementPDF(investorId, periodMonth) {
                    2:{halign:"right",cellWidth:24}, 3:{halign:"right",cellWidth:22},
                    4:{halign:"right",fontStyle:"bold",cellWidth:28}, 5:{halign:"right",cellWidth:22} },
   });
-  y = doc.lastAutoTable.finalY + 8;
+  y = doc.lastAutoTable.finalY + 4;
+  doc.setFont("helvetica","italic"); doc.setFontSize(7); doc.setTextColor(...C.tLight);
+  doc.text(t("pdf_holdings_note"), ML, y);
+  y += 8;
 
   // ── CAPITAL ACTIVITY ──
   if (y > H-70) { doc.addPage(); y = 20; }
@@ -5415,8 +5431,18 @@ function computeIncomeStatementData(periodMonth) {
   const monthLabel = new Date(`${periodMonth}-15`).toLocaleDateString("en-US", { month:"long", year:"numeric" });
   const asOfDate   = navEnd?.date || periodMonth;
 
+  // Sum every current investor's contribution key, not just the original
+  // two LPs — hardcoding fernando/dario here silently dropped every later
+  // investor's deposits (e.g. Juana/Pablo/Lucia, added mid-2026) from this
+  // total, which overstated investmentReturn/changeUnrealized by exactly
+  // their contributed amount for any period they deposited in. calcUnits()
+  // and buildUnitSchedule() (lib/nav.js) hit this same bug previously and
+  // fixed it the same way — see ib-nav-history.js's comment on that.
   const periodDeps    = (deposits||[]).filter(d => d.date?.startsWith(periodMonth));
-  const totalContribs = periodDeps.reduce((s, d) => s + (d.fernando||0) + (d.dario||0), 0);
+  const totalContribs = periodDeps.reduce((s, d) => s + (investors||[]).reduce((s2, inv) => {
+    const k = inv.id.startsWith("inv_") ? inv.id.slice(4) : inv.id;
+    return s2 + (d[k] || 0);
+  }, 0), 0);
   const investmentReturn = totalEnd - totalStart - totalContribs;
 
   // Dividend income by ticker
