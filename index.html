@@ -3364,9 +3364,15 @@ const _allocatedDepositIds = new Set();
 // real investor. Admin reads the live list; other viewers use the aggregate
 // pendingCash the server stores on the IB snapshot.
 let pendingDeposits = [];
+// Distinguishes "haven't fetched the live list yet" from "fetched it, zero
+// pending" — pendingDeposits.length alone can't tell those apart, and an
+// admin who has truly zero pending deposits must not fall back to
+// _ibSnap.pendingCash, which is only refreshed by the daily IB cron pull and
+// goes stale the moment a deposit is allocated in between.
+let pendingDepositsLoaded = false;
 
 function getPendingInfo(allocatedUnits, totalValue) {
-  const pendingCash = (currentUser?.admin && pendingDeposits.length)
+  const pendingCash = (currentUser?.admin && pendingDepositsLoaded)
     ? pendingDeposits.reduce((s, d) => s + (d.amount || 0), 0)
     : (_ibSnap?.pendingCash || 0);
   // Fair (post-money-neutral) NAV excludes the parked cash from the per-unit
@@ -3388,6 +3394,7 @@ async function loadPendingDeposits() {
     const deps = (data.deposits || []).filter(d => !_allocatedDepositIds.has(d.id));
     // Keep the pending list in sync so NAV / ownership can fold in pending units.
     pendingDeposits = deps;
+    pendingDepositsLoaded = true;
     try { renderMetrics(); renderOwnership(); } catch {}
     if (!deps.length) { section.style.display = "none"; return; }
     section.style.display = "block";
