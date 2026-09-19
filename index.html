@@ -455,6 +455,7 @@
         <div class="period-card"><div class="period-label" id="lbl-ytd">YTD</div><div class="period-value" id="period-ytd">—</div></div>
         <div class="period-card" style="background:var(--blue-bg);"><div class="period-label" style="color:var(--blue-text);" id="lbl-inception">Since inception</div><div class="period-value" id="period-inception" style="color:var(--blue-text);">—</div></div>
       </div>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px;" id="lbl-period-returns-hint">MTD = month-to-date · QTD = quarter-to-date · YTD = year-to-date</p>
     </div>
 
     <div class="section">
@@ -556,6 +557,7 @@
             <tbody id="bench-body"></tbody>
           </table>
         </div>
+        <p style="font-size:11px;color:var(--text3);margin-top:8px;" id="lbl-bench-hint">SPXTR = S&amp;P 500 (total return) · EFA = international developed markets · VT = total world stock market</p>
       </div>
     </div>
     </div>
@@ -1263,12 +1265,14 @@ const TR = {
     // Period returns
     lbl_period_returns: "Period returns",
     lbl_mtd: "MTD", lbl_qtd: "QTD", lbl_ytd: "YTD", lbl_inception: "Since inception",
+    period_returns_hint: "MTD = month-to-date · QTD = quarter-to-date · YTD = year-to-date",
     // Income
     lbl_income: "Income & costs — since inception",
     lbl_dividends: "Dividends", lbl_interest: "Interest", lbl_fees: "Fees & commissions",
     // Benchmarks
     lbl_bench: "Monthly returns vs benchmarks",
     bench_col_month: "Month", bench_col_portfolio: "Fund ONE",
+    bench_hint: "SPXTR = S&P 500 (total return) · EFA = international developed markets · VT = total world stock market",
     lbl_best_month: "Best month", lbl_worst_month: "Worst month",
     best_month_date: "April 2026", worst_month_date: "March 2026",
     nav_unit_label: "Unit NAV — price per unit",
@@ -1545,10 +1549,12 @@ const TR = {
     tab_ownership: "Participación", tab_transactions: "Transacciones", tab_activity: "Actividad",
     lbl_period_returns: "Retornos por período",
     lbl_mtd: "MTD", lbl_qtd: "QTD", lbl_ytd: "YTD", lbl_inception: "Desde el inicio",
+    period_returns_hint: "MTD = lo que va del mes · QTD = lo que va del trimestre · YTD = lo que va del año",
     lbl_income: "Ingresos y costos — desde el inicio",
     lbl_dividends: "Dividendos", lbl_interest: "Intereses", lbl_fees: "Comisiones y gastos",
     lbl_bench: "Retornos mensuales vs benchmarks",
     bench_col_month: "Mes", bench_col_portfolio: "Fund ONE",
+    bench_hint: "SPXTR = S&P 500 (retorno total) · EFA = mercados desarrollados internacionales · VT = mercado accionario mundial total",
     lbl_best_month: "Mejor mes", lbl_worst_month: "Peor mes",
     best_month_date: "Abril 2026", worst_month_date: "Marzo 2026",
     nav_unit_label: "NAV por unidad — precio por unidad",
@@ -1882,10 +1888,12 @@ function setLang(lang) {
     "settings-back-btn": "settings_back",
     "lbl-period-returns": "lbl_period_returns",
     "lbl-mtd": "lbl_mtd", "lbl-qtd": "lbl_qtd", "lbl-ytd": "lbl_ytd", "lbl-inception": "lbl_inception",
+    "lbl-period-returns-hint": "period_returns_hint",
     "lbl-income": "lbl_income",
     "lbl-dividends": "lbl_dividends", "lbl-interest": "lbl_interest", "lbl-fees": "lbl_fees",
     "lbl-bench": "lbl_bench",
     "bench-col-month": "bench_col_month", "bench-col-portfolio": "bench_col_portfolio",
+    "lbl-bench-hint": "bench_hint",
     "lbl-best-month": "lbl_best_month", "lbl-worst-month": "lbl_worst_month",
     "best-month-date": "best_month_date", "worst-month-date": "worst_month_date",
     "overview-chart-title": "overviewChartTitle",
