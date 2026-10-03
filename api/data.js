@@ -177,7 +177,15 @@ export default async function handler(req, res) {
           const scoped = inv ? scopeFundDataToInvestor(data, investorKeysFor(inv)) : { ...data, deposits: [] };
           return res.status(200).json({ ...scoped, totalDepositedAll });
         }
-        return res.status(200).json({ ...data, totalDepositedAll });
+        // Admin sees the full (unscoped) deposits array, so the client could in
+        // principle sum it locally — but index.html's fundTotalUnitsOverride is
+        // only ever refreshed when this field is present (see its save() call),
+        // so omitting it here left admin sessions' cached override frozen at
+        // whatever value was last fetched, silently going stale every time a new
+        // deposit landed. Attach it unconditionally, same as totalDepositedAll,
+        // so admin and investor sessions both self-correct on every load.
+        const totalUnitsOutstanding = computeTotalUnitsAtDate(data.deposits, new Date().toISOString().slice(0, 10));
+        return res.status(200).json({ ...data, totalDepositedAll, totalUnitsOutstanding });
       }
 
       return res.status(200).json(data);

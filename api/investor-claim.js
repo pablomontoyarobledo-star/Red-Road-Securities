@@ -17,7 +17,7 @@ import {
   writeAuditLog, listClaimedInvestorIds, insertClaimToken, invalidateOutstandingClaimTokens,
 } from "../lib/store.js";
 import { isAdminRequest, verifyClaimToken, newScryptCredential, issueToken, issueClaimToken, MIN_PASSWORD_LENGTH } from "../lib/auth.js";
-import { sendClaimAccountEmail } from "../lib/claimEmail.js";
+import { sendClaimAccountEmail, buildClaimUrl } from "../lib/claimEmail.js";
 
 function findInvestor(investors, investorId) {
   return investors.find(i => i.id === investorId);
@@ -48,11 +48,23 @@ async function handleInvite(req, res, body) {
 
   const { token, jti, expiresAt } = issueClaimToken({ investorId, email });
   await insertClaimToken({ jti, investorId, email, expiresAt });
-  await sendClaimAccountEmail({
-    to: investor.email, firstName: investor.firstName, lang: investor.lang || "en", token,
-  });
 
-  return res.status(200).json({ ok: true });
+  // Email delivery is best-effort: Resend is still in sandbox mode on this
+  // account (no verified domain), so it 403s for anyone but the account
+  // owner. The claim link is the actual credential here, so hand it back
+  // regardless — the admin can copy/text it — and let email start working
+  // silently once a domain is verified, with no code change needed then.
+  let emailSent = true;
+  try {
+    await sendClaimAccountEmail({
+      to: investor.email, firstName: investor.firstName, lang: investor.lang || "en", token,
+    });
+  } catch (err) {
+    emailSent = false;
+    console.error("[investor-claim] invite email failed:", err.message);
+  }
+
+  return res.status(200).json({ ok: true, claimUrl: buildClaimUrl(token), emailSent });
 }
 
 async function handleVerify(req, res, body) {

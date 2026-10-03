@@ -2962,8 +2962,14 @@ async function inviteInvestor(i) {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || "Failed to send");
     status.style.color = "var(--green-text)";
-    status.textContent = "✓ Sent";
-    setTimeout(() => { status.textContent = ""; }, 3000);
+    if (d.claimUrl) {
+      try { await navigator.clipboard.writeText(d.claimUrl); status.textContent = "✓ Link copied — paste it to them"; }
+      catch { status.textContent = d.claimUrl; }
+      setTimeout(() => { status.textContent = ""; }, 8000);
+    } else {
+      status.textContent = "✓ Sent";
+      setTimeout(() => { status.textContent = ""; }, 3000);
+    }
   } catch (err) {
     status.style.color = "var(--red-text)";
     status.textContent = err.message;
