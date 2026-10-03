@@ -159,11 +159,11 @@
   .ownership-bar-fill-d { height: 6px; background: #7F77DD; border-radius: 3px; }
 
   /* DEPOSITS TABLE */
-  .deposits-table { min-width: 620px; }
-  .deposits-table th:nth-child(1) { width: 110px; }
-  .deposits-table th:nth-child(2) { width: 90px; }
-  .deposits-table th:nth-child(5), .deposits-table th:nth-child(6) { text-align: right; }
-  .deposits-table td:nth-child(5), .deposits-table td:nth-child(6) { text-align: right; }
+  .deposits-table { min-width: 0; width: 100%; table-layout: auto; }
+  .deposits-table th, .deposits-table td { padding: 10px 8px; font-size: 12.5px; }
+  .deposits-table th { font-size: 10px; white-space: normal; vertical-align: bottom; }
+  .deposits-table th:nth-child(1), .deposits-table td:nth-child(1) { white-space: nowrap; }
+  .deposits-table th:nth-child(n+5), .deposits-table td:nth-child(n+5) { text-align: right; }
   .source-moneche { background: var(--bg2); color: var(--text2); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; display: inline-block; }
   .source-fernando { background: var(--blue-bg); color: #006B31; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; display: inline-block; }
   .total-row td { font-weight: 700; background: var(--bg2); border-top: 1px solid var(--border); }
@@ -3905,7 +3905,8 @@ function renderDeposits() {
     while (thead.children.length > 4) thead.removeChild(thead.lastChild);
     invKeys.forEach(({ inv }) => {
       const th = document.createElement("th");
-      th.textContent = `${inv.firstName} ${inv.lastName}`;
+      th.textContent = inv.firstName;
+      th.title = `${inv.firstName} ${inv.lastName}`;
       thead.appendChild(th);
     });
   }
