@@ -1,6 +1,7 @@
 .vercel
 .env*
 node_modules
+.claude/settings.local.json
 
 fund-data-init.json
 scripts/audit/results/screenshots/
